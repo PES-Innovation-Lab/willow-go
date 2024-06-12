@@ -1,7 +1,7 @@
 // Types related to Entry in the data model
 package types
 
-type Entry struct {
+type Entry[Timestamp uint64, NamespaceId, SubspaceId, PayloadDigest any] struct {
 	// ID of the namespace the Entry is a part of
 	namespace_id NamespaceId
 	// ID of the subspace to which the Entry belongs to
