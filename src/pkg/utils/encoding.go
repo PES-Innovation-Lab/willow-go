@@ -1,16 +1,17 @@
 package utils
 
 import (
+	"bytes"
 	"encoding/binary"
-	"math/big"
+	"errors"
 
 	"golang.org/x/exp/constraints"
 )
 
 // Encode a bigint
-func BigintToBytes(bigint *big.Int) []byte {
+func BigintToBytes(bigint uint64) []byte {
 	bytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(bytes, bigint.Uint64())
+	binary.BigEndian.PutUint64(bytes, bigint)
 	return bytes
 }
 func GetWidthMax32Int[T constraints.Unsigned](num T) int {
@@ -26,8 +27,8 @@ func GetWidthMax32Int[T constraints.Unsigned](num T) int {
 	}
 }
 
-func EncodingIntMax32[T constraints.Unsigned](num, max T) []byte {
-	width := GetWidthMax32Int(num)
+func EncodeIntMax32[T constraints.Unsigned](num, max T) []byte {
+	width := GetWidthMax32Int(max)
 	bytes := make([]byte, width)
 
 	switch width {
@@ -36,13 +37,39 @@ func EncodingIntMax32[T constraints.Unsigned](num, max T) []byte {
 	case 2:
 		binary.BigEndian.PutUint16(bytes, uint16(num))
 	case 3:
-		binary.BigEndian.PutUint16(bytes, uint16(num))
-		bytes[2] = byte(num & 0xff)
+		bytes[0] = byte(num >> 16)
+		binary.BigEndian.PutUint16(bytes[1:], uint16(num))
 	case 4:
 		binary.BigEndian.PutUint32(bytes, uint32(num))
 	}
 
 	return bytes
+}
+
+func DecodeIntMax32(bytes []byte, max uint32) (uint32, error) {
+	bytesToDecodeLength := GetWidthMax32Int(max)
+
+	if len(bytes) != bytesToDecodeLength {
+		return 0, errors.New("invalid byte slice length")
+	}
+	if bytesToDecodeLength > 4 {
+		return 0, errors.New("cannot decode non-UintMax bytes")
+	}
+
+	switch bytesToDecodeLength {
+	case 1:
+		return uint32(bytes[0]), nil
+	case 2:
+		return uint32(binary.BigEndian.Uint16(bytes)), nil
+	case 4:
+		return binary.BigEndian.Uint32(bytes), nil
+	}
+
+	// Otherwise it's 24 bit.
+	a := binary.BigEndian.Uint16(bytes[:2])
+	b := uint32(bytes[2])
+
+	return (uint32(a) << 8) + b, nil
 }
 
 func GetWidthMax64Int[T constraints.Unsigned](num T) int {
@@ -58,8 +85,8 @@ func GetWidthMax64Int[T constraints.Unsigned](num T) int {
 	}
 }
 
-func EncodingIntMax64[T constraints.Unsigned](num, max T) []byte {
-	width := GetWidthMax64Int(num)
+func EncodeIntMax64[T constraints.Unsigned](num, max T) []byte {
+	width := GetWidthMax64Int(max)
 	bytes := make([]byte, width)
 
 	switch width {
@@ -76,4 +103,26 @@ func EncodingIntMax64[T constraints.Unsigned](num, max T) []byte {
 	return bytes
 }
 
-func DecodeCompactWidth(encoded []bytes)
+func DecodeIntMax64(encoded []byte, max uint32) any {
+	reader := bytes.NewReader(encoded)
+
+	switch len(encoded) {
+	case 1:
+		var val uint8
+		binary.Read(reader, binary.BigEndian, &val)
+		return val
+	case 2:
+		var val uint16
+		binary.Read(reader, binary.BigEndian, &val)
+		return val
+	case 4:
+		var val uint32
+		binary.Read(reader, binary.BigEndian, &val)
+		return val
+	default:
+		var val uint64
+		binary.Read(reader, binary.BigEndian, &val)
+		return val
+	}
+
+}
