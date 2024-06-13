@@ -37,8 +37,8 @@ func EncodeIntMax32[T constraints.Unsigned](num, max T) []byte {
 	case 2:
 		binary.BigEndian.PutUint16(bytes, uint16(num))
 	case 3:
-		binary.BigEndian.PutUint16(bytes, uint16(num))
-		bytes[2] = byte(num | 0x00)
+		bytes[0] = byte(num >> 16)
+		binary.BigEndian.PutUint16(bytes[1:], uint16(num))
 	case 4:
 		binary.BigEndian.PutUint32(bytes, uint32(num))
 	}

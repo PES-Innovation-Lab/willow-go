@@ -67,6 +67,6 @@ func CommonPrefix(first types.Path, second types.Path) (types.Path, error) {
 }
 
 // TO-DO implement Encode and Decode functions for Path
-func EncodePath[T constraints.Unsigned](path types.Path, pathParams types.PathParams[T]) []byte {
-	componentCountBytes := EncodingIntMax32(T(len(path)), pathParams.MaxPathLength)
-}
+// func EncodePath[T constraints.Unsigned](path types.Path, pathParams types.PathParams[T]) []byte {
+// 	componentCountBytes := EncodingIntMax32(T(len(path)), pathParams.MaxPathLength)
+// }
