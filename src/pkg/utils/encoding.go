@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 
 	"golang.org/x/exp/constraints"
 )
@@ -73,11 +74,11 @@ func DecodeIntMax32(bytes []byte, max uint32) (uint32, error) {
 
 func GetWidthMax64Int[T constraints.Unsigned](num T) int {
 	switch true {
-	case int(num) < 1<<8:
+	case uint64(num) < 1<<8:
 		return 1
-	case int(num) < 1<<16:
+	case uint64(num) < 1<<16:
 		return 2
-	case int(num) < 1<<32:
+	case uint64(num) < 1<<32:
 		return 4
 	default:
 		return 8
@@ -99,10 +100,11 @@ func EncodeIntMax64[T constraints.Unsigned](num, max T) []byte {
 		binary.BigEndian.PutUint64(bytes, uint64(num))
 	}
 
+	fmt.Println(bytes, width, num)
 	return bytes
 }
 
-func DecodeIntMax64(encoded []byte, max uint32) any {
+func DecodeIntMax64(encoded []byte, max uint64) any {
 	//reader := bytes.NewReader(encoded)
 
 	switch len(encoded) {
