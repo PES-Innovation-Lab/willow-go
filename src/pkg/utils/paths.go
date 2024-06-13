@@ -53,5 +53,7 @@ func CommonPrefix(first types.Path, second types.Path) types.Path {
 	return first[0 : index+1]
 }
 
+// TO-DO implement Encode and Decode functions for Path
 func EncodePath[T constraints.Signed](path types.Path, pathParams types.PathParams[T]) []byte {
+	return nil
 }
