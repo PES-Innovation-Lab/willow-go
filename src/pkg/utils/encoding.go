@@ -15,11 +15,11 @@ func BigintToBytes(bigint uint64) []byte {
 }
 func GetWidthMax32Int[T constraints.Unsigned](num T) int {
 	switch true {
-	case int(num) < 1<<8:
+	case uint(num) < 1<<8:
 		return 1
-	case int(num) < 1<<16:
+	case uint(num) < 1<<16:
 		return 2
-	case int(num) < 1<<24:
+	case uint(num) < 1<<24:
 		return 3
 	default:
 		return 4
@@ -73,11 +73,11 @@ func DecodeIntMax32(bytes []byte, max uint32) (uint32, error) {
 
 func GetWidthMax64Int[T constraints.Unsigned](num T) int {
 	switch true {
-	case int(num) < 1<<8:
+	case uint(num) < 1<<8:
 		return 1
-	case int(num) < 1<<16:
+	case uint(num) < 1<<16:
 		return 2
-	case int(num) < 1<<32:
+	case uint(num) < 1<<32:
 		return 4
 	default:
 		return 8
@@ -102,29 +102,37 @@ func EncodeIntMax64[T constraints.Unsigned](num, max T) []byte {
 	return bytes
 }
 
-func DecodeIntMax64(encoded []byte, max uint32) any {
+func DecodeIntMax64(encoded []byte, max uint64) (uint64, error) {
 	//reader := bytes.NewReader(encoded)
+	bytesToDecodeLength := GetWidthMax64Int(max)
+
+	if len(encoded) != bytesToDecodeLength {
+		return 0, errors.New("invalid byte slice length")
+	}
+	if bytesToDecodeLength > 8 {
+		return 0, errors.New("cannot decode non-UintMax bytes")
+	}
 
 	switch len(encoded) {
 	case 1:
 		/*var val uint8
 		binary.Read(reader, binary.BigEndian, &val)
 		return val */
-		return uint8(encoded[0])
+		return uint64(encoded[0]), nil
 
 	case 2:
 		/*var val uint16
 		binary.Read(reader, binary.BigEndian, &val)
 		return val */
-		return binary.BigEndian.Uint16(encoded)
+		return uint64(binary.BigEndian.Uint16(encoded)), nil
 	case 4:
 		/*var val uint32
 		binary.Read(reader, binary.BigEndian, &val)
 		return val */
-		return binary.BigEndian.Uint32(encoded)
+		return uint64(binary.BigEndian.Uint32(encoded)), nil
 
 	case 8:
-		return binary.BigEndian.Uint64(encoded)
+		return binary.BigEndian.Uint64(encoded), nil
 	default:
 		panic("invalid length")
 		/*var val uint64
