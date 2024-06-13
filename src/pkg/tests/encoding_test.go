@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -41,7 +40,6 @@ func TestEncodeDecodeIntMax32(t *testing.T) {
 
 	for _, tc := range testCases {
 		encoded := utils.EncodeIntMax32(tc.num, tc.max)
-		fmt.Printf("encoded : %v\n", encoded)
 		decoded, err := utils.DecodeIntMax32(encoded, tc.max)
 		if err != nil {
 			t.Errorf("Error decoding: %v", err)
@@ -66,9 +64,53 @@ func TestEncodeDecodeIntMax64(t *testing.T) {
 
 	for _, tc := range testCases {
 		encoded := utils.EncodeIntMax64(tc.num, tc.max)
-		decoded := utils.DecodeIntMax64(encoded, uint32(tc.max))
+		// println(encoded, tc.num, tc.max)
+		decoded := utils.DecodeIntMax64(encoded, tc.max)
+		println(decoded)
 		if decoded != tc.expected {
 			t.Errorf("DecodeIntMax64(%d, %d) = %d; expected %d", tc.num, tc.max, decoded, tc.expected)
 		}
+	}
+}
+
+func BenchmarkEncodeIntMax32(b *testing.B) {
+	num := uint32(12345)
+	max := uint32(65535)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		utils.EncodeIntMax32(num, max)
+	}
+}
+
+func BenchmarkDecodeIntMax32(b *testing.B) {
+	num := uint32(12345)
+	max := uint32(65535)
+	encoded := utils.EncodeIntMax32(num, max)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		utils.DecodeIntMax32(encoded, max)
+	}
+}
+
+func BenchmarkEncodeIntMax64(b *testing.B) {
+	num := uint64(123456789012345)
+	max := uint64(18446744073709551615)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		utils.EncodeIntMax64(num, max)
+	}
+}
+
+func BenchmarkDecodeIntMax64(b *testing.B) {
+	num := uint64(123456789012345)
+	max := uint64(18446744073709551615)
+	encoded := utils.EncodeIntMax64(num, max)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		utils.DecodeIntMax64(encoded, uint64(max))
 	}
 }
