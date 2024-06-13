@@ -6,7 +6,7 @@ import (
 )
 
 /** Returns the successor to a path given a `Path` and `PathScheme`.  */
-func SuccessorPath[T constraints.Signed](path types.Path, scheme types.PathParams[T]) types.Path {
+func SuccessorPath[T constraints.Unsigned](path types.Path, scheme types.PathParams[T]) types.Path {
 	if len(path) == 0 {
 		nextPath := types.Path{make([]byte, 1)}
 
