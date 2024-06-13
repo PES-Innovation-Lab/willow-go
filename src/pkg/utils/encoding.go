@@ -9,7 +9,7 @@ import (
 )
 
 // Encode a bigint
-func BigintToBytes[T constraints.Integer](bigint T) []byte {
+func BigintToBytes(bigint uint64) []byte {
 	bytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(bytes, bigint)
 	return bytes
@@ -38,7 +38,7 @@ func EncodeIntMax32[T constraints.Unsigned](num, max T) []byte {
 		binary.BigEndian.PutUint16(bytes, uint16(num))
 	case 3:
 		binary.BigEndian.PutUint16(bytes, uint16(num))
-		bytes[2] = byte(num & 0xff)
+		bytes[2] = byte(num | 0x00)
 	case 4:
 		binary.BigEndian.PutUint32(bytes, uint32(num))
 	}
@@ -49,6 +49,9 @@ func EncodeIntMax32[T constraints.Unsigned](num, max T) []byte {
 func DecodeIntMax32(bytes []byte, max uint32) (uint32, error) {
 	bytesToDecodeLength := GetWidthMax32Int(max)
 
+	if len(bytes) != bytesToDecodeLength {
+		return 0, errors.New("invalid byte slice length")
+	}
 	if bytesToDecodeLength > 4 {
 		return 0, errors.New("cannot decode non-UintMax bytes")
 	}
