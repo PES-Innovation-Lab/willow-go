@@ -14,6 +14,7 @@ func BigintToBytes(bigint uint64) []byte {
 	binary.BigEndian.PutUint64(bytes, bigint)
 	return bytes
 }
+
 func GetWidthMax32Int[T constraints.Unsigned](num T) int {
 	switch true {
 	case int(num) < 1<<8:
@@ -124,5 +125,4 @@ func DecodeIntMax64(encoded []byte, max uint32) any {
 		binary.Read(reader, binary.BigEndian, &val)
 		return val
 	}
-
 }
