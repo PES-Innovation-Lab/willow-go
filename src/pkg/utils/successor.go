@@ -2,20 +2,24 @@ package utils
 
 import (
 	"github.com/PES-Innovation-Lab/willow-go/src/pkg/types"
+	"golang.org/x/exp/constraints"
 )
 
-func successorPath(path types.Path, scheme types.PathScheme) types.Path {
+/** Returns the successor to a path given a `Path` and `PathScheme`.  */
+func SuccessorPath[T constraints.Unsigned](path types.Path, scheme types.PathParams[T]) types.Path {
 	if len(path) == 0 {
-		nextPath := Path{make([]byte, 1)}
+		nextPath := types.Path{make([]byte, 1)}
 
-		if isValidPath(nextPath, scheme) {
+		valid, _ := IsValidPath(nextPath, scheme)
+
+		if valid {
 			return nextPath
 		}
-
 		return nil
+
 	}
 
-	workingPath := make(Path, len(path))
+	workingPath := make(types.Path, len(path))
 	copy(workingPath, path)
 
 	for i := len(path) - 1; i >= 0; i-- {
@@ -23,20 +27,26 @@ func successorPath(path types.Path, scheme types.PathScheme) types.Path {
 
 		simplestNextComponent := append(component, 0)
 
-		simplestNextPath := make(Path, len(path))
+		simplestNextPath := make(types.Path, len(path))
 		copy(simplestNextPath, path)
 		simplestNextPath[i] = simplestNextComponent
 
-		if isValidPath(simplestNextPath, scheme) {
+		valid, _ := IsValidPath(simplestNextPath, scheme)
+
+		if valid {
 			return simplestNextPath
 		}
 
-		incrementedComponent := successorBytesFixedWidth(component)
+		//Otherwise
+
+		incrementedComponent := SuccessorBytesFixedWidth(component)
 
 		if incrementedComponent != nil {
 			nextPath := append(path[:i], incrementedComponent)
 			return nextPath
 		}
+
+		//In the case of an overflow
 
 		workingPath = workingPath[:len(workingPath)-1]
 	}
@@ -48,18 +58,19 @@ func successorPath(path types.Path, scheme types.PathScheme) types.Path {
 	return workingPath
 }
 
-func successorPrefix(path Path) Path {
+/** Return a successor to a prefix, that is, the next element that is not a prefix of the given path. */
+func SuccessorPrefix(path types.Path) types.Path {
 	if len(path) == 0 {
 		return nil
 	}
 
-	workingPath := make(Path, len(path))
+	workingPath := make(types.Path, len(path))
 	copy(workingPath, path)
 
 	for i := len(path) - 1; i >= 0; i-- {
 		component := workingPath[i]
 
-		incrementedComponent := successorBytesFixedWidth(component)
+		incrementedComponent := SuccessorBytesFixedWidth(component)
 
 		if incrementedComponent != nil {
 			nextPath := append(path[:i], incrementedComponent)
@@ -81,7 +92,8 @@ func successorPrefix(path Path) Path {
 	return workingPath
 }
 
-func successorBytesFixedWidth(bytes []byte) []byte {
+/** Return the succeeding bytestring of the given bytestring without increasing that bytestring's length.  */
+func SuccessorBytesFixedWidth(bytes []byte) []byte {
 	newBytes := make([]byte, len(bytes))
 	copy(newBytes, bytes)
 
