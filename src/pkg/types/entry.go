@@ -1,7 +1,11 @@
 // Types related to Entry in the data model
 package types
 
-type Entry[Timestamp uint64, NamespaceId, SubspaceId, PayloadDigest any] struct {
+import "golang.org/x/exp/constraints"
+
+/* NamespaceId, SubspaceId, PayloadDigest are all ordered types
+as we need total order while using in ranges and checking for newer writes */
+type Entry[Timestamp uint64, NamespaceId, SubspaceId, PayloadDigest constraints.Ordered] struct {
 	// ID of the namespace the Entry is a part of
 	namespace_id NamespaceId
 	// ID of the subspace to which the Entry belongs to
