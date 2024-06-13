@@ -47,7 +47,7 @@ func IsPathPrefixed(prefix types.Path, path types.Path) (bool, error) {
 	return true, nil
 }
 
-func CommonPrefix(first types.Path, second types.Path) types.Path {
+func CommonPrefix(first types.Path, second types.Path) (types.Path, error) {
 	/*
 	* In this function we run until the end of one of the paths and check until where they match, if there are no matching
 	* prefix, we return nil, if there is we return the slice until the matching prefix.
@@ -61,12 +61,12 @@ func CommonPrefix(first types.Path, second types.Path) types.Path {
 		}
 	}
 	if index == 0 {
-		return nil
+		return nil, fmt.Errorf("There are no common prefiexs!")
 	}
-	return first[0 : index+1]
+	return first[0 : index+1], nil
 }
 
 // TO-DO implement Encode and Decode functions for Path
 func EncodePath[T constraints.Unsigned](path types.Path, pathParams types.PathParams[T]) []byte {
-	return nil
+	componentCountBytes := EncodingIntMax32(T(len(path)), pathParams.MaxPathLength)
 }

@@ -8,7 +8,7 @@ import (
 // We do have other helper functions and methods to compare paths and prefixes though!
 type Range[T constraints.Ordered | Path] struct {
 	Start T
-	End   *T // Use pointer to indicate open range if nil
+	End   *T // use pointer to indicate open range if nil
 }
 
 type Range3D[SubspaceId constraints.Ordered] struct {
