@@ -8,16 +8,16 @@ import (
 
 // checks if range end is greater than range start
 func IsValidRange[T constraints.Ordered | types.Path](r types.Range[T]) bool {
-	if r.end == nil {
+	if r.End == nil {
 		// open range, always valid
 		return true
 	}
 	// checks if T is Path, if yes, stores it in startPath and compares
-	if startPath, ok := any(r.start).(Path); ok {
-		endPath := any(*r.end).(Path)
+	if startPath, ok := any(r.Start).(Path); ok {
+		endPath := any(*r.End).(Path)
 		return utils.OrderPath(endPath, startPath) < 1
 	}
 
 	// normal comparison for constraints.Ordered types
-	return *r.end >= r.start
+	return *r.End >= r.Start
 }
