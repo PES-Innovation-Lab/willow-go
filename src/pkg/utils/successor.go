@@ -1,6 +1,10 @@
 package utils
 
-func successorPath(path Path, scheme PathScheme) Path {
+import (
+	"github.com/PES-Innovation-Lab/willow-go/src/pkg/types"
+)
+
+func successorPath(path types.Path, scheme types.PathScheme) types.Path {
 	if len(path) == 0 {
 		nextPath := Path{make([]byte, 1)}
 

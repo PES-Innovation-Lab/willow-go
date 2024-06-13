@@ -7,7 +7,12 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-func IsValidPath[T constraints.Signed](path types.Path, pathParams types.PathParams[T]) (bool, error) {
+func IsValidPath[T constraints.Unsigned](path types.Path, pathParams types.PathParams[T]) (bool, error) {
+	/*
+	  This function takes in a pathParams variable defined by the owner of the network and a path variable,
+	  checks if the given path satisfies all the constraints given and returns a boolean with an error.
+	  We run through each component of the path to check if all three constraints of a path is satisfied.
+	*/
 	if len(path) > int(pathParams.MaxComponentcount) {
 		return false, fmt.Errorf("The Path exceeds maximum allowed components.")
 	}
@@ -26,6 +31,10 @@ func IsValidPath[T constraints.Signed](path types.Path, pathParams types.PathPar
 }
 
 func IsPathPrefixed(prefix types.Path, path types.Path) (bool, error) {
+	/*
+	   This function, we check if prefix length is smalled than path length and then we run through each component to compare
+	   actual path to see if it's equal, if it is we can say that the given prefix prefixes the given path
+	*/
 	if len(prefix) > len(path) {
 		return false, fmt.Errorf("The prefix cannot be greater than the path it prefixes.")
 	}
@@ -39,6 +48,10 @@ func IsPathPrefixed(prefix types.Path, path types.Path) (bool, error) {
 }
 
 func CommonPrefix(first types.Path, second types.Path) types.Path {
+	/*
+	* In this function we run until the end of one of the paths and check until where they match, if there are no matching
+	* prefix, we return nil, if there is we return the slice until the matching prefix.
+	 */
 	index := 0
 	for ; index < len(first) && index < len(second); index++ {
 		firstComponent := first[index]
@@ -54,6 +67,6 @@ func CommonPrefix(first types.Path, second types.Path) types.Path {
 }
 
 // TO-DO implement Encode and Decode functions for Path
-func EncodePath[T constraints.Signed](path types.Path, pathParams types.PathParams[T]) []byte {
+func EncodePath[T constraints.Unsigned](path types.Path, pathParams types.PathParams[T]) []byte {
 	return nil
 }
