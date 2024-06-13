@@ -51,7 +51,7 @@ func DecodeIntMax32[T constraints.Unsigned](bytes []byte, max uint32) (uint32, e
 	bytesToDecodeLength := GetWidthMax32Int(max)
 
 	if bytesToDecodeLength > 4 {
-		return 0, errors.New("Cannot decode non-UintMax bytes")
+		return 0, errors.New("cannot decode non-UintMax bytes")
 	}
 
 	if bytesToDecodeLength == 1 {
