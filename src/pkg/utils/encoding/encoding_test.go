@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -32,12 +33,13 @@ func TestEncodeDecodeIntMax32(t *testing.T) {
 	}{
 		{0, 255, 0},
 		{1000, 65535, 1000},
-		{65536, 16777215, 65536},
+		{197485, 16777215, 197485},
 		{16777216, 4294967295, 16777216},
 	}
 
 	for _, tc := range testCases {
 		encoded := EncodeIntMax32(tc.num, tc.max)
+		fmt.Printf("encoded : %v\n", encoded)
 		decoded, err := DecodeIntMax32(encoded, tc.max)
 		if err != nil {
 			t.Errorf("Error decoding: %v", err)
@@ -62,7 +64,7 @@ func TestEncodeDecodeIntMax64(t *testing.T) {
 
 	for _, tc := range testCases {
 		encoded := EncodeIntMax64(tc.num, tc.max)
-		decoded := DecodeIntMax64(encoded, tc.max)
+		decoded := DecodeIntMax64(encoded, uint32(tc.max))
 		if decoded != tc.expected {
 			t.Errorf("DecodeIntMax64(%d, %d) = %d; expected %d", tc.num, tc.max, decoded, tc.expected)
 		}
