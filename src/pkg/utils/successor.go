@@ -2,18 +2,21 @@ package utils
 
 import (
 	"github.com/PES-Innovation-Lab/willow-go/src/pkg/types"
+	"golang.org/x/exp/constraints"
 )
 
 /** Returns the successor to a path given a `Path` and `PathScheme`.  */
-func SuccessorPath(path types.Path, scheme types.PathParams) types.Path {
+func SuccessorPath[T constraints.Signed](path types.Path, scheme types.PathParams[T]) types.Path {
 	if len(path) == 0 {
 		nextPath := types.Path{make([]byte, 1)}
 
-		if isValidPath(nextPath, scheme) {
+		valid, _ := IsValidPath(nextPath, scheme)
+
+		if valid {
 			return nextPath
 		}
-
 		return nil
+
 	}
 
 	workingPath := make(types.Path, len(path))
@@ -28,9 +31,13 @@ func SuccessorPath(path types.Path, scheme types.PathParams) types.Path {
 		copy(simplestNextPath, path)
 		simplestNextPath[i] = simplestNextComponent
 
-		if isValidPath(simplestNextPath, scheme) {
+		valid, _ := IsValidPath(simplestNextPath, scheme)
+
+		if valid {
 			return simplestNextPath
 		}
+
+		//Otherwise
 
 		incrementedComponent := SuccessorBytesFixedWidth(component)
 
@@ -39,7 +46,7 @@ func SuccessorPath(path types.Path, scheme types.PathParams) types.Path {
 			return nextPath
 		}
 
-		//in the case of an overflow
+		//In the case of an overflow
 
 		workingPath = workingPath[:len(workingPath)-1]
 	}
