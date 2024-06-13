@@ -1,9 +1,9 @@
 package utils
 
 import (
-	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 
 	"golang.org/x/exp/constraints"
 )
@@ -74,11 +74,11 @@ func DecodeIntMax32(bytes []byte, max uint32) (uint32, error) {
 
 func GetWidthMax64Int[T constraints.Unsigned](num T) int {
 	switch true {
-	case int(num) < 1<<8:
+	case uint64(num) < 1<<8:
 		return 1
-	case int(num) < 1<<16:
+	case uint64(num) < 1<<16:
 		return 2
-	case int(num) < 1<<32:
+	case uint64(num) < 1<<32:
 		return 4
 	default:
 		return 8
@@ -100,29 +100,28 @@ func EncodeIntMax64[T constraints.Unsigned](num, max T) []byte {
 		binary.BigEndian.PutUint64(bytes, uint64(num))
 	}
 
+	fmt.Println(bytes, width, num)
 	return bytes
 }
 
-func DecodeIntMax64(encoded []byte, max uint32) any {
-	reader := bytes.NewReader(encoded)
+func DecodeIntMax64(bytes []byte, max uint64) (uint64, error) {
+	bytesToDecodeLength := GetWidthMax64Int(max)
 
-	switch len(encoded) {
-	case 1:
-		var val uint8
-		binary.Read(reader, binary.BigEndian, &val)
-		return val
-	case 2:
-		var val uint16
-		binary.Read(reader, binary.BigEndian, &val)
-		return val
-	case 4:
-		var val uint32
-		binary.Read(reader, binary.BigEndian, &val)
-		return val
-	default:
-		var val uint64
-		binary.Read(reader, binary.BigEndian, &val)
-		return val
+	if len(bytes) != bytesToDecodeLength {
+		return 0, errors.New("invalid byte slice length")
+	}
+	if bytesToDecodeLength > 8 {
+		return 0, errors.New("cannot decode non-UintMax bytes")
 	}
 
+	switch bytesToDecodeLength {
+	case 1:
+		return uint64(bytes[0]), nil
+	case 2:
+		return uint64(binary.BigEndian.Uint16(bytes)), nil
+	case 4:
+		return uint64(binary.BigEndian.Uint32(bytes)), nil
+	default:
+		return uint64(binary.BigEndian.Uint64(bytes)), nil
+	}
 }
