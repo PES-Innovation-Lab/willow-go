@@ -1,15 +1,17 @@
-package utils
+package tests
 
 import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/PES-Innovation-Lab/willow-go/src/pkg/utils"
 )
 
 func TestGrowingBytes_Relative(t *testing.T) {
 	fifo := make(chan []byte, 10) // Simulating FIFO buffer
 
-	bytes := NewGrowingBytes(fifo)
+	bytes := utils.NewGrowingBytes(fifo)
 
 	// Initial assertion
 	if !reflect.DeepEqual(bytes.Array, []byte{}) {
@@ -51,7 +53,7 @@ func TestGrowingBytes_Relative(t *testing.T) {
 func TestGrowingBytes_Absolute(t *testing.T) {
 	fifo := make(chan []byte, 10) // Simulating FIFO buffer
 
-	bytes := NewGrowingBytes(fifo)
+	bytes := utils.NewGrowingBytes(fifo)
 
 	// Initial assertion
 	if !reflect.DeepEqual(bytes.Array, []byte{}) {
