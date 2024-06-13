@@ -105,34 +105,21 @@ func EncodeIntMax64[T constraints.Unsigned](num, max T) []byte {
 }
 
 func DecodeIntMax64(encoded []byte, max uint64) any {
-	//reader := bytes.NewReader(encoded)
 
 	switch len(encoded) {
 	case 1:
-		/*var val uint8
-		binary.Read(reader, binary.BigEndian, &val)
-		return val */
 		return uint8(encoded[0])
 
 	case 2:
-		/*var val uint16
-		binary.Read(reader, binary.BigEndian, &val)
-		return val */
+
 		return binary.BigEndian.Uint16(encoded)
 	case 4:
-		/*var val uint32
-		binary.Read(reader, binary.BigEndian, &val)
-		return val */
 		return binary.BigEndian.Uint32(encoded)
 
 	case 8:
 		return binary.BigEndian.Uint64(encoded)
 	default:
 		panic("invalid length")
-		/*var val uint64
-		binary.Read(reader, binary.BigEndian, &val)
-		return val */
-		//return binary.BigEndian.Uint64(encoded)
 	}
 
 }
