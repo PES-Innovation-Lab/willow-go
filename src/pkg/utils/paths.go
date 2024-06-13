@@ -61,7 +61,7 @@ func CommonPrefix(first types.Path, second types.Path) (types.Path, error) {
 		}
 	}
 	if index == 0 {
-		return nil, fmt.Errorf("There are no common prefiexs!")
+		return nil, fmt.Errorf("There are no common prefixes!")
 	}
 	return first[0 : index+1], nil
 }

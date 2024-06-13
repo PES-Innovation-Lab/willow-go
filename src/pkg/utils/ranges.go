@@ -21,20 +21,15 @@ func OrderRangePair[T constraints.Ordered | types.Path](a, b types.Range[T]) (ty
 	return b, a
 }
 
-// checks if range end is greater than range start
-func IsValidRange[T constraints.Ordered | types.Path](r types.Range[T]) bool {
-	if r.End == nil {
-		// open range, always valid
+/** Returns whether the range's end is greater than its start. */
+func IsValidRange[T constraints.Ordered](order types.TotalOrder, r types.Range[T]) bool {
+	if r.end == OPEN_END {
 		return true
 	}
-	// checks if T is Path, if yes, stores it in startPath and compares
-	if startPath, ok := any(r.Start).(types.Path); ok {
-		endPath := any(*r.End).(types.Path)
-		return OrderPath(endPath, startPath)
-	}
 
-	// normal comparison for constraints.Ordered types
-	return r.End >= r.Start
+	startEndOrder := order(r.Start, r.End)
+
+	return startEndOrder < 0
 }
 
 /** Returns whether a `Value` is included by a given `Range`. */
@@ -51,7 +46,7 @@ func IsIncludedRange[T constraints.Ordered | types.Path](order types.TotalOrder,
 }
 
 func IntersectRange[T constraints.Ordered | types.Path](order types.TotalOrder, a, b types.Range[T]) types.Range[T] {
-	
+
 	if err := IsValidRange(order, a); err != nil {
 		fmt.Println("Error with range a:", err)
 	}
@@ -86,7 +81,7 @@ func IntersectRange[T constraints.Ordered | types.Path](order types.TotalOrder, 
 		} else {
 			min = y
 		}
-		if (x, min){
+		if x < min {
 			max = y
 		} else {
 			max = x
@@ -102,13 +97,34 @@ func IntersectRange[T constraints.Ordered | types.Path](order types.TotalOrder, 
 			return //something like null
 		}
 		var z types.Range[T]
-		if order(min.End, max.End) < 0 {
-			z=min.End
+		if order(min.End, max.End) < 0 { //as ValueType in ts, find out why and if it has to implemented in go
+			z = min.End
 		} else {
-			z=max.End
+			z = max.End
 		}
 		return types.Range[T]{Start: max.Start, End: z}
 	}
 	return //something like null
 }
 
+func RangeisIncluded[T constraints.Ordered | types.Path](order types.TotalOrder, p, r types.Range[T]) bool {
+	if r.End == nil && p.End != nil {
+		return false
+	} else if p.End == nil {
+		return order(r.Start, p.Start) >= 0
+	}
+
+	gteStart := order(r.Start, p.Start) >= 0
+
+	if !gteStart {
+		return false
+	}
+
+	lteEnd := order(r.End, p.End) <= 0 //as ValueType in ts, check it out
+
+	return lteEnd
+}
+
+/*func IsValidRange3d [T constraints.Ordered | types.Path](orderSubspace types.TotalOrder, r types.Range3D[T]) bool {
+	if !IsValidRange(order)
+} */
