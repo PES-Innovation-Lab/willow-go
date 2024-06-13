@@ -4,7 +4,7 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-type Range[T constraints.Ordered] struct {
+type Range[T constraints.Ordered | Path] struct {
 	Start T
 	End   *T // Use pointer to indicate open range if nil
 }
