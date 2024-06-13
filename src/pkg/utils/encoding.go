@@ -16,11 +16,11 @@ func BigintToBytes(bigint uint64) []byte {
 }
 func GetWidthMax32Int[T constraints.Unsigned](num T) int {
 	switch true {
-	case int(num) < 1<<8:
+	case uint(num) < 1<<8:
 		return 1
-	case int(num) < 1<<16:
+	case uint(num) < 1<<16:
 		return 2
-	case int(num) < 1<<24:
+	case uint(num) < 1<<24:
 		return 3
 	default:
 		return 4
@@ -74,11 +74,11 @@ func DecodeIntMax32(bytes []byte, max uint32) (uint32, error) {
 
 func GetWidthMax64Int[T constraints.Unsigned](num T) int {
 	switch true {
-	case uint64(num) < 1<<8:
+	case uint(num) < 1<<8:
 		return 1
-	case uint64(num) < 1<<16:
+	case uint(num) < 1<<16:
 		return 2
-	case uint64(num) < 1<<32:
+	case uint(num) < 1<<32:
 		return 4
 	default:
 		return 8
@@ -111,8 +111,8 @@ func DecodeIntMax64(encoded []byte, max uint64) any {
 		return uint8(encoded[0])
 
 	case 2:
-
 		return binary.BigEndian.Uint16(encoded)
+
 	case 4:
 		return binary.BigEndian.Uint32(encoded)
 

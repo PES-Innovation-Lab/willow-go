@@ -64,8 +64,7 @@ func TestEncodeDecodeIntMax64(t *testing.T) {
 
 	for _, tc := range testCases {
 		encoded := utils.EncodeIntMax64(tc.num, tc.max)
-		decoded := utils.DecodeIntMax64(encoded, tc.max)
-		println(decoded)
+		decoded, _ := utils.DecodeIntMax64(encoded, tc.max)
 		if decoded != tc.expected {
 			t.Errorf("DecodeIntMax64(%d, %d) = %d; expected %d", tc.num, tc.max, decoded, tc.expected)
 		}
@@ -110,6 +109,6 @@ func BenchmarkDecodeIntMax64(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		utils.DecodeIntMax64(encoded, uint64(max))
+		utils.DecodeIntMax64(encoded, max)
 	}
 }
