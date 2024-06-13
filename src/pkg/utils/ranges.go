@@ -2,7 +2,7 @@ package utils
 
 import (
 	"github.com/PES-Innovation-Lab/willow-go/src/pkg/types"
-	"github.com/PES-Innovation-Lab/willow-go/src/pkg/utils"
+
 	"golang.org/x/exp/constraints"
 )
 
@@ -13,9 +13,9 @@ func IsValidRange[T constraints.Ordered | types.Path](r types.Range[T]) bool {
 		return true
 	}
 	// checks if T is Path, if yes, stores it in startPath and compares
-	if startPath, ok := any(r.Start).(Path); ok {
-		endPath := any(*r.End).(Path)
-		return utils.OrderPath(endPath, startPath) < 1
+	if startPath, ok := any(r.Start).(types.Path); ok {
+		endPath := any(*r.End).(types.Path)
+		return OrderPath(endPath, startPath) < 1
 	}
 
 	// normal comparison for constraints.Ordered types

@@ -1,9 +1,11 @@
-package utils
+package tests
 
 import (
 	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/PES-Innovation-Lab/willow-go/src/pkg/utils"
 )
 
 func TestBigintToBytes(t *testing.T) {
@@ -18,7 +20,7 @@ func TestBigintToBytes(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		result := BigintToBytes(tc.input)
+		result := utils.BigintToBytes(tc.input)
 		if !reflect.DeepEqual(result, tc.expected) {
 			t.Errorf("BigintToBytes(%d) = %v; expected %v", tc.input, result, tc.expected)
 		}
@@ -38,9 +40,14 @@ func TestEncodeDecodeIntMax32(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+<<<<<<< HEAD:src/pkg/utils/encoding/encoding_test.go
 		encoded := EncodeIntMax32(tc.num, tc.max)
 		fmt.Printf("encoded : %v\n", encoded)
 		decoded, err := DecodeIntMax32(encoded, tc.max)
+=======
+		encoded := utils.EncodeIntMax32(tc.num, tc.max)
+		decoded, err := utils.DecodeIntMax32(encoded, tc.max)
+>>>>>>> d8ad4ae71b36c28097c4a51144fe54a4bbe3309c:src/pkg/tests/encoding_test.go
 		if err != nil {
 			t.Errorf("Error decoding: %v", err)
 		}
@@ -63,8 +70,13 @@ func TestEncodeDecodeIntMax64(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+<<<<<<< HEAD:src/pkg/utils/encoding/encoding_test.go
 		encoded := EncodeIntMax64(tc.num, tc.max)
 		decoded := DecodeIntMax64(encoded, uint32(tc.max))
+=======
+		encoded := utils.EncodeIntMax64(tc.num, tc.max)
+		decoded := utils.DecodeIntMax64(encoded, tc.max)
+>>>>>>> d8ad4ae71b36c28097c4a51144fe54a4bbe3309c:src/pkg/tests/encoding_test.go
 		if decoded != tc.expected {
 			t.Errorf("DecodeIntMax64(%d, %d) = %d; expected %d", tc.num, tc.max, decoded, tc.expected)
 		}
