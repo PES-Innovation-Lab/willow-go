@@ -64,57 +64,20 @@ func IntersectRange[T types.OrderableGeneric](order types.TotalOrder[T], a, b ty
 		}
 	}
 
+func RangeIsIncluded[T types.OrderableGeneric](order types.TotalOrde, parentRange types.Range, childRange types.Range) bool{
+	if childRange.OpenEnd && !parentRange.OpenEnd{
+		return false
+	}
+	else{
+		gteStart =order(childRange.start, parentRange.start)>=0
+		if parentRange.OpenEnd{
+			return gteStart
+		}
+		else if !gteStart{
+			return false
+		}
 
-// 	x, y := OrderRangePair(a, b)
+	return order(childRange.End, parentRange.End)<=0	
+}
 
-// 	if x.End == nil && y.End == nil {
-// 		start := x.Start
-// 		if order(x.Start, y.Start) <= 0 {
-// 			start = y.Start
-// 		}
 
-// 		// Return the new Range with calculated start and nil
-// 		return types.Range[T]{Start: start, End: nil}
-// 	} else if x.End == nil && y.End != nil {
-// 		aStartBStartOrder := order(x.Start, y.Start)
-// 		aStartBEndOrder := order(x.Start, y.End)
-
-// 		if aStartBStartOrder <= 0 {
-// 			return y
-// 		} else if aStartBStartOrder > 0 && aStartBEndOrder < 0 {
-// 			return types.Range[T]{Start: x.Start, End: y.End}
-// 		}
-// 		return //something here instead of null, to figure
-// 	} else if x.End != nil && y.End != nil {
-// 		var min, max types.Range[T]
-// 		if order(x.Start, y.Start) < 0 {
-// 			min = x
-// 		} else {
-// 			z=max.End
-// 		}
-// 		return types.Range[T]{Start: max.Start, End: z}
-// 	}
-// 	return nil//something like null
-// }
-//
-// // func RangeisIncluded[T constraints.Ordered | types.Path](order types.TotalOrder, p, r types.Range[T]) bool {
-// // 	if r.End == nil && p.End != nil {
-// // 		return false
-// // 	} else if p.End == nil {
-// // 		return order(r.Start, p.Start) >= 0
-// // 	}
-//
-// // 	gteStart := order(r.Start, p.Start) >= 0
-//
-// // 	if !gteStart {
-// // 		return false
-// // 	}
-//
-// // 	lteEnd := order(r.End, p.End) <= 0 //as ValueType in ts, check it out
-//
-// // 	return lteEnd
-// // }
-//
-// // /*func IsValidRange3d [T constraints.Ordered | types.Path](orderSubspace types.TotalOrder, r types.Range3D[T]) bool {
-// // 	if !IsValidRange(order)
-// // } */
