@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/PES-Innovation-Lab/willow-go/src/pkg/utils"
+	"github.com/PES-Innovation-Lab/willow-go/utils"
 )
 
 func TestGrowingBytes_Relative(t *testing.T) {

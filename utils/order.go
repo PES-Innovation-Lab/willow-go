@@ -3,7 +3,7 @@ package utils
 import (
 	"math/big"
 
-	"github.com/PES-Innovation-Lab/willow-go/src/pkg/types"
+	"github.com/PES-Innovation-Lab/willow-go/types"
 )
 
 // OrderBytes compares two byte slices.

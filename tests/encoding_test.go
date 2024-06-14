@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/PES-Innovation-Lab/willow-go/src/pkg/utils"
+	"github.com/PES-Innovation-Lab/willow-go/utils"
 )
 
 func TestBigintToBytes(t *testing.T) {
@@ -54,22 +54,21 @@ func TestEncodeDecodeIntMax32(t *testing.T) {
 func TestEncodeDecodeIntMax64(t *testing.T) {
 	testCases := []struct {
 		num      uint64
-		max      uint64
 		expected uint64
 	}{
-		{0, 255, 0},
-		{1000, 65535, 1000},
-		{65536, 4294967295, 65536},
-		{4294967296, 18446744073709551615, 4294967296},
+		{0, 0},
+		{1000, 1000},
+		{65536, 65536},
+		{4294967296, 4294967296},
 	}
 
 	for _, tc := range testCases {
-		encoded := utils.EncodeIntMax64(tc.num, tc.max)
+		encoded := utils.EncodeIntMax64(tc.num)
 		// fmt.Println(encoded, tc.num, tc.max)
-		decoded := utils.DecodeIntMax64(encoded, tc.max)
+		decoded, _ := utils.DecodeIntMax64(encoded)
 		fmt.Printf("%s %s\n", reflect.TypeOf(decoded), reflect.TypeOf(tc.expected))
 		if decoded != tc.expected {
-			t.Errorf("DecodeIntMax64(%d, %d) = %d; expected %d", tc.num, tc.max, decoded, tc.expected)
+			t.Errorf("DecodeIntMax64(%d) = %d; expected %d", tc.num, decoded, tc.expected)
 		}
 	}
 }
@@ -97,21 +96,19 @@ func BenchmarkDecodeIntMax32(b *testing.B) {
 
 func BenchmarkEncodeIntMax64(b *testing.B) {
 	num := uint64(123456789012345)
-	max := uint64(18446744073709551615)
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		utils.EncodeIntMax64(num, max)
+		utils.EncodeIntMax64(num)
 	}
 }
 
 func BenchmarkDecodeIntMax64(b *testing.B) {
 	num := uint64(123456789012345)
-	max := uint64(18446744073709551615)
-	encoded := utils.EncodeIntMax64(num, max)
+	encoded := utils.EncodeIntMax64(num)
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		utils.DecodeIntMax64(encoded, max)
+		utils.DecodeIntMax64(encoded)
 	}
 }

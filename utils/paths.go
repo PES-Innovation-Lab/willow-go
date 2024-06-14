@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/PES-Innovation-Lab/willow-go/src/pkg/types"
+	"github.com/PES-Innovation-Lab/willow-go/types"
 	"golang.org/x/exp/constraints"
 )
 
