@@ -2,10 +2,19 @@ package utils
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/PES-Innovation-Lab/willow-go/src/pkg/types"
 	"golang.org/x/exp/constraints"
 )
+
+func PrefixesOf(path types.Path) []types.Path {
+	prefixes := []types.Path{[][]byte{}}
+	for i := range path {
+		prefixes = append(prefixes, path[0:i])
+	}
+	return prefixes
+}
 
 func IsValidPath[T constraints.Unsigned](path types.Path, pathParams types.PathParams[T]) (bool, error) {
 	/*
@@ -14,37 +23,37 @@ func IsValidPath[T constraints.Unsigned](path types.Path, pathParams types.PathP
 	  We run through each component of the path to check if all three constraints of a path is satisfied.
 	*/
 	if len(path) > int(pathParams.MaxComponentcount) {
-		return false, fmt.Errorf("The Path exceeds maximum allowed components.")
+		return false, fmt.Errorf("the Path exceeds maximum allowed components")
 	}
 
 	totalComponentCount := 0
 	for _, component := range path {
 		if len(component) > int(pathParams.MaxComponentLength) {
-			return false, fmt.Errorf("The component: %T exceeds maximum allowed component length.", component)
+			return false, fmt.Errorf("the component: %T exceeds maximum allowed component length", component)
 		}
 		totalComponentCount += len(component)
 	}
 	if totalComponentCount > int(pathParams.MaxPathLength) {
-		return false, fmt.Errorf("Path length exceeds maximum allowed length.")
+		return false, fmt.Errorf("path length exceeds maximum allowed length")
 	}
 	return true, nil
 }
 
-func IsPathPrefixed(prefix types.Path, path types.Path) bool {
+func IsPathPrefixed(prefix types.Path, path types.Path) (bool, error) {
 	/*
 	   This function, we check if prefix length is smalled than path length and then we run through each component to compare
 	   actual path to see if it's equal, if it is we can say that the given prefix prefixes the given path
 	*/
 	if len(prefix) > len(path) {
-		return false
+		return false, fmt.Errorf("the prefix cannot be greater than the path it prefixes")
 	}
 	for index, prefixComponent := range prefix {
 		pathComponent := path[index]
 		if OrderBytes(prefixComponent, pathComponent) != 0 {
-			return false
+			return false, fmt.Errorf("the given prefix is not a prefix for the given path")
 		}
 	}
-	return true
+	return true, nil
 }
 
 func CommonPrefix(first types.Path, second types.Path) (types.Path, error) {
@@ -61,12 +70,107 @@ func CommonPrefix(first types.Path, second types.Path) (types.Path, error) {
 		}
 	}
 	if index == 0 {
-		return nil, fmt.Errorf("There are no common prefixes!")
+		return nil, fmt.Errorf("there are no common prefixes")
 	}
 	return first[0 : index+1], nil
 }
 
-// TO-DO implement Encode and Decode functions for Path
-// func EncodePath[T constraints.Unsigned](path types.Path, pathParams types.PathParams[T]) []byte {
-// 	componentCountBytes := EncodingIntMax32(T(len(path)), pathParams.MaxPathLength)
-// }
+func EncodePath[T constraints.Unsigned](pathParams types.PathParams[T], path types.Path) []byte {
+	/*
+	   this function takes in a path and a pathParams variable relted to it, we take the path,
+	   The way path gets encoded is, the first "MaxComponentCount" width bytes are number of components,
+	   the next number of components is the length of the component followed by the respective component.
+	*/
+	componentCountBytes := EncodeIntMax32(T(len(path)), pathParams.MaxPathLength)
+	componentBytes := componentCountBytes
+	for _, component := range path {
+		lengthBytesComponent := EncodeIntMax32(T(len(component)), pathParams.MaxComponentLength)
+		componentBytes = append(componentBytes, lengthBytesComponent...)
+		componentBytes = append(componentBytes, component...)
+	}
+	return componentBytes
+}
+
+func DecodePath[T constraints.Unsigned](pathParams types.PathParams[T], encPath []byte) [][]byte {
+	/*
+	   It checks the number of components in the first "MaxComponentCount" width and then interates through each
+	   Component, checks it's length and extracts the component based on the length
+	*/
+	maxCountWidth := GetWidthMax32Int(pathParams.MaxComponentcount)
+	componentCountBytes := encPath[0:maxCountWidth]
+
+	componentCount, err := DecodeIntMax32(componentCountBytes, pathParams.MaxComponentcount)
+	if err != nil {
+		log.Fatalf("error: %s", err)
+	}
+	pos := maxCountWidth
+
+	maxComponentLengthWidth := GetWidthMax32Int(pathParams.MaxComponentLength)
+	var path [][]byte
+
+	for i := 0; i < int(componentCount); i++ {
+		lengthComponentBytes := encPath[pos : pos+maxComponentLengthWidth]
+		lengthComponent, err := DecodeIntMax32(lengthComponentBytes, pathParams.MaxComponentLength)
+		if err != nil {
+			log.Fatalf("error: %s", err)
+		}
+		pathComponent := encPath[pos+maxComponentLengthWidth : pos+maxComponentLengthWidth+int(lengthComponent)]
+
+		path = append(path, pathComponent)
+		pos += maxComponentLengthWidth + int(lengthComponent)
+
+	}
+	return path
+}
+
+func EncodePathLength[T constraints.Unsigned](pathParams types.PathParams[T], path types.Path) uint64 {
+	countWidth := GetWidthMax32Int(pathParams.MaxComponentcount)
+
+	length := countWidth
+
+	compLenWidth := GetWidthMax32Int(pathParams.MaxComponentLength)
+
+	for _, comp := range path {
+		length += compLenWidth
+		length += len(comp)
+	}
+	return uint64(length)
+}
+
+func EncodeRelativePath[T constraints.Unsigned](pathParams types.PathParams[T], toEncode types.Path, refernce types.Path) []byte {
+	longestPrefix, err := CommonPrefix(toEncode, refernce)
+	if err != nil {
+		log.Fatalf("error in calculating common paths: %s", err)
+	}
+	longestPrefixLength := len(longestPrefix)
+	prefixLengthBytes := EncodeIntMax32(T(longestPrefixLength), pathParams.MaxComponentcount)
+	suffix := toEncode[longestPrefixLength:]
+	suffixEncoded := EncodePath(pathParams, suffix)
+
+	return append(prefixLengthBytes, suffixEncoded...)
+}
+
+func DecodeRelativePath[T constraints.Unsigned](
+	pathParams types.PathParams[T],
+	encRelPath []byte,
+	refernce types.Path,
+) types.Path {
+	prefixLengthWidth := GetWidthMax32Int(pathParams.MaxComponentcount)
+	prefixLength, err := DecodeIntMax32(encRelPath[0:prefixLengthWidth], pathParams.MaxComponentcount)
+	if err != nil {
+		log.Fatalf("error: %s", err)
+	}
+
+	prefix := refernce[0:prefixLength]
+
+	suffix := DecodePath(pathParams, encRelPath[prefixLengthWidth:])
+
+	return append(prefix, suffix...)
+}
+
+func DecodeRelPathStream[T constraints.Unsigned](
+	pathParams types.PathParams[T],
+	bytes GrowingBytes,
+	refernce types.Path,
+) {
+}

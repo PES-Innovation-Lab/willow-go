@@ -90,52 +90,31 @@ func IntersectRange[T types.OrderableGeneric](order types.TotalOrder[T], a, b ty
 // 		if order(x.Start, y.Start) < 0 {
 // 			min = x
 // 		} else {
-// 			min = y
+// 			z=max.End
 // 		}
-// 		if x < min {
-// 			max = y
-// 		} else {
-// 			max = x
-// 		}
-
-		// reject if min's end is lte max's start
-		if order(min.End, max.Start) <= 0 {
-			return //something like null
-		}
-
-		// reject if max's start is gte min's end
-		if order(max.Start, min.End) >= 0 {
-			return //something like null
-		}
-		var z types.Range[T]
-		if order(min.End, max.End) < 0 { //as ValueType in ts, find out why and if it has to implemented in go
-			z=min.End
-		} else {
-			z=max.End
-		}
-		return types.Range[T]{Start: max.Start, End: z}
-	}
-	return //something like null
-}
-
-// func RangeisIncluded[T constraints.Ordered | types.Path](order types.TotalOrder, p, r types.Range[T]) bool {
-// 	if r.End == nil && p.End != nil {
-// 		return false
-// 	} else if p.End == nil {
-// 		return order(r.Start, p.Start) >= 0
+// 		return types.Range[T]{Start: max.Start, End: z}
 // 	}
-
-// 	gteStart := order(r.Start, p.Start) >= 0
-
-// 	if !gteStart {
-// 		return false
-// 	}
-
-// 	lteEnd := order(r.End, p.End) <= 0 //as ValueType in ts, check it out
-
-// 	return lteEnd
+// 	return nil//something like null
 // }
-
-// /*func IsValidRange3d [T constraints.Ordered | types.Path](orderSubspace types.TotalOrder, r types.Range3D[T]) bool {
-// 	if !IsValidRange(order)
-// } */
+//
+// // func RangeisIncluded[T constraints.Ordered | types.Path](order types.TotalOrder, p, r types.Range[T]) bool {
+// // 	if r.End == nil && p.End != nil {
+// // 		return false
+// // 	} else if p.End == nil {
+// // 		return order(r.Start, p.Start) >= 0
+// // 	}
+//
+// // 	gteStart := order(r.Start, p.Start) >= 0
+//
+// // 	if !gteStart {
+// // 		return false
+// // 	}
+//
+// // 	lteEnd := order(r.End, p.End) <= 0 //as ValueType in ts, check it out
+//
+// // 	return lteEnd
+// // }
+//
+// // /*func IsValidRange3d [T constraints.Ordered | types.Path](orderSubspace types.TotalOrder, r types.Range3D[T]) bool {
+// // 	if !IsValidRange(order)
+// // } */
