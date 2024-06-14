@@ -75,7 +75,7 @@ func IntersectRange[T types.OrderableGeneric](order types.TotalOrder[T], a, b ty
 		return false, types.Range[T]{}
 	}
 
-	// Case when both ranges are closed-ended
+	// case when both ranges are closed-ended
 	if !a.OpenEnd && !b.OpenEnd {
 		min := a
 		max := b
@@ -89,9 +89,9 @@ func IntersectRange[T types.OrderableGeneric](order types.TotalOrder[T], a, b ty
 		}
 
 		// reject if max's start is greater than or equal to min's end
-		if order(max.Start, min.End) >= 0 {
-			return false, types.Range[T]{}
-		}
+		// if order(max.Start, min.End) >= 0 {
+		// 	return false, types.Range[T]{}
+		// }
 
 		return true, types.Range[T]{
 			Start: max.Start,
@@ -101,24 +101,103 @@ func IntersectRange[T types.OrderableGeneric](order types.TotalOrder[T], a, b ty
 				}
 				return max.End
 			}(),
+			OpenEnd: false,
 		}
 	}
 
 	return false, types.Range[T]{}
 }
 
-func RangeIsIncluded[T types.OrderableGeneric](order types.TotalOrder[T], parentRange types.Range[T], childRange types.Range[T]) bool{
-	if childRange.OpenEnd && !parentRange.OpenEnd{
+func RangeIsIncluded[T types.OrderableGeneric](order types.TotalOrder[T], parentRange types.Range[T], childRange types.Range[T]) bool {
+	if childRange.OpenEnd && !parentRange.OpenEnd {
 		return false
 	} else {
-		gteStart =order(childRange.start, parentRange.start)>=0
-		if parentRange.OpenEnd{
+		gteStart := order(childRange.Start, parentRange.Start) >= 0
+		if parentRange.OpenEnd {
 			return gteStart
-		} else if !gteStart{
+		} else if !gteStart {
 			return false
 		}
 
-	return order(childRange.End, parentRange.End)<=0	
+		return order(childRange.End, parentRange.End) <= 0
+
+	}
 }
 
-func IsValidRange3d[SubspaceType types.OrderableGeneric](order types.types.TotalOrder)
+func IsValidRange3d[SubspaceId types.OrderableGeneric](OrderSubspace types.TotalOrder[SubspaceId], r types.Range3d[SubspaceId]) bool {
+	if !IsValidRange(OrderTimestamp, r.TimeRange) {
+		return false
+	}
+	if !IsValidRange(OrderPath, r.PathRange) {
+		return false
+	}
+	if !IsValidRange(OrderSubspace, r.SubspaceRange) {
+		return false
+	}
+	return true
+}
+
+func IsIncluded3d[SubspaceId types.OrderableGeneric](orderSubspace types.TotalOrder[SubspaceId], r types.Range3d[SubspaceId], position types.Position3d[SubspaceId]) bool {
+	if !IsIncludedRange(OrderTimestamp, r.TimeRange, position.Time) {
+		return false
+	}
+	if !IsIncludedRange(OrderPath, r.PathRange, position.Path) {
+		return false
+	}
+	if !IsIncludedRange(orderSubspace, r.SubspaceRange, position.Subspace) {
+		return false
+	}
+	return true
+}
+
+func IntersectRange3d[SubspaceId types.OrderableGeneric](OrderSubspace types.TotalOrder[SubspaceId], a types.Range3d[SubspaceId], b types.Range3d[SubspaceId]) (bool, types.Range3d[SubspaceId]) {
+	ok, intersectionTimestamp := IntersectRange(OrderTimestamp, a.TimeRange, b.TimeRange)
+	if !ok {
+		return false, types.Range3d[SubspaceId]{}
+	}
+	ok, intersectionSubspace := IntersectRange(OrderSubspace, a.SubspaceRange, b.SubspaceRange)
+	if !ok {
+		return false, types.Range3d[SubspaceId]{}
+	}
+	ok, intersectionPath := IntersectRange(OrderPath, a.PathRange, b.PathRange)
+	if !ok {
+		return false, types.Range3d[SubspaceId]{}
+	}
+
+	return true, types.Range3d[SubspaceId]{
+		TimeRange:     intersectionTimestamp,
+		PathRange:     intersectionPath,
+		SubspaceRange: intersectionSubspace,
+	}
+}
+
+func IsEqualRangeValue[T types.OrderableGeneric](order types.TotalOrder[T], a types.Range[T], isStartA bool, b types.Range[T], isStartB bool) bool {
+	if a.OpenEnd && b.OpenEnd {
+		return true
+	}
+
+	var x, y T
+
+	switch isStartA {
+	case true:
+		x = a.Start
+	case false:
+		x = a.End
+
+	switch isStartB {
+	case true:
+		y = b.Start
+	case false:
+		y = b.End
+		
+	}
+
+
+	if !a.OpenEnd && !b.OpenEnd && order(x,y) == 0{
+		return true
+	}
+	return false
+}
+// Volunteer based
+// Personalisable
+

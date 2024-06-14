@@ -1,8 +1,6 @@
 package utils
 
 import (
-	"math/big"
-
 	"github.com/PES-Innovation-Lab/willow-go/types"
 )
 
@@ -31,7 +29,7 @@ func OrderBytes(a, b []byte) types.Rel {
 }
 
 // OrderTimestamp compares two big.Int values.
-func OrderTimestamp(a, b *big.Int) types.Rel {
+func OrderTimestamp(a, b uint64) types.Rel {
 	return a.Cmp(b)
 }
 
