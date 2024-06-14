@@ -16,3 +16,9 @@ type Range3D[SubspaceId constraints.Ordered] struct {
 	Paths     Range[Path]
 	Times     Range[uint64]
 }
+
+type Position3d[SubspaceId constraints.Ordered] struct {
+	Subspace SubspaceId
+	Path     Path
+	Time     uint64
+}

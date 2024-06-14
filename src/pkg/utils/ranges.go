@@ -45,7 +45,7 @@ func IsIncludedRange[T constraints.Ordered | types.Path](order types.TotalOrder,
 	return ltEnd
 }
 
-func IntersectRange[T constraints.Ordered | types.Path](order types.TotalOrder, a, b types.Range[T]) types.Range[T] {
+func IntersectRange[T constraints.Ordered | types.Path](order types.TotalOrder, a, b types.Range[T]) *types.Range[T] {
 	
 	if err := IsValidRange(order, a); err != nil {
 		fmt.Println("Error with range a:", err)
@@ -89,12 +89,12 @@ func IntersectRange[T constraints.Ordered | types.Path](order types.TotalOrder, 
 
 		// reject if min's end is lte max's start
 		if order(min.End, max.Start) <= 0 {
-			return //something like null
+			return nil
 		}
 
 		// reject if max's start is gte min's end
 		if order(max.Start, min.End) >= 0 {
-			return //something like null
+			return nil
 		}
 		var z types.Range[T]
 		if order(min.End, max.End) < 0 { //as ValueType in ts, find out why and if it has to implemented in go
@@ -102,9 +102,9 @@ func IntersectRange[T constraints.Ordered | types.Path](order types.TotalOrder, 
 		} else {
 			z=max.End
 		}
-		return types.Range[T]{Start: max.Start, End: z}
+		return &types.Range[T]{Start: max.Start, End: z}
 	}
-	return //something like null
+	return nil
 }
 
 func RangeisIncluded[T constraints.Ordered | types.Path](order types.TotalOrder, p, r types.Range[T]) bool {

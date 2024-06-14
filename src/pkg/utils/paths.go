@@ -30,21 +30,21 @@ func IsValidPath[T constraints.Unsigned](path types.Path, pathParams types.PathP
 	return true, nil
 }
 
-func IsPathPrefixed(prefix types.Path, path types.Path) (bool, error) {
+func IsPathPrefixed(prefix types.Path, path types.Path) bool {
 	/*
 	   This function, we check if prefix length is smalled than path length and then we run through each component to compare
 	   actual path to see if it's equal, if it is we can say that the given prefix prefixes the given path
 	*/
 	if len(prefix) > len(path) {
-		return false, fmt.Errorf("The prefix cannot be greater than the path it prefixes.")
+		return false
 	}
 	for index, prefixComponent := range prefix {
 		pathComponent := path[index]
 		if OrderBytes(prefixComponent, pathComponent) != 0 {
-			return false, fmt.Errorf("The given prefix is not a prefix for the given path.")
+			return false
 		}
 	}
-	return true, nil
+	return true
 }
 
 func CommonPrefix(first types.Path, second types.Path) (types.Path, error) {
