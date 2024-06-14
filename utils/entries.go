@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"github.com/PES-Innovation-Lab/willow-go/src/pkg/types"
+	types "github.com/PES-Innovation-Lab/willow-go/types"
 	"golang.org/x/exp/constraints"
 )
 

@@ -3,8 +3,8 @@ package tests
 import (
 	"testing"
 
-	"github.com/PES-Innovation-Lab/willow-go/src/pkg/types"
-	"github.com/PES-Innovation-Lab/willow-go/src/pkg/utils"
+	"github.com/PES-Innovation-Lab/willow-go/types"
+	"github.com/PES-Innovation-Lab/willow-go/utils"
 )
 
 func TestOrderPath(t *testing.T) {
