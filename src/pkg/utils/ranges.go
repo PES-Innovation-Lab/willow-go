@@ -9,13 +9,12 @@ import (
 var OPEN_END = new(interface{})
 
 // orderRangePair orders two Range structs based on their end values.
-func OrderRangePair[T constraints.Ordered | types.Path](a, b types.Range[T]) (types.Range[T], types.Range[T]) {
+func OrderRangePair[T types.OrderableGeneric](a, b types.Range[T]) (types.Range[T], types.Range[T]) {
 	if (a.End == nil && b.End == nil) ||
 		(a.End != nil && b.End != nil) ||
 		(a.End == nil && b.End != nil) {
 		return a, b
 	}
-
 	return b, a
 }
 
@@ -38,14 +37,33 @@ func IsIncludedRange[T types.OrderableGeneric](order types.TotalOrder[T], r type
 	return ltEnd
 }
 
-func IntersectRange[T constraints.Ordered | types.Path](order types.TotalOrder, a, b types.Range[T]) types.Range[T] {
+func IntersectRange[T types.OrderableGeneric](order types.TotalOrder[T], a, b types.Range[T]) types.Range[T] {
 	
-	if err := IsValidRange(order, a); err != nil {
-		fmt.Println("Error with range a:", err)
+	if !IsValidRange(order, a) || !IsValidRange(order, b) {
+		fmt.Println("Paths are not valid paths... BOZO CAN'T EVEN PASS PATHS PROPERLY AHH")
 	}
-	if err := IsValidRange(order, b); err != nil {
-		fmt.Println("Error with range b:", err) // Expected
+
+	a, b :=  OrderRangePair(a, b)
+	if a.OpenEnd && b.OpenEnd {
+		return types.Range[T] {
+			Start: func() T { if order(a.Start, b.Start) <= 0 { return b.Start } else { return a.Start } }(),
+			End: 0,
+			OpenEnd: true,
+		}
+	} else if a.OpenEnd && !b.OpenEnd {
+		aStartbStartOrder := order(a.Start, b.Start)
+		aStartbEndOrder := order(a.Start, b.Start)
+
+		if aStartbStartOrder <= 0 {
+			return b
+		} else if aStartbStartOrder > 0 && aStartbEndOrder < 0 {
+			return types.Range[T] {
+				Start: a.Start,
+				End: b.End,
+			}
+		}
 	}
+
 
 // 	x, y := OrderRangePair(a, b)
 
