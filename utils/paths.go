@@ -11,7 +11,7 @@ import (
 func PrefixesOf(path types.Path) []types.Path {
 	prefixes := []types.Path{[][]byte{}}
 	for i := range path {
-		prefixes = append(prefixes, path[0:i])
+		prefixes = append(prefixes, path[0:i+1])
 	}
 	return prefixes
 }

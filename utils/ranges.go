@@ -107,6 +107,7 @@ func IntersectRange[T types.OrderableGeneric](order types.TotalOrder[T], a, b ty
 	return false, types.Range[T]{}
 }
 
+/*
 func RangeIsIncluded[T types.OrderableGeneric](order types.TotalOrder[T], parentRange types.Range[T], childRange types.Range[T]) bool{
 	if childRange.OpenEnd && !parentRange.OpenEnd{
 		return false
@@ -118,7 +119,7 @@ func RangeIsIncluded[T types.OrderableGeneric](order types.TotalOrder[T], parent
 			return false
 		}
 
-	return order(childRange.End, parentRange.End)<=0	
+	return order(childRange.End, parentRange.End)<=0
 }
-
-func IsValidRange3d[SubspaceType types.OrderableGeneric](order types.types.TotalOrder)
+} */
+//func IsValidRange3d[SubspaceType types.OrderableGeneric](order types.types.TotalOrder)
