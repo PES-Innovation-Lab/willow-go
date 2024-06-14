@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -64,9 +65,9 @@ func TestEncodeDecodeIntMax64(t *testing.T) {
 
 	for _, tc := range testCases {
 		encoded := utils.EncodeIntMax64(tc.num, tc.max)
-		// println(encoded, tc.num, tc.max)
+		// fmt.Println(encoded, tc.num, tc.max)
 		decoded := utils.DecodeIntMax64(encoded, tc.max)
-		println(decoded)
+		fmt.Printf("%s %s\n", reflect.TypeOf(decoded), reflect.TypeOf(tc.expected))
 		if decoded != tc.expected {
 			t.Errorf("DecodeIntMax64(%d, %d) = %d; expected %d", tc.num, tc.max, decoded, tc.expected)
 		}

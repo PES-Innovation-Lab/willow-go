@@ -30,6 +30,7 @@ func GetWidthMax32Int[T constraints.Unsigned](num T) int {
 
 func EncodeIntMax32[T constraints.Unsigned](num, max T) []byte {
 	width := GetWidthMax32Int(max)
+
 	bytes := make([]byte, width)
 
 	switch width {
@@ -47,7 +48,7 @@ func EncodeIntMax32[T constraints.Unsigned](num, max T) []byte {
 	return bytes
 }
 
-func DecodeIntMax32(bytes []byte, max uint32) (uint32, error) {
+func DecodeIntMax32[T constraints.Unsigned](bytes []byte, max T) (uint32, error) {
 	bytesToDecodeLength := GetWidthMax32Int(max)
 
 	if len(bytes) != bytesToDecodeLength {
@@ -106,7 +107,7 @@ func EncodeIntMax64[T constraints.Unsigned](num, max T) []byte {
 }
 
 func DecodeIntMax64(encoded []byte, max uint64) any {
-	//reader := bytes.NewReader(encoded)
+	// reader := bytes.NewReader(encoded)
 
 	switch len(encoded) {
 	case 1:
