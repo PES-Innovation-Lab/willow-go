@@ -150,6 +150,35 @@ func EncodeRelativePath[T constraints.Unsigned](pathParams types.PathParams[T], 
 	return append(prefixLengthBytes, suffixEncoded...)
 }
 
+func DecodePathStream[T constraints.Unsigned](pathParams types.PathParams[T], bytes *GrowingBytes) types.Path {
+	maxCountWidth := GetWidthMax32Int(pathParams.MaxComponentcount)
+
+	bytes.NextAbsolute(maxCountWidth)
+
+	countBytes := bytes.Array[0:maxCountWidth]
+	componentCount, _ := DecodeIntMax32(countBytes, pathParams.MaxComponentcount)
+
+	bytes.Prune(maxCountWidth)
+	componentLengthWidth := GetWidthMax32Int(pathParams.MaxComponentLength)
+	var path types.Path
+
+	for i := 0; i < int(componentCount); i++ {
+		bytes.NextAbsolute(componentLengthWidth)
+
+		lengthBytes := bytes.Array[0:componentLengthWidth]
+		componentLength, _ := DecodeIntMax32(lengthBytes, pathParams.MaxComponentLength)
+
+		bytes.NextAbsolute(componentLengthWidth + componentLengthWidth)
+
+		pathComponent := bytes.Array[componentLengthWidth : componentLengthWidth+int(componentLength)]
+
+		path = append(path, pathComponent)
+
+		bytes.Prune(componentLengthWidth + int(componentLength))
+	}
+	return path
+}
+
 func DecodeRelativePath[T constraints.Unsigned](
 	pathParams types.PathParams[T],
 	encRelPath []byte,
@@ -170,7 +199,29 @@ func DecodeRelativePath[T constraints.Unsigned](
 
 func DecodeRelPathStream[T constraints.Unsigned](
 	pathParams types.PathParams[T],
-	bytes GrowingBytes,
-	refernce types.Path,
-) {
+	bytes *GrowingBytes,
+	reference types.Path,
+) types.Path {
+	prefixLengthWidth := GetWidthMax32Int(pathParams.MaxComponentcount)
+	bytes.NextAbsolute(prefixLengthWidth)
+
+	prefixLength, _ := DecodeIntMax32(bytes.Array[0:prefixLengthWidth], pathParams.MaxComponentcount)
+	prefix := reference[0:prefixLength]
+	bytes.Prune(prefixLengthWidth)
+
+	suffix := DecodePathStream(pathParams, bytes)
+
+	return append(prefix, suffix...)
+}
+
+func EncodePathRelativeLength[T constraints.Unsigned](pathParams types.PathParams[T], primary types.Path, refernce types.Path) int {
+	longestPrefix, err := CommonPrefix(primary, refernce)
+	if err != nil {
+		log.Fatalf("Error: %s", err)
+	}
+	longestPrefixLength := len(longestPrefix)
+	prefixLengthLength := GetWidthMax32Int(pathParams.MaxComponentcount)
+	suffix := primary[longestPrefixLength:]
+	suffixLength := len(suffix)
+	return prefixLengthLength + suffixLength
 }
