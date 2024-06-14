@@ -19,7 +19,7 @@ func TestBigintToBytes(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		result := utils.BigintToBytes(tc.input)
+		result := utils.BigIntToBytes(tc.input)
 		if !reflect.DeepEqual(result, tc.expected) {
 			t.Errorf("BigintToBytes(%d) = %v; expected %v", tc.input, result, tc.expected)
 		}
