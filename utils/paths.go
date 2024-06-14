@@ -72,7 +72,7 @@ func CommonPrefix(first types.Path, second types.Path) (types.Path, error) {
 	if index == 0 {
 		return nil, fmt.Errorf("there are no common prefixes")
 	}
-	return first[0 : index+1], nil
+	return first[0:index], nil
 }
 
 func EncodePath[T constraints.Unsigned](pathParams types.PathParams[T], path types.Path) []byte {

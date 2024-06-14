@@ -9,13 +9,12 @@ import (
 )
 
 func TestPrefixesOf(t *testing.T) {
-
 	type PrefixesOfVector struct {
 		Path     types.Path
 		Prefixes []types.Path
 	}
 
-	var PrefixesOfVectors = []PrefixesOfVector{
+	PrefixesOfVectors := []PrefixesOfVector{
 		{
 			Path: types.Path{},
 			Prefixes: []types.Path{
@@ -63,7 +62,7 @@ func TestIsValidPath(t *testing.T) {
 	}
 
 	// Define your validPathVectors as a slice of ValidPathVector
-	var validPathVectors = []ValidPathVector{
+	validPathVectors := []ValidPathVector{
 		{
 			Path:               types.Path{{0}},
 			MaxComponentCount:  1,
@@ -114,7 +113,6 @@ func TestIsValidPath(t *testing.T) {
 }
 
 func TestIsPathPrefixed(t *testing.T) {
-
 	type PrefixPathVector struct {
 		Path           types.Path
 		Prefix         types.Path
@@ -136,7 +134,8 @@ func TestIsPathPrefixed(t *testing.T) {
 			Path:           types.Path{{0}, {2}},
 			Prefix:         types.Path{make([]byte, 1)},
 			ExpectedResult: true,
-		}, {
+		},
+		{
 			Path:           types.Path{{1}, {2}, {3}},
 			Prefix:         types.Path{{1}, {2}, {3}, {4}},
 			ExpectedResult: false,
@@ -148,6 +147,52 @@ func TestIsPathPrefixed(t *testing.T) {
 		if result != vector.ExpectedResult {
 			t.Error("Test isPrefixed failed!!")
 		}
+	}
+}
+
+func TestCommonPrefix(t *testing.T) {
+	type PrefixPathVector struct {
+		Path1    types.Path
+		Path2    types.Path
+		Expected types.Path
+	}
+	prefixVectors := []PrefixPathVector{
+		{
+			Path1:    types.Path{{0}, {1}, {2}},
+			Path2:    types.Path{{0}, {1}, {2}, {3}},
+			Expected: types.Path{{0}, {1}, {2}},
+		},
+		{
+			Path1:    types.Path{{0}},
+			Path2:    types.Path{{0}},
+			Expected: types.Path{{0}},
+		},
+		{
+			Path1:    types.Path{{0}, {1}, {2}},
+			Path2:    types.Path{{1}, {2}, {3}},
+			Expected: types.Path{},
+		},
+		{
+			Path1:    types.Path{{0}, {1}, {2}, {4}},
+			Path2:    types.Path{{0}, {1}, {3}, {2}},
+			Expected: types.Path{{0}, {1}},
+		},
+	}
+	for _, vector := range prefixVectors {
+		result, _ := utils.CommonPrefix(vector.Path1, vector.Path2)
+		for index, component := range result {
+			if utils.OrderBytes(result[index], component) != 0 {
+				t.Errorf("Test failed! Expected")
+			}
+		}
+	}
+}
+
+func TestEncodeDecodePrefix(t *testing.T) {
+	pathParams := types.PathParams[uint8]{
+		MaxComponentcount:  8,
+		MaxPathLength:      8,
+		MaxComponentLength: 8,
 	}
 
 }
