@@ -5,15 +5,15 @@ import "golang.org/x/exp/constraints"
 
 type Entry[NamespaceId, SubspaceId, PayloadDigest constraints.Ordered] struct {
 	// ID of the namespace the Entry is a part of
-	namespace_id NamespaceId
+	Namespace_id NamespaceId
 	// ID of the subspace to which the Entry belongs to
-	subspace_id SubspaceId
+	Subspace_id SubspaceId
 	// The path which the entry has
-	path Path
+	Path Path
 	// The hashed payload
-	payload_digest PayloadDigest
+	Payload_digest PayloadDigest
 	// The time at which the entry was created in microseconds
-	timestamp uint64
+	Timestamp uint64
 	// The length of the payload
-	payload_length uint64
+	Payload_length uint64
 }

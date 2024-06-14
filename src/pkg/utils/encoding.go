@@ -3,13 +3,12 @@ package utils
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
 
 	"golang.org/x/exp/constraints"
 )
 
 // Encode a bigint
-func BigintToBytes(bigint uint64) []byte {
+func BigIntToBytes(bigint uint64) []byte {
 	bytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(bytes, bigint)
 	return bytes
@@ -102,24 +101,22 @@ func EncodeIntMax64[T constraints.Unsigned](num T) []byte {
 		binary.BigEndian.PutUint64(bytes, uint64(num))
 	}
 
-	fmt.Println(bytes, width, num)
 	return bytes
 }
 
-func DecodeIntMax64(encoded []byte) any {
-	// reader := bytes.NewReader(encoded)
+func DecodeIntMax64(encoded []byte) (uint64, error) {
 	switch len(encoded) {
 	case 1:
-		return uint8(encoded[0])
+		return uint64(encoded[0]), nil
 
 	case 2:
-		return binary.BigEndian.Uint16(encoded)
+		return uint64(binary.BigEndian.Uint16(encoded)), nil
 
 	case 4:
-		return binary.BigEndian.Uint32(encoded)
+		return uint64(binary.BigEndian.Uint32(encoded)), nil
 
 	case 8:
-		return binary.BigEndian.Uint64(encoded)
+		return binary.BigEndian.Uint64(encoded), nil
 	default:
 		panic("invalid length")
 	}

@@ -8,6 +8,14 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
+func PrefixesOf(path types.Path) []types.Path {
+	prefixes := []types.Path{[][]byte{}}
+	for i := range path {
+		prefixes = append(prefixes, path[0:i])
+	}
+	return prefixes
+}
+
 func IsValidPath[T constraints.Unsigned](path types.Path, pathParams types.PathParams[T]) (bool, error) {
 	/*
 	  This function takes in a pathParams variable defined by the owner of the network and a path variable,
@@ -67,7 +75,7 @@ func CommonPrefix(first types.Path, second types.Path) (types.Path, error) {
 	return first[0 : index+1], nil
 }
 
-func EncodePath[T constraints.Unsigned](path types.Path, pathParams types.PathParams[T]) []byte {
+func EncodePath[T constraints.Unsigned](pathParams types.PathParams[T], path types.Path) []byte {
 	/*
 	   this function takes in a path and a pathParams variable relted to it, we take the path,
 	   The way path gets encoded is, the first "MaxComponentCount" width bytes are number of components,
@@ -83,7 +91,7 @@ func EncodePath[T constraints.Unsigned](path types.Path, pathParams types.PathPa
 	return componentBytes
 }
 
-func DecodePath[T constraints.Unsigned](encPath []byte, pathParams types.PathParams[T]) [][]byte {
+func DecodePath[T constraints.Unsigned](pathParams types.PathParams[T], encPath []byte) [][]byte {
 	/*
 	   It checks the number of components in the first "MaxComponentCount" width and then interates through each
 	   Component, checks it's length and extracts the component based on the length
@@ -115,7 +123,7 @@ func DecodePath[T constraints.Unsigned](encPath []byte, pathParams types.PathPar
 	return path
 }
 
-func EncodePathLength[T constraints.Unsigned](path types.Path, pathParams types.PathParams[T]) uint64 {
+func EncodePathLength[T constraints.Unsigned](pathParams types.PathParams[T], path types.Path) uint64 {
 	countWidth := GetWidthMax32Int(pathParams.MaxComponentcount)
 
 	length := countWidth
@@ -137,7 +145,7 @@ func EncodeRelativePath[T constraints.Unsigned](pathParams types.PathParams[T], 
 	longestPrefixLength := len(longestPrefix)
 	prefixLengthBytes := EncodeIntMax32(T(longestPrefixLength), pathParams.MaxComponentcount)
 	suffix := toEncode[longestPrefixLength:]
-	suffixEncoded := EncodePath(suffix, pathParams)
+	suffixEncoded := EncodePath(pathParams, suffix)
 
 	return append(prefixLengthBytes, suffixEncoded...)
 }
@@ -155,7 +163,7 @@ func DecodeRelativePath[T constraints.Unsigned](
 
 	prefix := refernce[0:prefixLength]
 
-	suffix := DecodePath(encRelPath[prefixLengthWidth:], pathParams)
+	suffix := DecodePath(pathParams, encRelPath[prefixLengthWidth:])
 
 	return append(prefix, suffix...)
 }
