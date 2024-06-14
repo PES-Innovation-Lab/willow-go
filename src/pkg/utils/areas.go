@@ -2,7 +2,7 @@ package utils
 
 import (
 	"fmt"
-	"math/big"
+	"math"
 
 	"github.com/PES-Innovation-Lab/willow-go/src/pkg/types"
 	"golang.org/x/exp/constraints"
@@ -119,15 +119,19 @@ func AreaTo3dRange[SubspaceType constraints.Ordered](opts Options[SubspaceType],
 }
 
 // Define a constant for a really big integer (2^64 in this case)
-const REALLY_BIG_INT string = "18446744073709551616"
+const REALLY_BIG_INT uint64 = 18446744073709551601
 
 /** `Math.min`, but for `BigInt`. */
 // bigIntMin returns the minimum of two big.Int values
-func bigIntMin(a, b *big.Int) *big.Int {
-	if a.Cmp(b) < 0 {
-		return a
+func bigIntMin(a, b uint64) uint64 {
+	if a > b {
+		return b
 	}
-	return b
+	// Check for overflow (a - b might overflow uint64)
+	if a-b > math.MaxUint64 {
+		return 0 // Or handle overflow appropriately
+	}
+	return a
 }
 
 /** Encode an `Area` relative to known outer `Area`.
@@ -139,9 +143,59 @@ func EncodeAreaInArea[SubspaceId constraints.Ordered](opts EncodeAreaOpts[Subspa
 		fmt.Errorf("Inner is not included by outer")
 	}
 
-	if inner.Times.End == nil {
-		var innerEnd *big.Int = big.NewIntFromString(REALLY_BIG_INT, 10)
-	} else {
+	var innerEnd uint64
 
+	if inner.Times.End == nil {
+		innerEnd = REALLY_BIG_INT
+	} else {
+		innerEnd = *inner.Times.End
 	}
+
+	var outerEnd uint64
+
+	if outer.Times.End == nil {
+		outerEnd = REALLY_BIG_INT
+	} else {
+		outerEnd = *outer.Times.End
+	}
+
+	startDiff := bigIntMin(
+		inner.Times.Start-outer.Times.Start, outerEnd-inner.Times.Start,
+	)
+
+	endDiff := bigIntMin(
+		innerEnd-inner.Times.Start, outerEnd-innerEnd,
+	)
+
+	flags := 0x0
+
+	isSubspaceSame := (inner.Subspace_id == nil && outer.Subspace_id == nil) || (inner.Subspace_id != nil && outer.Subspace_id != nil && (opts.OrderSubspace(*inner.Subspace_id, *outer.Subspace_id) == 0))
+
+	if !isSubspaceSame {
+		flags |= 0x80
+	}
+
+	if inner.Times.End == nil {
+		flags |= 0x40
+	}
+
+	if startDiff == (inner.Times.Start - outer.Times.Start) {
+		flags |= 0x20
+	}
+
+	if endDiff == (innerEnd - inner.Times.Start) {
+		flags |= 0x10
+	}
+
+	startDiffCompactWidth := compactWidth(startDiff) //to be done in encoding
+
+	if startDiffCompactWidth == 4 || startDiffCompactWidth == 8 {
+		flags |= 0x8
+	}
+
+	if startDiffCompactWidth == 2 || startDiffCompactWidth == 8 {
+		flags |= 0x4
+	}
+
+	endDiffCompactWidth := compactWidth(endDiff)
 }

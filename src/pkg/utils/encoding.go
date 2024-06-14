@@ -16,11 +16,11 @@ func BigintToBytes(bigint uint64) []byte {
 }
 func GetWidthMax32Int[T constraints.Unsigned](num T) int {
 	switch true {
-	case int(num) < 1<<8:
+	case uint(num) < 1<<8:
 		return 1
-	case int(num) < 1<<16:
+	case uint(num) < 1<<16:
 		return 2
-	case int(num) < 1<<24:
+	case uint(num) < 1<<24:
 		return 3
 	default:
 		return 4
@@ -74,11 +74,11 @@ func DecodeIntMax32(bytes []byte, max uint32) (uint32, error) {
 
 func GetWidthMax64Int[T constraints.Unsigned](num T) int {
 	switch true {
-	case uint64(num) < 1<<8:
+	case uint(num) < 1<<8:
 		return 1
-	case uint64(num) < 1<<16:
+	case uint(num) < 1<<16:
 		return 2
-	case uint64(num) < 1<<32:
+	case uint(num) < 1<<32:
 		return 4
 	default:
 		return 8
@@ -104,24 +104,22 @@ func EncodeIntMax64[T constraints.Unsigned](num, max T) []byte {
 	return bytes
 }
 
-func DecodeIntMax64(bytes []byte, max uint64) (uint64, error) {
-	bytesToDecodeLength := GetWidthMax64Int(max)
+func DecodeIntMax64(encoded []byte, max uint64) any {
 
-	if len(bytes) != bytesToDecodeLength {
-		return 0, errors.New("invalid byte slice length")
-	}
-	if bytesToDecodeLength > 8 {
-		return 0, errors.New("cannot decode non-UintMax bytes")
-	}
-
-	switch bytesToDecodeLength {
+	switch len(encoded) {
 	case 1:
-		return uint64(bytes[0]), nil
+		return uint8(encoded[0])
+
 	case 2:
-		return uint64(binary.BigEndian.Uint16(bytes)), nil
+		return binary.BigEndian.Uint16(encoded)
+
 	case 4:
-		return uint64(binary.BigEndian.Uint32(bytes)), nil
+		return binary.BigEndian.Uint32(encoded)
+
+	case 8:
+		return binary.BigEndian.Uint64(encoded)
 	default:
-		return uint64(binary.BigEndian.Uint64(bytes)), nil
+		panic("invalid length")
 	}
+
 }

@@ -1,9 +1,10 @@
-package utils
+package tests
 
 import (
 	"testing"
 
 	"github.com/PES-Innovation-Lab/willow-go/src/pkg/types"
+	"github.com/PES-Innovation-Lab/willow-go/src/pkg/utils"
 )
 
 func TestOrderPath(t *testing.T) {
@@ -75,7 +76,7 @@ func TestOrderPath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := OrderPath(tt.args.a, tt.args.b); got != tt.want {
+			if got := utils.OrderPath(tt.args.a, tt.args.b); got != tt.want {
 				t.Errorf("OrderPath(%s, %s) = %v, want %v", tt.args.a, tt.args.b, got, tt.want)
 			}
 		})
