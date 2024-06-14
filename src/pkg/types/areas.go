@@ -5,13 +5,13 @@ import (
 )
 
 type Area[SubspaceId constraints.Ordered] struct {
-	subspace_id SubspaceId
-	path        Path
-	times       Range[uint64]
+	Subspace_id *SubspaceId
+	Path        Path
+	Times       Range[uint64]
 }
 
 type AreaOfInterest[SubspaceId constraints.Ordered] struct {
-	area      Area[SubspaceId]
-	max_count uint64
-	max_size  uint64
+	Area      Area[SubspaceId]
+	Max_count uint64
+	Max_size  uint64
 }

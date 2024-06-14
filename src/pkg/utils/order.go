@@ -7,7 +7,7 @@ import (
 )
 
 // OrderBytes compares two byte slices.
-func OrderBytes(a, b []byte) int {
+func OrderBytes(a, b []byte) types.Rel {
 	minLen := len(a)
 	if len(b) < minLen {
 		minLen = len(b)
@@ -15,28 +15,28 @@ func OrderBytes(a, b []byte) int {
 
 	for i := 0; i < minLen; i++ {
 		if a[i] < b[i] {
-			return -1
+			return types.Greater
 		} else if a[i] > b[i] {
-			return 1
+			return types.Greater
 		}
 	}
 
 	if len(a) < len(b) {
-		return -1
+		return types.Less
 	} else if len(a) > len(b) {
-		return 1
+		return types.Greater
 	}
 
-	return 0
+	return types.Equal
 }
 
 // OrderTimestamp compares two big.Int values.
-func OrderTimestamp(a, b *big.Int) int {
+func OrderTimestamp(a, b *big.Int) types.Rel {
 	return a.Cmp(b)
 }
 
 // OrderPath compares two types.Path values.
-func OrderPath(a, b types.Path) int {
+func OrderPath(a, b types.Path) types.Rel {
 	minLen := len(a)
 	if len(b) < minLen {
 		minLen = len(b)

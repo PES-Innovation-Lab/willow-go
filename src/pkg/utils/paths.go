@@ -68,6 +68,11 @@ func CommonPrefix(first types.Path, second types.Path) (types.Path, error) {
 }
 
 func EncodePath[T constraints.Unsigned](path types.Path, pathParams types.PathParams[T]) []byte {
+	/*
+	   this function takes in a path and a pathParams variable relted to it, we take the path,
+	   The way path gets encoded is, the first "MaxComponentCount" width bytes are number of components,
+	   the next number of components is the length of the component followed by the respective component.
+	*/
 	componentCountBytes := EncodeIntMax32(T(len(path)), pathParams.MaxPathLength)
 	componentBytes := componentCountBytes
 	for _, component := range path {
@@ -79,6 +84,10 @@ func EncodePath[T constraints.Unsigned](path types.Path, pathParams types.PathPa
 }
 
 func DecodePath[T constraints.Unsigned](encPath []byte, pathParams types.PathParams[T]) [][]byte {
+	/*
+	   It checks the number of components in the first "MaxComponentCount" width and then interates through each
+	   Component, checks it's length and extracts the component based on the length
+	*/
 	maxCountWidth := GetWidthMax32Int(pathParams.MaxComponentcount)
 	componentCountBytes := encPath[0:maxCountWidth]
 

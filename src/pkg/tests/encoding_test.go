@@ -112,6 +112,6 @@ func BenchmarkDecodeIntMax64(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		utils.DecodeIntMax64(encoded, uint64(max))
+		utils.DecodeIntMax64(encoded, max)
 	}
 }
