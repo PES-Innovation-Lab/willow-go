@@ -1,16 +1,12 @@
 package types
 
-import (
-	"golang.org/x/exp/constraints"
-)
-
-type Area[SubspaceId constraints.Ordered] struct {
+type Area[SubspaceId OrderableGeneric] struct {
 	Subspace_id *SubspaceId
 	Path        Path
 	Times       Range[uint64]
 }
 
-type AreaOfInterest[SubspaceId constraints.Ordered] struct {
+type AreaOfInterest[SubspaceId OrderableGeneric] struct {
 	Area      Area[SubspaceId]
 	Max_count uint64
 	Max_size  uint64
