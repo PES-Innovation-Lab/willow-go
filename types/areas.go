@@ -4,9 +4,9 @@ import "cmp"
 
 type Area[SubspaceId cmp.Ordered] struct {
 	Subspace_id  SubspaceId
-	Any_subspace bool
 	Path         Path
 	Times        Range[uint64]
+	Any_subspace bool
 }
 
 type AreaOfInterest[SubspaceId cmp.Ordered] struct {

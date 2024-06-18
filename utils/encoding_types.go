@@ -6,13 +6,13 @@ import "golang.org/x/exp/constraints"
 // Define Growing Bytes here
 // figure out the promise type thing
 
-type StreamDecoder[ValueType any] func(value GrowingBytes) (chan ValueType, error)
+type StreamDecoder[ValueType any] func(value GrowingBytes) (ValueType, error)
 
 type EncodingScheme[ValueType any, K constraints.Unsigned] interface {
 	Encode(value ValueType) []byte
 	Decode(encoded []byte) (ValueType, error)
 	EncodedLength(value ValueType) K
-	DecodeStream() StreamDecoder[ValueType]
+	DrcodeStream(value *GrowingBytes) (ValueType, error)
 }
 
 type PrivyEncodingScheme[ValueType, PrivyType any, K constraints.Unsigned] interface {
