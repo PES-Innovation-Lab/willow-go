@@ -149,6 +149,7 @@ func AreaTo3dRange[SubspaceType types.OrderableGeneric](opts Options[SubspaceTyp
 			OpenEnd: false}
 	}
 	var path_range types.Range[SubspaceType]
+
 	path_range = types.Range[SubspaceType]{
 		Start:   area.Path,
 		End:     SuccessorPrefix(area.Path),
