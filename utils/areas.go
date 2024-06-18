@@ -19,6 +19,12 @@ type Options[SubspaceType cmp.Ordered] struct {
 	MinimalSubspace        SubspaceType
 }
 
+type EntryOpts[SubspaceId, PayloadDigest constraints.Ordered, K constraints.Unsigned] struct {
+	DecodeStreamSubspace      func(bytes *GrowingBytes) SubspaceId
+	DecodeStreamPayloadDigest func(bytes *GrowingBytes) PayloadDigest
+	pathScheme                types.PathParams[K]
+}
+
 type EncodeAreaOpts[SubspaceId constraints.Unsigned] struct {
 	EncodeSubspace func(subspace SubspaceId) []byte
 	OrderSubspace  types.TotalOrder[SubspaceId]
@@ -536,3 +542,56 @@ func EncodeEntryInNamespaceArea[NamespaceId, SubspaceId, PayloadDigest constrain
 }
 
 /** Decode an Entry relative to a namespace area from {@linkcode GrowingBytes}. */
+func DecodeStreamEntryInNamespaceArea[K constraints.Ordered, T constraints.Unsigned](opts EntryOpts[K, K, T], bytes *GrowingBytes, outer types.Area[K], nameSpaceId K) (types.Entry[K, K, K], error) {
+	accumulatedBytes := bytes.NextAbsolute(1)
+	header := accumulatedBytes[0]
+
+	isSubspaceEncoded := (header & 0x80) == 0x80
+	addToStartOrSubtractFromEnd := (header & 0x40) == 0x40
+	compactWidthTimeDiff := math.Pow(2, float64(header&0x30>>4))
+	compactWidthPayloadLength := math.Pow(2, float64(header&0xc>>2))
+
+	bytes.Prune(1)
+	var subspaceId K
+
+	if isSubspaceEncoded {
+		subspaceId = opts.DecodeStreamPayloadDigest(bytes)
+	} else if !outer.Any_subspace {
+		subspaceId = outer.Subspace_id
+	} else {
+		return types.Entry[K, K, K]{}, fmt.Errorf("Entry was encoded relative to area")
+	}
+
+	path := DecodeRelPathStream(opts.pathScheme, bytes, outer.Path)
+	accumulatedBytes = bytes.NextAbsolute(int(compactWidthTimeDiff))
+
+	timeDiff, err := DecodeIntMax64(accumulatedBytes[0:int(compactWidthTimeDiff)])
+	if err != nil {
+		return types.Entry[K, K, K]{}, err
+	}
+	accumulatedBytes = bytes.NextAbsolute(int(compactWidthTimeDiff))
+	payloadLength, err := DecodeIntMax64(accumulatedBytes[int(compactWidthTimeDiff) : int(compactWidthTimeDiff)+int(compactWidthPayloadLength)])
+	if err != nil {
+		return types.Entry[K, K, K]{}, err
+	}
+	bytes.Prune(int(compactWidthTimeDiff) + int(compactWidthPayloadLength))
+	payloadDigest := opts.DecodeStreamPayloadDigest(bytes)
+
+	var timeStamp uint64
+
+	if addToStartOrSubtractFromEnd {
+		timeStamp = outer.Times.Start + timeDiff
+	} else if !outer.Times.OpenEnd {
+		timeStamp = outer.Times.End - timeDiff
+	} else {
+		return types.Entry[K, K, K]{}, fmt.Errorf("Entry was encoded relative to area with concrete time end")
+	}
+	return types.Entry[K, K, K]{
+		Namespace_id:   nameSpaceId,
+		Subspace_id:    subspaceId,
+		Path:           path,
+		Payload_digest: payloadDigest,
+		Payload_length: payloadLength,
+		Timestamp:      timeStamp,
+	}, nil
+}
