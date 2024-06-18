@@ -3,9 +3,10 @@ package types
 import "cmp"
 
 type Area[SubspaceId cmp.Ordered] struct {
-	Subspace_id *SubspaceId
-	Path        Path
-	Times       Range[uint64]
+	Subspace_id  SubspaceId
+	Any_subspace bool
+	Path         Path
+	Times        Range[uint64]
 }
 
 type AreaOfInterest[SubspaceId cmp.Ordered] struct {

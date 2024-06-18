@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"cmp"
 	"fmt"
 	"math"
 	"strconv"
@@ -10,7 +11,7 @@ import (
 )
 
 // Define the options struct
-type Options[SubspaceType types.OrderableGeneric] struct {
+type Options[SubspaceType cmp.Ordered] struct {
 	SuccessorSubspace      types.SuccessorFn[SubspaceType]
 	MaxPathLength          int
 	MaxComponentCount      int
@@ -60,26 +61,26 @@ func concat(byteSlices ...[]byte) []byte {
 }
 
 /** The full area is the Area including all Entries. */
-func FullArea[SubspaceId types.OrderableGeneric]() types.Area[SubspaceId] {
-	return types.Area[SubspaceId]{Subspace_id: nil, Path: nil, Times: types.Range[uint64]{Start: 0, End: 0, OpenEnd: true}}
+func FullArea[SubspaceId cmp.Ordered]() types.Area[SubspaceId] {
+	return types.Area[SubspaceId]{Subspace_id: SubspaceId(0), Any_subspace: true, Path: nil, Times: types.Range[uint64]{Start: 0, End: 0, OpenEnd: true}}
 }
 
 /** The subspace area is the Area include all entries with a given subspace ID. */
-func SubspaceArea[SubspaceId types.OrderableGeneric](subspaceId SubspaceId) types.Area[SubspaceId] {
-	return types.Area[SubspaceId]{Subspace_id: nil, Path: nil, Times: types.Range[uint64]{Start: 0, End: 0, OpenEnd: true}}
+func SubspaceArea[SubspaceId cmp.Ordered](subspaceId SubspaceId) types.Area[SubspaceId] {
+	return types.Area[SubspaceId]{Subspace_id: SubspaceId(0), Any_subspace: true, Path: nil, Times: types.Range[uint64]{Start: 0, End: 0, OpenEnd: true}}
 }
 
 /** Return whether a subspace ID is included by an `Area`. */
-func IsSubspaceIncludedInArea[SubspaceType types.OrderableGeneric](orderSubspace types.TotalOrder[SubspaceType], area types.Area[SubspaceType], subspace SubspaceType) bool {
-	if area.Subspace_id == nil {
+func IsSubspaceIncludedInArea[SubspaceType cmp.Ordered](orderSubspace types.TotalOrder[SubspaceType], area types.Area[SubspaceType], subspace SubspaceType) bool {
+	if area.Any_subspace == true {
 		return true
 	}
 
-	return orderSubspace(*area.Subspace_id, subspace) == 0 //===used here in ts, neeed to see if the functionality remains the same
+	return orderSubspace(area.Subspace_id, subspace) == 0 //===used here in ts, neeed to see if the functionality remains the same
 }
 
 /** Return whether a 3d position is included by an `Area`. */
-func IsIncludedArea[SubspaceType types.OrderableGeneric](orderSubspace types.TotalOrder[SubspaceType], area types.Area[SubspaceType], position types.Position3d[SubspaceType]) bool {
+func IsIncludedArea[SubspaceType cmp.Ordered](orderSubspace types.TotalOrder[SubspaceType], area types.Area[SubspaceType], position types.Position3d[SubspaceType]) bool {
 	if !IsSubspaceIncludedInArea(orderSubspace, area, position.Subspace) {
 		return false
 	}
@@ -94,11 +95,11 @@ func IsIncludedArea[SubspaceType types.OrderableGeneric](orderSubspace types.Tot
 }
 
 /** Return whether an area is fully included by another area. */
-func AreaIsIncluded[SubspaceType types.OrderableGeneric](orderSubspace types.TotalOrder[SubspaceType], inner, outer types.Area[SubspaceType]) bool {
-	if outer.Subspace_id != nil && inner.Subspace_id == nil {
+func AreaIsIncluded[SubspaceType cmp.Ordered](orderSubspace types.TotalOrder[SubspaceType], inner, outer types.Area[SubspaceType]) bool {
+	if outer.Any_subspace != true && inner.Any_subspace == true {
 		return false
 	}
-	if outer.Subspace_id != nil && inner.Subspace_id != nil && orderSubspace(*outer.Subspace_id, *inner.Subspace_id) != 0 {
+	if outer.Any_subspace != true && inner.Any_subspace != true && orderSubspace(outer.Subspace_id, inner.Subspace_id) != 0 {
 		return false
 	}
 	res, _ := IsPathPrefixed(outer.Path, inner.Path)
@@ -112,8 +113,8 @@ func AreaIsIncluded[SubspaceType types.OrderableGeneric](orderSubspace types.Tot
 }
 
 /** Return the intersection of two areas, for which there may be none. */
-func IntersectArea[SubspaceType types.OrderableGeneric](orderSubspace types.TotalOrder[SubspaceType], a, b types.Area[SubspaceType]) *types.Area[SubspaceType] {
-	if a.Subspace_id != nil && b.Subspace_id != nil && orderSubspace(*a.Subspace_id, *b.Subspace_id) != 0 {
+func IntersectArea[SubspaceType cmp.Ordered](orderSubspace types.TotalOrder[SubspaceType], a, b types.Area[SubspaceType]) *types.Area[SubspaceType] {
+	if a.Any_subspace != true && b.Any_subspace != true && orderSubspace(a.Subspace_id, b.Subspace_id) != 0 {
 		return nil
 	}
 
@@ -138,25 +139,23 @@ func IntersectArea[SubspaceType types.OrderableGeneric](orderSubspace types.Tota
 }
 
 /** Convert an `Area` to a `Range3d`. */
-func AreaTo3dRange[SubspaceType types.OrderableGeneric](opts Options[SubspaceType], area types.Area[SubspaceType]) types.Range3d[SubspaceType] {
-	var subspace_range types.Range[SubspaceType]
-	if area.Subspace_id == nil {
-		subspace_range = types.Range[SubspaceType]{Start: opts.MinimalSubspace, End: 0, OpenEnd: true}
+func AreaTo3dRange[T cmp.Ordered](opts Options[T], area types.Area[T]) types.Range3d[T] {
+	var subspace_range types.Range[T]
+	if area.Any_subspace == true {
+		subspace_range = types.Range[T]{Start: opts.MinimalSubspace, End: T(0), OpenEnd: true}
 	} else {
-		subspace_range = types.Range[SubspaceType]{
-			Start:   *area.Subspace_id,
-			End:     *opts.SuccessorSubspace(*area.Subspace_id),
+		subspace_range = types.Range[T]{
+			Start:   area.Subspace_id,
+			End:     *opts.SuccessorSubspace(area.Subspace_id), //NEED TO CHANGE THE SUCCESSOR DEFINITION IN ORDER
 			OpenEnd: false}
 	}
-	var path_range types.Range[SubspaceType]
-
-	path_range = types.Range[SubspaceType]{
+	path_range := types.Range[types.Path]{
 		Start:   area.Path,
 		End:     SuccessorPrefix(area.Path),
 		OpenEnd: true,
 	}
 	//FIX PATH_RANGE
-	return types.Range3d[SubspaceType]{SubspaceRange: subspace_range, PathRange: path_range, TimeRange: area.Times}
+	return types.Range3d[T]{SubspaceRange: subspace_range, PathRange: path_range, TimeRange: area.Times}
 }
 
 // Define a constant for a really big integer (2^64 in this case)
@@ -210,7 +209,7 @@ func EncodeAreaInArea[SubspaceId constraints.Unsigned](opts EncodeAreaOpts[Subsp
 
 	flags := byte(0x0)
 
-	isSubspaceSame := (inner.Subspace_id == nil && outer.Subspace_id == nil) || (inner.Subspace_id != nil && outer.Subspace_id != nil && (opts.OrderSubspace(*inner.Subspace_id, *outer.Subspace_id) == 0))
+	isSubspaceSame := (inner.Any_subspace == true && outer.Any_subspace == true) || (inner.Any_subspace != true && outer.Any_subspace != true && (opts.OrderSubspace(inner.Subspace_id, outer.Subspace_id) == 0))
 
 	if !isSubspaceSame {
 		flags |= byte(0x80)
@@ -264,7 +263,7 @@ func EncodeAreaInArea[SubspaceId constraints.Unsigned](opts EncodeAreaOpts[Subsp
 	if isSubspaceSame {
 		subspaceIdBytes = []byte{}
 	} else {
-		subspaceIdBytes = opts.EncodeSubspace(*inner.Subspace_id)
+		subspaceIdBytes = opts.EncodeSubspace(inner.Subspace_id)
 	}
 
 	result := concat(flagByte, startDiffBytes, endDiffBytes, relativePathBytes, subspaceIdBytes)
@@ -274,13 +273,13 @@ func EncodeAreaInArea[SubspaceId constraints.Unsigned](opts EncodeAreaOpts[Subsp
 
 /** The length of an encoded area in area. */
 func EncodeAreaInAreaLength[SubspaceId constraints.Unsigned](opts EncodeAreaInAreaLengthOptions[SubspaceId], inner, outer types.Area[SubspaceId]) int {
-	isSubspaceSame := (inner.Subspace_id == nil && outer.Subspace_id == nil) || (inner.Subspace_id != nil && outer.Subspace_id != nil && (opts.OrderSubspace(*inner.Subspace_id, *outer.Subspace_id) == 0))
+	isSubspaceSame := (inner.Any_subspace == true && outer.Any_subspace == true) || (inner.Any_subspace != true && outer.Any_subspace != true && (opts.OrderSubspace(inner.Subspace_id, outer.Subspace_id) == 0))
 
 	var subspaceLen int
 	if isSubspaceSame {
 		subspaceLen = 0
 	} else {
-		subspaceLen = opts.EncodeSubspaceIdLength(*inner.Subspace_id)
+		subspaceLen = opts.EncodeSubspaceIdLength(inner.Subspace_id)
 	}
 
 	pathLen := EncodePathRelativeLength(opts.PathScheme, inner.Path, outer.Path) //ask where this is written
@@ -341,7 +340,7 @@ func DecodeAreaInArea[SubspaceId constraints.Unsigned](opts DecodeAreaInAreaOpti
 		if includeInnerSubspaceId {
 			subspaceId, _ = opts.decodeSubspaceId.Decode(encodedInner[subspacePos:])
 		} else {
-			subspaceId = *outer.Subspace_id
+			subspaceId = outer.Subspace_id
 		}
 		var innerStart uint64
 		if addStartDiff {
@@ -349,7 +348,7 @@ func DecodeAreaInArea[SubspaceId constraints.Unsigned](opts DecodeAreaInAreaOpti
 		} else {
 			innerStart = outer.Times.Start - startDiff
 		}
-		return types.Area[SubspaceId]{Path: path, Subspace_id: &subspaceId, Times: types.Range[uint64]{Start: innerStart, End: 0, OpenEnd: true}} //just recheck the return of Subspace_id
+		return types.Area[SubspaceId]{Path: path, Subspace_id: subspaceId, Times: types.Range[uint64]{Start: innerStart, End: 0, OpenEnd: true}} //just recheck the return of Subspace_id
 	}
 	endDiffPos := 1 + startDiffWidth
 	pathPos := endDiffPos + endDiffWidth
@@ -362,7 +361,7 @@ func DecodeAreaInArea[SubspaceId constraints.Unsigned](opts DecodeAreaInAreaOpti
 	if includeInnerSubspaceId {
 		subspaceId, _ = opts.decodeSubspaceId.Decode(encodedInner[subspacePos:])
 	} else {
-		subspaceId = *outer.Subspace_id
+		subspaceId = outer.Subspace_id
 	}
 	var innerStart uint64
 	if addStartDiff {
@@ -377,7 +376,7 @@ func DecodeAreaInArea[SubspaceId constraints.Unsigned](opts DecodeAreaInAreaOpti
 		innerEnd = outer.Times.End - endDiff
 	}
 
-	return types.Area[SubspaceId]{Path: path, Subspace_id: &subspaceId, Times: types.Range[uint64]{Start: innerStart, End: innerEnd, OpenEnd: false}}
+	return types.Area[SubspaceId]{Path: path, Subspace_id: subspaceId, Times: types.Range[uint64]{Start: innerStart, End: innerEnd, OpenEnd: false}}
 }
 
 var compactWidthEndMasks = map[int]int{
@@ -474,7 +473,7 @@ func EncodeEntryInNamespaceArea[NamespaceId, SubspaceId, PayloadDigest constrain
 	}
 
 	var isSubspaceAnyFlag int
-	if outer.Subspace_id == nil {
+	if outer.Any_subspace == true {
 		isSubspaceAnyFlag = 0x80
 	} else {
 		isSubspaceAnyFlag = 0x0
@@ -500,7 +499,7 @@ func EncodeEntryInNamespaceArea[NamespaceId, SubspaceId, PayloadDigest constrain
 	headerBytes := []byte(strconv.Itoa(header))
 
 	var encodedSubspace []byte
-	if outer.Subspace_id == nil {
+	if outer.Any_subspace == true {
 		encodedSubspace = []byte{}
 	} else {
 		encodedSubspace = opts.encodeSubspaceId(entry.Subspace_id)
