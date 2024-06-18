@@ -164,7 +164,7 @@ func AreaTo3dRange[T cmp.Ordered](opts Options[T], area types.Area[T]) types.Ran
 
 // Define a constant for a really big integer (2^64 in this case)
 const REALLY_BIG_INT uint64 = 18446744073709551601
-*/
+
 /** `Math.min`, but for `BigInt`. */
 // bigIntMin returns the minimum of two big.Int values
 func bigIntMin(a, b uint64) uint64 {
