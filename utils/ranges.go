@@ -183,21 +183,41 @@ func IsEqualRangeValue[T types.OrderableGeneric](order types.TotalOrder[T], a ty
 		x = a.Start
 	case false:
 		x = a.End
+	}
 
 	switch isStartB {
 	case true:
 		y = b.Start
 	case false:
-		y = b.End
-		
+		y = b.End	
 	}
-
 
 	if !a.OpenEnd && !b.OpenEnd && order(x,y) == 0{
 		return true
 	}
 	return false
 }
+
+func EncodeRange3dRelative[SubspaceId types.OrderableGeneric](
+	orderSubspace types.TotalOrder[SubpaceId],
+	encodeSubspaceId func(subspace SubspaceId) uint16,
+	pathScheme types.PathParams,
+	r types.Range3d[SubspaceId],
+	ref types.Range3d[SubspaceId],
+) {
+	start_to_start := Abs(r.TimeRange.Start - ref.TimeRange.Start)
+	start_to_end := Abs(r.TimeRange.Start - ref.TimeRange.End)
+	end_to_start := Abs(r.TimeRange.End - ref.TimeRange.Start)
+	end_to_end := Abs(r.TimeRange.End - ref.TimeRange.End)
+	start_time_diff := min(start_to_start, start_to_end)
+	end_time_diff := min(end_to_start, end_to_end)
+
+	var encoding1 uint8 = 0x00;
+	var encoding2 uint8 = 0x00;
+
+	if orderSubspace
+}
+
 // Volunteer based
 // Personalisable
 
