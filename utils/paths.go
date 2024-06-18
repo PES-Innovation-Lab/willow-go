@@ -137,8 +137,8 @@ func EncodePathLength[T constraints.Unsigned](pathParams types.PathParams[T], pa
 	return uint64(length)
 }
 
-func EncodeRelativePath[T constraints.Unsigned](pathParams types.PathParams[T], toEncode types.Path, refernce types.Path) []byte {
-	longestPrefix, err := CommonPrefix(toEncode, refernce)
+func EncodeRelativePath[T constraints.Unsigned](pathParams types.PathParams[T], toEncode types.Path, reference types.Path) []byte {
+	longestPrefix, err := CommonPrefix(toEncode, reference)
 	if err != nil {
 		log.Fatalf("error in calculating common paths: %s", err)
 	}
