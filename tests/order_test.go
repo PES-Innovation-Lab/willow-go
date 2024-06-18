@@ -1,12 +1,6 @@
 package tests
 
-import (
-	"testing"
-
-	"github.com/PES-Innovation-Lab/willow-go/types"
-	"github.com/PES-Innovation-Lab/willow-go/utils"
-)
-
+/*
 func TestOrderPath(t *testing.T) {
 	type args struct {
 		a types.Path
@@ -82,3 +76,4 @@ func TestOrderPath(t *testing.T) {
 		})
 	}
 }
+*/

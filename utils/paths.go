@@ -11,7 +11,7 @@ import (
 func PrefixesOf(path types.Path) []types.Path {
 	prefixes := []types.Path{[][]byte{}}
 	for i := range path {
-		prefixes = append(prefixes, path[0:i])
+		prefixes = append(prefixes, path[0:i+1])
 	}
 	return prefixes
 }
@@ -72,7 +72,7 @@ func CommonPrefix(first types.Path, second types.Path) (types.Path, error) {
 	if index == 0 {
 		return nil, fmt.Errorf("there are no common prefixes")
 	}
-	return first[0 : index+1], nil
+	return first[0:index], nil
 }
 
 func EncodePath[T constraints.Unsigned](pathParams types.PathParams[T], path types.Path) []byte {
