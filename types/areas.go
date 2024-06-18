@@ -1,16 +1,15 @@
 package types
 
-import (
-	"golang.org/x/exp/constraints"
-)
+import "cmp"
 
-type Area[SubspaceId constraints.Ordered] struct {
-	Subspace_id *SubspaceId
-	Path        Path
-	Times       Range[uint64]
+type Area[SubspaceId cmp.Ordered] struct {
+	Subspace_id  SubspaceId
+	Any_subspace bool
+	Path         Path
+	Times        Range[uint64]
 }
 
-type AreaOfInterest[SubspaceId constraints.Ordered] struct {
+type AreaOfInterest[SubspaceId cmp.Ordered] struct {
 	Area      Area[SubspaceId]
 	Max_count uint64
 	Max_size  uint64

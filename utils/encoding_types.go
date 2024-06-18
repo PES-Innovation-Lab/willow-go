@@ -10,7 +10,7 @@ type StreamDecoder[ValueType any] func(value GrowingBytes) (chan ValueType, erro
 
 type EncodingScheme[ValueType any, K constraints.Unsigned] interface {
 	Encode(value ValueType) []byte
-	Decode(encoded []byte) (TValueType error)
+	Decode(encoded []byte) (ValueType, error)
 	EncodedLength(value ValueType) K
 	DecodeStream() StreamDecoder[ValueType]
 }
