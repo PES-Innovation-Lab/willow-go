@@ -67,16 +67,16 @@ func FullArea[SubspaceId cmp.Ordered]() types.Area[SubspaceId] {
 
 /** The subspace area is the Area include all entries with a given subspace ID. */
 func SubspaceArea[SubspaceId cmp.Ordered](subspaceId SubspaceId) types.Area[SubspaceId] {
-	return types.Area[SubspaceId]{Subspace_id: SubspaceId(0), Any_subspace: true, Path: nil, Times: types.Range[uint64]{Start: 0, End: 0, OpenEnd: true}}
+	return types.Area[SubspaceId]{Subspace_id: subspaceId, Any_subspace: false, Path: nil, Times: types.Range[uint64]{Start: 0, End: 0, OpenEnd: true}}
 }
-*/
+
 /** Return whether a subspace ID is included by an `Area`. */
 func IsSubspaceIncludedInArea[SubspaceType cmp.Ordered](orderSubspace types.TotalOrder[SubspaceType], area types.Area[SubspaceType], subspace SubspaceType) bool {
 	if area.Any_subspace == true {
 		return true
 	}
 
-	return orderSubspace(area.Subspace_id, subspace) == 0 //===used here in ts, neeed to see if the functionality remains the same
+	return orderSubspace(area.Subspace_id, subspace) == 0 //===used here in ts, need to see if the functionality remains the same
 }
 
 /** Return whether a 3d position is included by an `Area`. */
@@ -93,8 +93,10 @@ func IsIncludedArea[SubspaceType cmp.Ordered](orderSubspace types.TotalOrder[Sub
 	}
 	return true
 }
-*/
+
 /** Return whether an area is fully included by another area. */
+/** Inner is the area being tested for inclusion. */
+/** Outer is the area which we are testing for inclusion within. */
 func AreaIsIncluded[SubspaceType cmp.Ordered](orderSubspace types.TotalOrder[SubspaceType], inner, outer types.Area[SubspaceType]) bool {
 	if outer.Any_subspace != true && inner.Any_subspace == true {
 		return false
@@ -106,20 +108,20 @@ func AreaIsIncluded[SubspaceType cmp.Ordered](orderSubspace types.TotalOrder[Sub
 	if !res {
 		return false
 	}
-	if !RangeisIncluded(OrderTimestamp, outer.Times, inner.Times) {
+	if !RangeIsIncluded(OrderTimestamp, outer.Times, inner.Times) {
 		return false
 	}
 	return true
 }
-*/
+
 /** Return the intersection of two areas, for which there may be none. */
 func IntersectArea[SubspaceType cmp.Ordered](orderSubspace types.TotalOrder[SubspaceType], a, b types.Area[SubspaceType]) *types.Area[SubspaceType] {
 	if a.Any_subspace != true && b.Any_subspace != true && orderSubspace(a.Subspace_id, b.Subspace_id) != 0 {
 		return nil
 	}
 
-	isPrefixA, _ := IsPathPrefixed(a.Path, b.Path)
-	isPrefixB, _ := IsPathPrefixed(b.Path, a.Path)
+	isPrefixA, _ := IsPathPrefixed(a.Path, b.Path) // a.pathPrefix is being checked if it's a prefix of b.pathPrefix
+	isPrefixB, _ := IsPathPrefixed(b.Path, a.Path) // b.pathPrefix is being checked if it's a prefix of a.pathPrefix
 
 	if !isPrefixA && !isPrefixB {
 		return nil
@@ -132,13 +134,14 @@ func IntersectArea[SubspaceType cmp.Ordered](orderSubspace types.TotalOrder[Subs
 	}
 
 	if isPrefixA {
-		return &types.Area[SubspaceType]{Subspace_id: a.Subspace_id, Path: b.Path, Times: timeIntersection}
+		return &types.Area[SubspaceType]{Subspace_id: a.Subspace_id, Path: b.Path, Times: timeIntersection} //we put b.Path here, as a.Path is it's prefix, which means that there's no use of putting a.Path
 	}
 
 	return &types.Area[SubspaceType]{Subspace_id: a.Subspace_id, Path: a.Path, Times: timeIntersection}
 }
-*/
+
 /** Convert an `Area` to a `Range3d`. */
+//THIS FUNCTION NEEDS TO BE FIXED
 func AreaTo3dRange[T cmp.Ordered](opts Options[T], area types.Area[T]) types.Range3d[T] {
 	var subspace_range types.Range[T]
 	if area.Any_subspace == true {
@@ -152,7 +155,7 @@ func AreaTo3dRange[T cmp.Ordered](opts Options[T], area types.Area[T]) types.Ran
 	path_range := types.Range[types.Path]{
 		Start:   area.Path,
 		End:     SuccessorPrefix(area.Path),
-		OpenEnd: true,
+		OpenEnd: false,
 	}
 	//FIX PATH_RANGE
 	return types.Range3d[T]{SubspaceRange: subspace_range, PathRange: path_range, TimeRange: area.Times}
@@ -160,8 +163,8 @@ func AreaTo3dRange[T cmp.Ordered](opts Options[T], area types.Area[T]) types.Ran
 
 // Define a constant for a really big integer (2^64 in this case)
 const REALLY_BIG_INT uint64 = 18446744073709551601
-*/
-/** `Math.min`, but for `BigInt`. */
+
+// `Math.min`, but for `BigInt`. //
 // bigIntMin returns the minimum of two big.Int values
 func bigIntMin(a, b uint64) uint64 {
 	if a > b {
