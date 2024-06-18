@@ -6,8 +6,6 @@ import (
 	"github.com/PES-Innovation-Lab/willow-go/types"
 )
 
-// Constants for open end and closed end representations
-var OPEN_END = new(interface{})
 
 // orderRangePair orders two Range structs based on their end values.
 func OrderRangePair[T types.OrderableGeneric](a, b types.Range[T]) (types.Range[T], types.Range[T]) {
@@ -112,15 +110,17 @@ func RangeIsIncluded[T types.OrderableGeneric](order types.TotalOrder[T], parent
 	if childRange.OpenEnd && !parentRange.OpenEnd {
 		return false
 	} else {
-		  gteStart := order(childRange.Start, parentRange.Start) >= 0
-		  if parentRange.OpenEnd {
-			  return gteStart
+		gteStart := order(childRange.Start, parentRange.Start) >= 0
+		if parentRange.OpenEnd {
+			return gteStart
 		} else if !gteStart {
-			  return false
-		} 
-	 return order(childRange.End, parentRange.End)<=0
-   }
-} 
+			return false
+		}
+
+		return order(childRange.End, parentRange.End) <= 0
+
+	}
+}
 
 func IsValidRange3d[SubspaceId types.OrderableGeneric](OrderSubspace types.TotalOrder[SubspaceId], r types.Range3d[SubspaceId]) bool {
 	if !IsValidRange(OrderTimestamp, r.TimeRange) {
@@ -196,6 +196,3 @@ func IsEqualRangeValue[T types.OrderableGeneric](order types.TotalOrder[T], a ty
 	}
 	return false
 }
-// Volunteer based
-// Personalisable
-
