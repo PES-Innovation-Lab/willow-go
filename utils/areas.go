@@ -140,7 +140,7 @@ func IntersectArea[SubspaceType cmp.Ordered](orderSubspace types.TotalOrder[Subs
 	}
 
 	if isPrefixA {
-		return &types.Area[SubspaceType]{Subspace_id: a.Subspace_id, Path: b.Path, Times: timeIntersection} //we put b.Path here, as a.Path is it's prefix, which means that there's no use of putting a.Path
+		return &types.Area[SubspaceType]{Subspace_id: a.Subspace_id, Path: b.Path, Times: timeIntersection} // we put b.Path here, as a.Path is it's prefix, which means that there's no use of putting a.Path
 	}
 
 	return &types.Area[SubspaceType]{Subspace_id: a.Subspace_id, Path: a.Path, Times: timeIntersection}
