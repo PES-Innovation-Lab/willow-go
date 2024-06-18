@@ -119,7 +119,7 @@ func RangeIsIncluded[T types.OrderableGeneric](order types.TotalOrder[T], parent
 		return order(childRange.End, parentRange.End) <= 0
 
 	}
-} /*
+}
 
 func IsValidRange3d[SubspaceId types.OrderableGeneric](OrderSubspace types.TotalOrder[SubspaceId], r types.Range3d[SubspaceId]) bool {
 	if !IsValidRange(OrderTimestamp, r.TimeRange) {
@@ -132,9 +132,8 @@ func IsValidRange3d[SubspaceId types.OrderableGeneric](OrderSubspace types.Total
 		return false
 	}
 	return true
-}*/
+}
 
-/*
 func IsIncluded3d[SubspaceId types.OrderableGeneric](orderSubspace types.TotalOrder[SubspaceId], r types.Range3d[SubspaceId], position types.Position3d[SubspaceId]) bool {
 	if !IsIncludedRange(OrderTimestamp, r.TimeRange, position.Time) {
 		return false
@@ -168,8 +167,7 @@ func IntersectRange3d[SubspaceId types.OrderableGeneric](OrderSubspace types.Tot
 		SubspaceRange: intersectionSubspace,
 	}
 }
-*/
-/*
+
 func IsEqualRangeValue[T types.OrderableGeneric](order types.TotalOrder[T], a types.Range[T], isStartA bool, b types.Range[T], isStartB bool) bool {
 	if a.OpenEnd && b.OpenEnd {
 		return true
@@ -196,7 +194,6 @@ func IsEqualRangeValue[T types.OrderableGeneric](order types.TotalOrder[T], a ty
 	}
 	return false
 }
-*/
 
 /*
 func EncodeRange3dRelative[SubspaceId types.OrderableGeneric](
