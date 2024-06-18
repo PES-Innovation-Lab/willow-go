@@ -84,7 +84,7 @@ func (gb *GrowingBytes) NextAbsolute(length int) []byte {
 		return <-resolver
 	}
 
-	resolver := make(chan []byte, 1)
+	resolver := make(chan []byte, 10)
 	gb.DeferredUntilLength = &DeferredUntilLength{
 		length:   length,
 		resolver: resolver,
@@ -99,10 +99,11 @@ func (gb *GrowingBytes) NextAbsolute(length int) []byte {
 // Prune the array by the given byte length
 func (gb *GrowingBytes) Prune(length int) {
 	gb.Mu.Lock()
-	defer gb.Mu.Unlock()
+
 	if length >= len(gb.Array) {
 		gb.Array = []byte{}
 	} else {
 		gb.Array = gb.Array[length:]
 	}
+	gb.Mu.Unlock()
 }

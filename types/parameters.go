@@ -10,7 +10,7 @@ type PathParams[ValueType constraints.Unsigned] struct {
 	  we are also not setting it to signed and not a fixed uint32 so that if the user does not want the params to be that long
 	  we can save some space by using uint8 if required.
 	*/
-	MaxComponentcount  ValueType
+	MaxComponentCount  ValueType
 	MaxComponentLength ValueType
 	MaxPathLength      ValueType
 }

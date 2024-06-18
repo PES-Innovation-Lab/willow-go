@@ -22,7 +22,7 @@ func IsValidPath[T constraints.Unsigned](path types.Path, pathParams types.PathP
 	  checks if the given path satisfies all the constraints given and returns a boolean with an error.
 	  We run through each component of the path to check if all three constraints of a path is satisfied.
 	*/
-	if len(path) > int(pathParams.MaxComponentcount) {
+	if len(path) > int(pathParams.MaxComponentCount) {
 		return false, fmt.Errorf("the Path exceeds maximum allowed components")
 	}
 
@@ -91,15 +91,15 @@ func EncodePath[T constraints.Unsigned](pathParams types.PathParams[T], path typ
 	return componentBytes
 }
 
-func DecodePath[T constraints.Unsigned](pathParams types.PathParams[T], encPath []byte) [][]byte {
+func DecodePath[T constraints.Unsigned](pathParams types.PathParams[T], encPath []byte) types.Path {
 	/*
 	   It checks the number of components in the first "MaxComponentCount" width and then interates through each
 	   Component, checks it's length and extracts the component based on the length
 	*/
-	maxCountWidth := GetWidthMax32Int(pathParams.MaxComponentcount)
+	maxCountWidth := GetWidthMax32Int(pathParams.MaxComponentCount)
 	componentCountBytes := encPath[0:maxCountWidth]
 
-	componentCount, err := DecodeIntMax32(componentCountBytes, pathParams.MaxComponentcount)
+	componentCount, err := DecodeIntMax32(componentCountBytes, pathParams.MaxComponentCount)
 	if err != nil {
 		log.Fatalf("error: %s", err)
 	}
@@ -124,7 +124,7 @@ func DecodePath[T constraints.Unsigned](pathParams types.PathParams[T], encPath 
 }
 
 func EncodePathLength[T constraints.Unsigned](pathParams types.PathParams[T], path types.Path) uint64 {
-	countWidth := GetWidthMax32Int(pathParams.MaxComponentcount)
+	countWidth := GetWidthMax32Int(pathParams.MaxComponentCount)
 
 	length := countWidth
 
@@ -143,7 +143,7 @@ func EncodeRelativePath[T constraints.Unsigned](pathParams types.PathParams[T], 
 		log.Fatalf("error in calculating common paths: %s", err)
 	}
 	longestPrefixLength := len(longestPrefix)
-	prefixLengthBytes := EncodeIntMax32(T(longestPrefixLength), pathParams.MaxComponentcount)
+	prefixLengthBytes := EncodeIntMax32(T(longestPrefixLength), pathParams.MaxComponentCount)
 	suffix := toEncode[longestPrefixLength:]
 	suffixEncoded := EncodePath(pathParams, suffix)
 
@@ -151,12 +151,12 @@ func EncodeRelativePath[T constraints.Unsigned](pathParams types.PathParams[T], 
 }
 
 func DecodePathStream[T constraints.Unsigned](pathParams types.PathParams[T], bytes *GrowingBytes) types.Path {
-	maxCountWidth := GetWidthMax32Int(pathParams.MaxComponentcount)
+	maxCountWidth := GetWidthMax32Int(pathParams.MaxComponentCount)
 
-	bytes.NextAbsolute(maxCountWidth)
+	accumulatedBytes := bytes.NextAbsolute(maxCountWidth)
 
-	countBytes := bytes.Array[0:maxCountWidth]
-	componentCount, _ := DecodeIntMax32(countBytes, pathParams.MaxComponentcount)
+	countBytes := accumulatedBytes[0:maxCountWidth]
+	componentCount, _ := DecodeIntMax32(countBytes, pathParams.MaxComponentCount)
 
 	bytes.Prune(maxCountWidth)
 	componentLengthWidth := GetWidthMax32Int(pathParams.MaxComponentLength)
@@ -184,8 +184,8 @@ func DecodeRelativePath[T constraints.Unsigned](
 	encRelPath []byte,
 	refernce types.Path,
 ) types.Path {
-	prefixLengthWidth := GetWidthMax32Int(pathParams.MaxComponentcount)
-	prefixLength, err := DecodeIntMax32(encRelPath[0:prefixLengthWidth], pathParams.MaxComponentcount)
+	prefixLengthWidth := GetWidthMax32Int(pathParams.MaxComponentCount)
+	prefixLength, err := DecodeIntMax32(encRelPath[0:prefixLengthWidth], pathParams.MaxComponentCount)
 	if err != nil {
 		log.Fatalf("error: %s", err)
 	}
@@ -202,10 +202,10 @@ func DecodeRelPathStream[T constraints.Unsigned](
 	bytes *GrowingBytes,
 	reference types.Path,
 ) types.Path {
-	prefixLengthWidth := GetWidthMax32Int(pathParams.MaxComponentcount)
-	bytes.NextAbsolute(prefixLengthWidth)
+	prefixLengthWidth := GetWidthMax32Int(pathParams.MaxComponentCount)
+	accumulatedBytes := bytes.NextAbsolute(prefixLengthWidth)
 
-	prefixLength, _ := DecodeIntMax32(bytes.Array[0:prefixLengthWidth], pathParams.MaxComponentcount)
+	prefixLength, _ := DecodeIntMax32(accumulatedBytes[0:prefixLengthWidth], pathParams.MaxComponentCount)
 	prefix := reference[0:prefixLength]
 	bytes.Prune(prefixLengthWidth)
 
@@ -220,7 +220,7 @@ func EncodePathRelativeLength[T constraints.Unsigned](pathParams types.PathParam
 		log.Fatalf("Error: %s", err)
 	}
 	longestPrefixLength := len(longestPrefix)
-	prefixLengthLength := GetWidthMax32Int(pathParams.MaxComponentcount)
+	prefixLengthLength := GetWidthMax32Int(pathParams.MaxComponentCount)
 	suffix := primary[longestPrefixLength:]
 	suffixLength := len(suffix)
 	return prefixLengthLength + suffixLength

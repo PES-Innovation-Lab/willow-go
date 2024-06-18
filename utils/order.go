@@ -29,6 +29,7 @@ func OrderBytes(a, b []byte) types.Rel {
 }
 
 // OrderTimestamp compares two big.Int values.
+/*
 func OrderTimestamp(a, b uint64) types.Rel {
 	return a.Cmp(b)
 }
@@ -53,4 +54,4 @@ func OrderPath(a, b types.Path) types.Rel {
 		return 1
 	}
 	return 0
-}
+}*/
