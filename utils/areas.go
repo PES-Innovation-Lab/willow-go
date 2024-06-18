@@ -69,7 +69,7 @@ func FullArea[SubspaceId cmp.Ordered]() types.Area[SubspaceId] {
 func SubspaceArea[SubspaceId cmp.Ordered](subspaceId SubspaceId) types.Area[SubspaceId] {
 	return types.Area[SubspaceId]{Subspace_id: SubspaceId(0), Any_subspace: true, Path: nil, Times: types.Range[uint64]{Start: 0, End: 0, OpenEnd: true}}
 }
-
+*/
 /** Return whether a subspace ID is included by an `Area`. */
 func IsSubspaceIncludedInArea[SubspaceType cmp.Ordered](orderSubspace types.TotalOrder[SubspaceType], area types.Area[SubspaceType], subspace SubspaceType) bool {
 	if area.Any_subspace == true {
@@ -93,7 +93,7 @@ func IsIncludedArea[SubspaceType cmp.Ordered](orderSubspace types.TotalOrder[Sub
 	}
 	return true
 }
-
+*/
 /** Return whether an area is fully included by another area. */
 func AreaIsIncluded[SubspaceType cmp.Ordered](orderSubspace types.TotalOrder[SubspaceType], inner, outer types.Area[SubspaceType]) bool {
 	if outer.Any_subspace != true && inner.Any_subspace == true {
@@ -111,7 +111,7 @@ func AreaIsIncluded[SubspaceType cmp.Ordered](orderSubspace types.TotalOrder[Sub
 	}
 	return true
 }
-
+*/
 /** Return the intersection of two areas, for which there may be none. */
 func IntersectArea[SubspaceType cmp.Ordered](orderSubspace types.TotalOrder[SubspaceType], a, b types.Area[SubspaceType]) *types.Area[SubspaceType] {
 	if a.Any_subspace != true && b.Any_subspace != true && orderSubspace(a.Subspace_id, b.Subspace_id) != 0 {
@@ -137,7 +137,7 @@ func IntersectArea[SubspaceType cmp.Ordered](orderSubspace types.TotalOrder[Subs
 
 	return &types.Area[SubspaceType]{Subspace_id: a.Subspace_id, Path: a.Path, Times: timeIntersection}
 }
-
+*/
 /** Convert an `Area` to a `Range3d`. */
 func AreaTo3dRange[T cmp.Ordered](opts Options[T], area types.Area[T]) types.Range3d[T] {
 	var subspace_range types.Range[T]
@@ -160,7 +160,7 @@ func AreaTo3dRange[T cmp.Ordered](opts Options[T], area types.Area[T]) types.Ran
 
 // Define a constant for a really big integer (2^64 in this case)
 const REALLY_BIG_INT uint64 = 18446744073709551601
-
+*/
 /** `Math.min`, but for `BigInt`. */
 // bigIntMin returns the minimum of two big.Int values
 func bigIntMin(a, b uint64) uint64 {
