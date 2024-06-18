@@ -69,7 +69,7 @@ func FullArea[SubspaceId cmp.Ordered]() types.Area[SubspaceId] {
 func SubspaceArea[SubspaceId cmp.Ordered](subspaceId SubspaceId) types.Area[SubspaceId] {
 	return types.Area[SubspaceId]{Subspace_id: SubspaceId(0), Any_subspace: true, Path: nil, Times: types.Range[uint64]{Start: 0, End: 0, OpenEnd: true}}
 }
-*/
+
 /** Return whether a subspace ID is included by an `Area`. */
 func IsSubspaceIncludedInArea[SubspaceType cmp.Ordered](orderSubspace types.TotalOrder[SubspaceType], area types.Area[SubspaceType], subspace SubspaceType) bool {
 	if area.Any_subspace == true {
@@ -93,7 +93,7 @@ func IsIncludedArea[SubspaceType cmp.Ordered](orderSubspace types.TotalOrder[Sub
 	}
 	return true
 }
-*/
+
 /** Return whether an area is fully included by another area. */
 func AreaIsIncluded[SubspaceType cmp.Ordered](orderSubspace types.TotalOrder[SubspaceType], inner, outer types.Area[SubspaceType]) bool {
 	if outer.Any_subspace != true && inner.Any_subspace == true {
@@ -111,7 +111,7 @@ func AreaIsIncluded[SubspaceType cmp.Ordered](orderSubspace types.TotalOrder[Sub
 	}
 	return true
 }
-*/
+
 /** Return the intersection of two areas, for which there may be none. */
 func IntersectArea[SubspaceType cmp.Ordered](orderSubspace types.TotalOrder[SubspaceType], a, b types.Area[SubspaceType]) *types.Area[SubspaceType] {
 	if a.Any_subspace != true && b.Any_subspace != true && orderSubspace(a.Subspace_id, b.Subspace_id) != 0 {
@@ -137,7 +137,7 @@ func IntersectArea[SubspaceType cmp.Ordered](orderSubspace types.TotalOrder[Subs
 
 	return &types.Area[SubspaceType]{Subspace_id: a.Subspace_id, Path: a.Path, Times: timeIntersection}
 }
-*/
+
 /** Convert an `Area` to a `Range3d`. */
 func AreaTo3dRange[T cmp.Ordered](opts Options[T], area types.Area[T]) types.Range3d[T] {
 	var subspace_range types.Range[T]
@@ -146,21 +146,22 @@ func AreaTo3dRange[T cmp.Ordered](opts Options[T], area types.Area[T]) types.Ran
 	} else {
 		subspace_range = types.Range[T]{
 			Start:   area.Subspace_id,
-			End:     *opts.SuccessorSubspace(area.Subspace_id), //NEED TO CHANGE THE SUCCESSOR DEFINITION IN ORDER
-			OpenEnd: false}
+			End:     *opts.SuccessorSubspace(area.Subspace_id), // NEED TO CHANGE THE SUCCESSOR DEFINITION IN ORDER
+			OpenEnd: false,
+		}
 	}
 	path_range := types.Range[types.Path]{
 		Start:   area.Path,
 		End:     SuccessorPrefix(area.Path),
 		OpenEnd: true,
 	}
-	//FIX PATH_RANGE
+	// FIX PATH_RANGE
 	return types.Range3d[T]{SubspaceRange: subspace_range, PathRange: path_range, TimeRange: area.Times}
 }
 
 // Define a constant for a really big integer (2^64 in this case)
 const REALLY_BIG_INT uint64 = 18446744073709551601
-*/
+
 /** `Math.min`, but for `BigInt`. */
 // bigIntMin returns the minimum of two big.Int values
 func bigIntMin(a, b uint64) uint64 {
@@ -257,7 +258,7 @@ func EncodeAreaInArea[SubspaceId constraints.Unsigned](opts EncodeAreaOpts[Subsp
 		endDiffBytes = EncodeIntMax64(endDiff)
 	}
 
-	relativePathBytes := EncodeRelativePath(opts.PathScheme, inner.Path, outer.Path) //the function to be implemented in path
+	relativePathBytes := EncodeRelativePath(opts.PathScheme, inner.Path, outer.Path) // the function to be implemented in path
 
 	var subspaceIdBytes []byte
 	if isSubspaceSame {
@@ -282,7 +283,7 @@ func EncodeAreaInAreaLength[SubspaceId constraints.Unsigned](opts EncodeAreaInAr
 		subspaceLen = opts.EncodeSubspaceIdLength(inner.Subspace_id)
 	}
 
-	pathLen := EncodePathRelativeLength(opts.PathScheme, inner.Path, outer.Path) //ask where this is written
+	pathLen := EncodePathRelativeLength(opts.PathScheme, inner.Path, outer.Path) // ask where this is written
 
 	var innerEnd uint64
 
@@ -348,7 +349,7 @@ func DecodeAreaInArea[SubspaceId constraints.Unsigned](opts DecodeAreaInAreaOpti
 		} else {
 			innerStart = outer.Times.Start - startDiff
 		}
-		return types.Area[SubspaceId]{Path: path, Subspace_id: subspaceId, Times: types.Range[uint64]{Start: innerStart, End: 0, OpenEnd: true}} //just recheck the return of Subspace_id
+		return types.Area[SubspaceId]{Path: path, Subspace_id: subspaceId, Times: types.Range[uint64]{Start: innerStart, End: 0, OpenEnd: true}} // just recheck the return of Subspace_id
 	}
 	endDiffPos := 1 + startDiffWidth
 	pathPos := endDiffPos + endDiffWidth
@@ -386,81 +387,86 @@ var compactWidthEndMasks = map[int]int{
 	8: 0x3,
 }
 
-// func DecodeStreamAreaInArea[SubspaceId constraints.Unsigned](opts DecodeStreamAreaInAreaOptions[SubspaceId], bytes *GrowingBytes, outer types.Area[SubspaceId]) chan Result[SubspaceId] {
-// 	resultChan := make(chan Result[SubspaceId])
+func DecodeStreamAreaInArea[SubspaceId constraints.Unsigned](opts DecodeStreamAreaInAreaOptions[SubspaceId], bytes *GrowingBytes, outer types.Area[SubspaceId]) (types.Area[SubspaceId], error) {
+	// TO-DO finish
+	accumulatedBytes := bytes.NextAbsolute(1)
+	flags := accumulatedBytes[0]
 
-// 	go func() {
-// 		defer close(resultChan)
-// 		if val, err := bytes.NextAbsolute(1); err != nil {
-// 			resultChan <- Result[SubspaceId]{Err: err}
-// 			return
-// 		}
-// 		flags := bytes.Array()[0]
+	includeInnerSybspaceId := (flags & 0x80) == 0x80
+	hasOpenEnd := (flags & 0x40) == 0x40
+	addStartDiff := (flags & 0x20) == 0x20
+	addEndDiff := (flags & 0x10) == 0x10
+	startDiffWidth := math.Pow(2, float64((0x3 & flags >> 2)))
+	endDiffWidth := math.Pow(2, float64((0x3 & flags)))
+	var subSpaceId SubspaceId
+	var timeReturnStart uint64
 
-// 		includeInnerSubspaceId := (flags & 0x80) == 0x80
-// 		hasOpenEnd := (flags & 0x40) == 0x40
-// 		addStartDiff := (flags & 0x20) == 0x20
-// 		addEndDiff := (flags & 0x10) == 0x10
-// 		startDiffWidth := 1 << (0x3 & (flags >> 2))
-// 		endDiffWidth := 1 << (0x3 & flags)
+	bytes.Prune(1)
 
-// 		bytes.Prune(1)
+	if hasOpenEnd {
+		accumulatedBytes = bytes.NextAbsolute(int(startDiffWidth))
+		startDiff, _ := DecodeIntMax64(accumulatedBytes[0:int(startDiffWidth)])
+		bytes.Prune(int(startDiffWidth))
+		path := DecodeRelPathStream(opts.PathScheme, bytes, outer.Path)
+		if includeInnerSybspaceId {
+			subSpaceId, _ = opts.DecodeStreamSubspace.DrcodeStream(bytes)
+		} else {
+			subSpaceId = outer.Subspace_id
+		}
+		if addStartDiff {
+			timeReturnStart = outer.Times.Start + startDiff
+		} else {
+			timeReturnStart = outer.Times.Start - startDiff
+		}
+		return types.Area[SubspaceId]{
+			Path:        path,
+			Subspace_id: subSpaceId,
+			Times: types.Range[uint64]{
+				Start:   timeReturnStart,
+				End:     0,
+				OpenEnd: true,
+			},
+			Any_subspace: false,
+		}, nil
+	}
+	accumulatedBytes = bytes.NextAbsolute(int(startDiffWidth))
 
-// 		if hasOpenEnd {
-// 			if err := bytes.NextAbsolute(startDiffWidth); err != nil {
-// 				resultChan <- Result[SubspaceId]{Err: fmt.Errorf("not implemented for non-open-end case")}
-// 				return
-// 			}
+	startDiff, _ := DecodeIntMax64(accumulatedBytes[0:int(startDiffWidth)])
+	bytes.Prune(int(startDiffWidth))
 
-// 			startDiff, _ := DecodeIntMax64(bytes.Array[:startDiffWidth])
-// 			bytes.Prune(startDiffWidth)
+	accumulatedBytes = bytes.NextAbsolute(int(endDiffWidth))
+	endDif, _ := DecodeIntMax64(accumulatedBytes[0:int(endDiffWidth)])
+	bytes.Prune(int(endDiffWidth))
 
-// 			path := DecodeRelPathStream(opts.PathScheme, bytes, outer.Path)
+	path := DecodeRelPathStream(opts.PathScheme, bytes, outer.Path)
+	if includeInnerSybspaceId {
+		subSpaceId, _ = opts.DecodeStreamSubspace.DrcodeStream(bytes)
+	} else {
+		subSpaceId = outer.Subspace_id
+	}
+	if addStartDiff {
+		timeReturnStart = outer.Times.Start + startDiff
+	} else {
+		timeReturnStart = outer.Times.Start - startDiff
+	}
+	var timeReturnEnd uint64
+	if addEndDiff {
+		timeReturnEnd = timeReturnStart + endDif
+	} else {
+		timeReturnEnd = outer.Times.End - endDif
+	}
 
-// 			var subspaceId SubspaceId
-// 			if includeInnerSubspaceId {
-// 				subspaceId = opts.DecodeStreamSubspace.DecodeStream(bytes)
-// 			} else {
-// 				subspaceId = *outer.Subspace_id
-// 			}
-
-// 			var start uint64
-// 			if addStartDiff {
-// 				start = outer.Times.Start + startDiff
-// 			} else {
-// 				start = outer.Times.Start - startDiff
-// 			}
-
-// 			var end uint64
-// 			if addEndDiff {
-// 				// innerStart + endDiff
-// 				end = start + endDiff
-// 			} else {
-// 				// outer.timeRange.end - endDiff
-// 				end = outerTimeRangeEn - endDiff
-// 			}
-
-// 			resultChan <- Result[SubspaceId]{
-// 				Area: types.Area[SubspaceId]{
-// 					Subspace_id: &subspaceId, //just check once
-// 					Path:        path,
-// 					Times: types.Range[uint64]{
-// 						Start:   start,
-// 						End:     0,
-// 						OpenEnd: true,
-// 					},
-// 				},
-// 				Err: nil,
-// 			}
-// 			return
-// 		}
-
-// 		resultChan <- Result[SubspaceId]{Err: fmt.Errorf("not implemented for non-open-end case")}
-
-// 	}()
-
-// 	return resultChan
-// }
+	return types.Area[SubspaceId]{
+		Path:        path,
+		Subspace_id: subSpaceId,
+		Times: types.Range[uint64]{
+			Start:   timeReturnStart,
+			End:     timeReturnEnd,
+			OpenEnd: false,
+		},
+		Any_subspace: false,
+	}, nil
+}
 
 /** Encode an {@linkcode Entry} relative to an {@linkcode Area}. */
 
