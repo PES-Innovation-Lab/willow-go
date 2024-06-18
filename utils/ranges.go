@@ -6,9 +6,6 @@ import (
 	"github.com/PES-Innovation-Lab/willow-go/types"
 )
 
-// Constants for open end and closed end representations
-var OPEN_END = new(interface{})
-
 // orderRangePair orders two Range structs based on their end values.
 func OrderRangePair[T types.OrderableGeneric](a, b types.Range[T]) (types.Range[T], types.Range[T]) {
 	if (!a.OpenEnd && !b.OpenEnd) ||
