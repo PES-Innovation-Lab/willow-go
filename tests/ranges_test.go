@@ -1,35 +1,33 @@
-package tests
+package utils
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/PES-Innovation-Lab/willow-go/types"
-	"github.com/stretchr/testify/assert"
-	"golang.org/x/exp/constraints"
+	"github.com/PES-Innovation-Lab/willow-go/utils"
 )
 
-func TestIsValidRange[T constraints.Ordered](t *testing.T) {
-	assert := assert.New(t)
-
-	// Test cases
-	tests := []struct {
-		name   string
-		order  types.TotalOrder[T]
-		r      types.Range[int]
-		expect bool
-	}{
-
-		{"Open end range", OrderTimestamp, Range[int]{Start: 0, End: 10, OpenEnd: true}, true},
-		{"Valid range", OrderTimestamp, Range[int]{Start: 0, End: 10, OpenEnd: false}, true},
-		{"Invalid range", OrderTimestamp, Range[int]{Start: 10, End: 0, OpenEnd: false}, false},
-		{"Equal start and end", OrderTimestamp, Range[int]{Start: 10, End: 10, OpenEnd: false}, false},
+func TestEncodeRange3dRelative(t *testing.T) {
+	type args struct {
+		orderSubspace    types.TotalOrder[uint64]
+		encodeSubspaceId func(subspace uint64) []byte
+		pathScheme       types.PathParams[uint8]
+		r                types.Range3d[uint64]
+		ref              types.Range3d[uint64]
 	}
-
-	// Run tests
+	tests := []struct {
+		name string
+		args args
+		want []byte
+	}{
+		// TODO: Add test cases.
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := IsValidRange(tt.order, tt.r)
-			assert.Equal(tt.expect, result)
+			if got := utils.EncodeRange3dRelative(tt.args.orderSubspace, tt.args.encodeSubspaceId, tt.args.pathScheme, tt.args.r, tt.args.ref); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("EncodeRange3dRelative() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }
