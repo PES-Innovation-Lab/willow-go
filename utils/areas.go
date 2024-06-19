@@ -66,6 +66,10 @@ func concat(byteSlices ...[]byte) []byte {
 	return result
 }
 
+func isEmpty(path types.Path) bool {
+	return len(path) == 0
+}
+
 /** The full area is the Area including all Entries. */
 func FullArea[SubspaceId cmp.Ordered]() types.Area[SubspaceId] {
 	return types.Area[SubspaceId]{Subspace_id: SubspaceId(0), Any_subspace: true, Path: nil, Times: types.Range[uint64]{Start: 0, End: 0, OpenEnd: true}}
@@ -153,18 +157,35 @@ func AreaTo3dRange[T cmp.Ordered](opts Options[T], area types.Area[T]) types.Ran
 	if area.Any_subspace == true {
 		subspace_range = types.Range[T]{Start: opts.MinimalSubspace, End: T(0), OpenEnd: true}
 	} else {
+		end := *opts.SuccessorSubspace(area.Subspace_id)
+		var choice bool
+		if end == T(0) {
+			end = T(0)
+			choice = true
+		} else {
+			choice = false
+		}
 		subspace_range = types.Range[T]{
 			Start:   area.Subspace_id,
-			End:     *opts.SuccessorSubspace(area.Subspace_id), // NEED TO CHANGE THE SUCCESSOR DEFINITION IN ORDER
-			OpenEnd: false,
+			End:     end, // NEED TO CHANGE THE SUCCESSOR DEFINITION IN ORDER
+			OpenEnd: choice,
 		}
 	}
-	path_range := types.Range[types.Path]{
-		Start:   area.Path,
-		End:     SuccessorPrefix(area.Path),
-		OpenEnd: false,
+	var path_range types.Range[types.Path]
+	end := SuccessorPrefix(area.Path)
+	var choice bool
+	if isEmpty(end) {
+		end = types.Path{}
+		choice = true
+	} else {
+		choice = false
 	}
-	// FIX PATH_RANGE
+	path_range = types.Range[types.Path]{
+		Start:   area.Path,
+		End:     end,
+		OpenEnd: choice,
+	}
+
 	return types.Range3d[T]{SubspaceRange: subspace_range, PathRange: path_range, TimeRange: area.Times}
 }
 
