@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/PES-Innovation-Lab/willow-go/types"
+	"golang.org/x/exp/constraints"
 )
 
 // orderRangePair orders two Range structs based on their end values.
@@ -195,10 +196,10 @@ func IsEqualRangeValue[T types.OrderableGeneric](order types.TotalOrder[T], a ty
 	return false
 }
 
-func EncodeRange3dRelative[SubspaceId types.OrderableGeneric](
-	orderSubspace types.TotalOrder[SubpaceId],
+func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsigned](
+	orderSubspace types.TotalOrder[SubspaceId],
 	encodeSubspaceId func(subspace SubspaceId) uint16,
-	pathScheme types.PathParams,
+	pathScheme types.PathParams[T],
 	r types.Range3d[SubspaceId],
 	ref types.Range3d[SubspaceId],
 ) {
