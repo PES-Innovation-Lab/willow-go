@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/PES-Innovation-Lab/willow-go/types"
+	"golang.org/x/exp/constraints"
 )
 
 // orderRangePair orders two Range structs based on their end values.
@@ -195,42 +196,62 @@ func IsEqualRangeValue[T types.OrderableGeneric](order types.TotalOrder[T], a ty
 	return false
 }
 
-func EncodeRange3dRelative[SubspaceId types.OrderableGeneric](
-	orderSubspace types.TotalOrder[SubpaceId],
-	encodeSubspaceId func(subspace SubspaceId) uint16,
-	pathScheme types.PathParams,
+func AbsDiffuint64(a uint64, b uint64) uint64 {
+	/* return absolute value of a - b uint64 values*/
+	if a < b {
+		return (b - a)
+	} else if a > b {
+		return (a - b)
+	} else {
+		return (a - b)
+	}
+}
+
+func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsigned](
+	orderSubspace types.TotalOrder[SubspaceId],
+	encodeSubspaceId func(subspace SubspaceId) []byte,
+	pathScheme types.PathParams[T],
 	r types.Range3d[SubspaceId],
 	ref types.Range3d[SubspaceId],
 ) {
-	start_to_start := Abs(r.TimeRange.Start - ref.TimeRange.Start)
-	start_to_end := Abs(r.TimeRange.Start - ref.TimeRange.End)
-	end_to_start := Abs(r.TimeRange.End - ref.TimeRange.Start)
-	end_to_end := Abs(r.TimeRange.End - ref.TimeRange.End)
+	start_to_start := AbsDiffuint64(r.TimeRange.Start, ref.TimeRange.Start)
+	start_to_end := AbsDiffuint64(r.TimeRange.Start, ref.TimeRange.End)
+	end_to_start := AbsDiffuint64(r.TimeRange.End, ref.TimeRange.Start)
+	end_to_end := AbsDiffuint64(r.TimeRange.End, ref.TimeRange.End)
 	start_time_diff := min(start_to_start, start_to_end)
 	end_time_diff := min(end_to_start, end_to_end)
 
-	var encoding1 uint8 = 0x00
-	var encoding2 uint8 = 0x00
+	var encoding1 byte = 0x00
+	var encoding2 byte = 0x00
+
+	var subspaceIdEncoding1 []byte
+	var subspaceIdEncoding2 []byte
+
+	var pathEncoding1 []byte
+	var pathEncoding2 []byte
 
 	// Encode byte 1
+
 	// encoding bits 0, 1
-	if IsEqualRangeValue(orderSubspace, r, true, ref, true) {
+	if IsEqualRangeValue(orderSubspace, r.SubspaceRange, true, ref.SubspaceRange, true) {
 		encoding1 = encoding1 | 0x40
-	} else if IsEqualRangeValue(orderSubspace, r, true, ref, false) {
+	} else if IsEqualRangeValue(orderSubspace, r.SubspaceRange, true, ref.SubspaceRange, false) {
 		encoding1 = encoding1 | 0x80
 	} else {
 		encoding1 = encoding1 | 0xC0
+		subspaceIdEncoding1 = encodeSubspaceId(r.SubspaceRange.Start)
 	}
 
 	// eoncoding bits at 2, 3
 	if r.SubspaceRange.OpenEnd {
-		encoding1 = encoding2 | 0x00
-	} else if IsEqualRangeValue(orderSubspace, r, false, ref, true) {
+		// do nothing
+	} else if IsEqualRangeValue(orderSubspace, r.SubspaceRange, false, ref.SubspaceRange, true) {
 		encoding1 = encoding2 | 0x10
-	} else if IsEqualRangeValue(orderSubspace, r, false, ref, false) {
+	} else if IsEqualRangeValue(orderSubspace, r.SubspaceRange, false, ref.SubspaceRange, false) {
 		encoding1 = encoding1 | 0x20
 	} else {
 		encoding1 = encoding1 | 0x30
+		subspaceIdEncoding2 = encodeSubspaceId(r.SubspaceRange.End)
 	}
 
 	// encoding bit 4
@@ -239,24 +260,30 @@ func EncodeRange3dRelative[SubspaceId types.OrderableGeneric](
 
 	if len(prefixStartStart) >= len(prefixStartEnd) {
 		encoding1 = encoding1 | 0x08
+		pathEncoding1 = EncodeRelativePath(pathScheme, r.PathRange.Start, ref.PathRange.Start)
+	} else {
+		pathEncoding1 = EncodeRelativePath(pathScheme, r.PathRange.Start, ref.PathRange.End)
 	}
 
-	//encoding bit 5
+	// encoding bit 5
 	if r.PathRange.OpenEnd {
 		encoding1 = encoding1 | 0x04
 	}
 
-	//encoding bit 6
+	// encoding bit 6
 	prefixEndStart, _ := CommonPrefix(r.PathRange.End, ref.PathRange.Start)
 	prefixEndEnd, _ := CommonPrefix(r.PathRange.End, ref.PathRange.End)
 	if len(prefixEndStart) >= len(prefixEndEnd) {
 		encoding1 = encoding1 | 0x02
+		pathEncoding2 = EncodeRelativePath(pathScheme, r.PathRange.End, ref.PathRange.Start)
+	} else {
+		pathEncoding2 = EncodeRelativePath(pathScheme, r.PathRange.End, ref.PathRange.End)
 	}
 	if r.PathRange.OpenEnd {
 		encoding1 = encoding1 & 0xFD
 	}
 
-	//encoding big 7
+	// encoding big 7
 	if r.TimeRange.OpenEnd {
 		encoding1 = encoding1 | 0x01
 	}
@@ -317,7 +344,6 @@ func EncodeRange3dRelative[SubspaceId types.OrderableGeneric](
 		encoding2 = encoding2 | 0x03
 	}
 
+	// remaining encoding information ->
+	start_time_diff_encoding := EncodeIntMax64(start_time_diff)
 }
-
-// Volunteer based
-// Personalisable

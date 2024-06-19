@@ -102,7 +102,7 @@ func TestIsValidPath(t *testing.T) {
 
 	for _, val := range validPathVectors {
 		valid, _ := utils.IsValidPath[uint](val.Path, types.PathParams[uint]{
-			MaxComponentcount:  val.MaxComponentCount,
+			MaxComponentCount:  val.MaxComponentCount,
 			MaxComponentLength: val.MaxComponentLength,
 			MaxPathLength:      val.MaxPathLength,
 		})
@@ -188,11 +188,60 @@ func TestCommonPrefix(t *testing.T) {
 	}
 }
 
-func TestEncodeDecodePrefix(t *testing.T) {
-	pathParams := types.PathParams[uint8]{
-		MaxComponentcount:  8,
-		MaxPathLength:      8,
-		MaxComponentLength: 8,
-	}
+type PathEncodingVector struct {
+	PathParams types.PathParams[uint32]
+	Path       types.Path
+}
 
+var PathEncodingVectors = []PathEncodingVector{
+	{
+		PathParams: types.PathParams[uint32]{
+			MaxComponentLength: 16777215,
+			MaxComponentCount:  16777215,
+			MaxPathLength:      16777215,
+		},
+		Path: types.Path{{}, {}, {7, 8, 9}},
+	},
+	{
+		PathParams: types.PathParams[uint32]{
+			MaxComponentLength: 16777215,
+			MaxComponentCount:  16777215,
+			MaxPathLength:      16777215,
+		},
+		Path: types.Path{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}},
+	},
+}
+
+func TestEncodeDecodePath(t *testing.T) {
+
+	for _, vector := range PathEncodingVectors {
+		encoded := utils.EncodePath(vector.PathParams, vector.Path)
+		decoded := utils.DecodePath(vector.PathParams, encoded)
+		if !reflect.DeepEqual(vector.Path, decoded) {
+			t.Errorf("Test failed! Expected %v, but got %v", vector.Path, decoded)
+		}
+	}
+}
+
+func TestEncodeDecodeStream(t *testing.T) {
+	for _, vector := range PathEncodingVectors {
+		encoded := utils.EncodePath(vector.PathParams, vector.Path)
+
+		stream := make(chan []byte, 10) // Simulating FIFO buffer
+
+		bytes := utils.NewGrowingBytes(stream)
+
+		go func() {
+
+			for _, encodedByte := range encoded {
+				stream <- []byte{encodedByte}
+			}
+		}()
+
+		decoded := utils.DecodePathStream[uint32](vector.PathParams, bytes)
+
+		if !reflect.DeepEqual(vector.Path, decoded) {
+			t.Errorf("Test failed! Expected %v, but got %v", vector.Path, decoded)
+		}
+	}
 }
