@@ -8,10 +8,10 @@ type Entry[NamespaceId, SubspaceId, PayloadDigest constraints.Ordered] struct {
 	Namespace_id NamespaceId
 	// ID of the subspace to which the Entry belongs to
 	Subspace_id SubspaceId
-	// The path which the entry has
-	Path Path
 	// The hashed payload
 	Payload_digest PayloadDigest
+	// The path which the entry has
+	Path Path
 	// The time at which the entry was created in microseconds
 	Timestamp uint64
 	// The length of the payload

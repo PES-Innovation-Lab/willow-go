@@ -109,13 +109,25 @@ func EncodeEntryRelativeEntry[NamespaceId, SubspaceId, PayloadDigest constraints
 		EncodeNamespace     func(namespace NamespaceId) []byte
 		EncodeSubspace      func(subspace SubspaceId) []byte
 		EncodePayloadDigest func(digest PayloadDigest) []byte
-		isEqualNamespace    func(a NamespaceId, b NamespaceId) bool
+		IsEqualNamespace    func(a NamespaceId, b NamespaceId) bool
 		OrderSubspace       types.TotalOrder[SubspaceId]
 		PathScheme          types.PathParams[ValueType]
 	}, entry types.Entry[NamespaceId, SubspaceId, PayloadDigest],
 	ref types.Entry[NamespaceId, SubspaceId, PayloadDigest],
 ) []byte {
+	timeDiff := AbsDiffuint64(entry.Timestamp, ref.Timestamp)
+	var encodeNamespaceFlag int
+	if !opts.IsEqualNamespace(entry.Namespace_id, ref.Namespace_id) {
+		encodeNamespaceFlag = 0x80
+	} else {
+		encodeNamespaceFlag = 0x00
+	}
+	var encodeSubspaceFlag int
 
-	var t []byte
-	return t
+	if opts.OrderSubspace(entry.Subspace_id, ref.Subspace_id) != 0 {
+		encodeSubspaceFlag = 0x40
+	} else {
+		encodeSubspaceFlag = 0x0
+	}
+
 }
