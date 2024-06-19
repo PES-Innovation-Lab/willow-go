@@ -238,47 +238,47 @@ func EncodeAreaInArea[SubspaceId constraints.Unsigned](opts EncodeAreaOpts[Subsp
 		innerEnd-inner.Times.Start, outerEnd-innerEnd,
 	)
 
-	flags := byte(0x0)
+	flags := 0x0
 
 	isSubspaceSame := (inner.Any_subspace == true && outer.Any_subspace == true) || (inner.Any_subspace != true && outer.Any_subspace != true && (opts.OrderSubspace(inner.Subspace_id, outer.Subspace_id) == 0))
 
 	if !isSubspaceSame {
-		flags |= byte(0x80)
+		flags |= 0x80
 	}
 
 	if inner.Times.OpenEnd == false {
-		flags |= byte(0x40)
+		flags |= 0x40
 	}
 
 	if startDiff == (inner.Times.Start - outer.Times.Start) {
-		flags |= byte(0x20)
+		flags |= 0x20
 	}
 
 	if endDiff == (innerEnd - inner.Times.Start) {
-		flags |= byte(0x10)
+		flags |= 0x10
 	}
 
 	startDiffCompactWidth := GetWidthMax64Int(startDiff)
 
 	if startDiffCompactWidth == 4 || startDiffCompactWidth == 8 {
-		flags |= byte(0x8)
+		flags |= 0x8
 	}
 
 	if startDiffCompactWidth == 2 || startDiffCompactWidth == 8 {
-		flags |= byte(0x4)
+		flags |= 0x4
 	}
 
 	endDiffCompactWidth := GetWidthMax64Int(endDiff)
 
 	if endDiffCompactWidth == 4 || endDiffCompactWidth == 8 {
-		flags |= byte(0x2)
+		flags |= 0x2
 	}
 
 	if endDiffCompactWidth == 2 || endDiffCompactWidth == 8 {
-		flags |= byte(0x1)
+		flags |= 0x1
 	}
 
-	flagByte := []byte{flags}
+	flagByte := []byte{byte(flags)}
 
 	startDiffBytes := EncodeIntMax64(startDiff)
 	var endDiffBytes []byte
