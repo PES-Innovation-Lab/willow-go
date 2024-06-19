@@ -53,9 +53,9 @@ type DecodeStreamAreaInAreaOptions[SubspaceId constraints.Unsigned] struct {
 }
 
 type EncodeEntryInNamespaceAreaOptions[SubspaceId constraints.Unsigned, PayloadDigest any] struct {
-	encodeSubspaceId    func(subspace SubspaceId) []byte
-	encodePayloadDigest func(digest PayloadDigest) []byte
-	pathScheme          types.PathParams[SubspaceId]
+	EncodeSubspaceId    func(subspace SubspaceId) []byte
+	EncodePayloadDigest func(digest PayloadDigest) []byte
+	PathScheme          types.PathParams[SubspaceId]
 }
 
 func concat(byteSlices ...[]byte) []byte {
@@ -538,10 +538,10 @@ func EncodeEntryInNamespaceArea[NamespaceId, SubspaceId, PayloadDigest constrain
 	if outer.Any_subspace == true {
 		encodedSubspace = []byte{}
 	} else {
-		encodedSubspace = opts.encodeSubspaceId(entry.Subspace_id)
+		encodedSubspace = opts.EncodeSubspaceId(entry.Subspace_id)
 	}
 
-	encodedPath := EncodeRelativePath[SubspaceId](opts.pathScheme, entry.Path, outer.Path)
+	encodedPath := EncodeRelativePath[SubspaceId](opts.PathScheme, entry.Path, outer.Path)
 
 	encodedTimeDiff := GetWidthMax64Int(timeDiff)
 
@@ -551,7 +551,7 @@ func EncodeEntryInNamespaceArea[NamespaceId, SubspaceId, PayloadDigest constrain
 
 	encodedPayloadLengthBytes := []byte(strconv.Itoa(encodedPayloadLength))
 
-	encodedPayloadDigest := opts.encodePayloadDigest(entry.Payload_digest)
+	encodedPayloadDigest := opts.EncodePayloadDigest(entry.Payload_digest)
 
 	result := concat(
 		headerBytes,
