@@ -209,7 +209,7 @@ func AbsDiffuint64(a uint64, b uint64) uint64 {
 
 func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsigned](
 	orderSubspace types.TotalOrder[SubspaceId],
-	encodeSubspaceId func(subspace SubspaceId) uint16,
+	encodeSubspaceId func(subspace SubspaceId) []byte,
 	pathScheme types.PathParams[T],
 	r types.Range3d[SubspaceId],
 	ref types.Range3d[SubspaceId],
@@ -221,10 +221,17 @@ func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 	start_time_diff := min(start_to_start, start_to_end)
 	end_time_diff := min(end_to_start, end_to_end)
 
-	var encoding1 uint8 = 0x00
-	var encoding2 uint8 = 0x00
+	var encoding1 byte = 0x00
+	var encoding2 byte = 0x00
+
+	var subspaceIdEncoding1 []byte
+	var subspaceIdEncoding2 []byte
+
+	var pathEncoding1 []byte
+	var pathEncoding2 []byte
 
 	// Encode byte 1
+
 	// encoding bits 0, 1
 	if IsEqualRangeValue(orderSubspace, r.SubspaceRange, true, ref.SubspaceRange, true) {
 		encoding1 = encoding1 | 0x40
@@ -232,17 +239,19 @@ func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 		encoding1 = encoding1 | 0x80
 	} else {
 		encoding1 = encoding1 | 0xC0
+		subspaceIdEncoding1 = encodeSubspaceId(r.SubspaceRange.Start)
 	}
 
 	// eoncoding bits at 2, 3
 	if r.SubspaceRange.OpenEnd {
-		encoding1 = encoding2 | 0x00
+		// do nothing
 	} else if IsEqualRangeValue(orderSubspace, r.SubspaceRange, false, ref.SubspaceRange, true) {
 		encoding1 = encoding2 | 0x10
 	} else if IsEqualRangeValue(orderSubspace, r.SubspaceRange, false, ref.SubspaceRange, false) {
 		encoding1 = encoding1 | 0x20
 	} else {
 		encoding1 = encoding1 | 0x30
+		subspaceIdEncoding2 = encodeSubspaceId(r.SubspaceRange.End)
 	}
 
 	// encoding bit 4
@@ -251,24 +260,30 @@ func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 
 	if len(prefixStartStart) >= len(prefixStartEnd) {
 		encoding1 = encoding1 | 0x08
+		pathEncoding1 = EncodeRelativePath(pathScheme, r.PathRange.Start, ref.PathRange.Start)
+	} else {
+		pathEncoding1 = EncodeRelativePath(pathScheme, r.PathRange.Start, ref.PathRange.End)
 	}
 
-	//encoding bit 5
+	// encoding bit 5
 	if r.PathRange.OpenEnd {
 		encoding1 = encoding1 | 0x04
 	}
 
-	//encoding bit 6
+	// encoding bit 6
 	prefixEndStart, _ := CommonPrefix(r.PathRange.End, ref.PathRange.Start)
 	prefixEndEnd, _ := CommonPrefix(r.PathRange.End, ref.PathRange.End)
 	if len(prefixEndStart) >= len(prefixEndEnd) {
 		encoding1 = encoding1 | 0x02
+		pathEncoding2 = EncodeRelativePath(pathScheme, r.PathRange.End, ref.PathRange.Start)
+	} else {
+		pathEncoding2 = EncodeRelativePath(pathScheme, r.PathRange.End, ref.PathRange.End)
 	}
 	if r.PathRange.OpenEnd {
 		encoding1 = encoding1 & 0xFD
 	}
 
-	//encoding big 7
+	// encoding big 7
 	if r.TimeRange.OpenEnd {
 		encoding1 = encoding1 | 0x01
 	}
@@ -330,8 +345,5 @@ func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 	}
 
 	// remaining encoding information ->
-
+	start_time_diff_encoding := EncodeIntMax64(start_time_diff)
 }
-
-// Volunteer based
-// Personalisable
