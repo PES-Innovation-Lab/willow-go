@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"golang.org/x/exp/constraints"
@@ -215,6 +216,14 @@ func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 	ref types.Range3d[SubspaceId],
 ) {
 	start_to_start := AbsDiffuint64(r.TimeRange.Start, ref.TimeRange.Start)
+
+	if ref.TimeRange.OpenEnd {
+		ref.TimeRange.End = math.MaxUint64
+		if r.TimeRange.OpenEnd {
+			r.TimeRange.End = math.MaxUint64
+		}
+	}
+
 	start_to_end := AbsDiffuint64(r.TimeRange.Start, ref.TimeRange.End)
 	end_to_start := AbsDiffuint64(r.TimeRange.End, ref.TimeRange.Start)
 	end_to_end := AbsDiffuint64(r.TimeRange.End, ref.TimeRange.End)
@@ -346,4 +355,5 @@ func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 
 	// remaining encoding information ->
 	start_time_diff_encoding := EncodeIntMax64(start_time_diff)
+	end_time_diff_encoding := EncodeIntMax64()
 }
