@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"golang.org/x/exp/constraints"
@@ -37,7 +38,6 @@ func IsIncludedRange[T types.OrderableGeneric](order types.TotalOrder[T], r type
 }
 
 func IntersectRange[T types.OrderableGeneric](order types.TotalOrder[T], a, b types.Range[T]) (bool, types.Range[T]) {
-
 	if !IsValidRange(order, a) || !IsValidRange(order, b) {
 		fmt.Println("Paths are not valid paths... BOZO CAN'T EVEN PASS PATHS PROPERLY AHH")
 	}
@@ -209,22 +209,37 @@ func AbsDiffuint64(a uint64, b uint64) uint64 {
 
 func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsigned](
 	orderSubspace types.TotalOrder[SubspaceId],
-	encodeSubspaceId func(subspace SubspaceId) uint16,
+	encodeSubspaceId func(subspace SubspaceId) []byte,
 	pathScheme types.PathParams[T],
 	r types.Range3d[SubspaceId],
 	ref types.Range3d[SubspaceId],
-) {
+) []byte {
 	start_to_start := AbsDiffuint64(r.TimeRange.Start, ref.TimeRange.Start)
+
+	if ref.TimeRange.OpenEnd {
+		ref.TimeRange.End = math.MaxUint64
+		if r.TimeRange.OpenEnd {
+			r.TimeRange.End = math.MaxUint64
+		}
+	}
+
 	start_to_end := AbsDiffuint64(r.TimeRange.Start, ref.TimeRange.End)
 	end_to_start := AbsDiffuint64(r.TimeRange.End, ref.TimeRange.Start)
 	end_to_end := AbsDiffuint64(r.TimeRange.End, ref.TimeRange.End)
 	start_time_diff := min(start_to_start, start_to_end)
 	end_time_diff := min(end_to_start, end_to_end)
 
-	var encoding1 uint8 = 0x00
-	var encoding2 uint8 = 0x00
+	var encoding1 byte = 0x00
+	var encoding2 byte = 0x00
+
+	var subspaceIdEncodingStart []byte
+	var subspaceIdEncodingEnd []byte
+
+	var pathEncodingStart []byte
+	var pathEncodingEnd []byte
 
 	// Encode byte 1
+
 	// encoding bits 0, 1
 	if IsEqualRangeValue(orderSubspace, r.SubspaceRange, true, ref.SubspaceRange, true) {
 		encoding1 = encoding1 | 0x40
@@ -232,17 +247,19 @@ func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 		encoding1 = encoding1 | 0x80
 	} else {
 		encoding1 = encoding1 | 0xC0
+		subspaceIdEncodingStart = encodeSubspaceId(r.SubspaceRange.Start)
 	}
 
 	// eoncoding bits at 2, 3
 	if r.SubspaceRange.OpenEnd {
-		encoding1 = encoding2 | 0x00
+		// do nothing
 	} else if IsEqualRangeValue(orderSubspace, r.SubspaceRange, false, ref.SubspaceRange, true) {
 		encoding1 = encoding2 | 0x10
 	} else if IsEqualRangeValue(orderSubspace, r.SubspaceRange, false, ref.SubspaceRange, false) {
 		encoding1 = encoding1 | 0x20
 	} else {
 		encoding1 = encoding1 | 0x30
+		subspaceIdEncodingEnd = encodeSubspaceId(r.SubspaceRange.End)
 	}
 
 	// encoding bit 4
@@ -251,24 +268,30 @@ func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 
 	if len(prefixStartStart) >= len(prefixStartEnd) {
 		encoding1 = encoding1 | 0x08
+		pathEncodingStart = EncodeRelativePath(pathScheme, r.PathRange.Start, ref.PathRange.Start)
+	} else {
+		pathEncodingStart = EncodeRelativePath(pathScheme, r.PathRange.Start, ref.PathRange.End)
 	}
 
-	//encoding bit 5
+	// encoding bit 5
 	if r.PathRange.OpenEnd {
 		encoding1 = encoding1 | 0x04
 	}
 
-	//encoding bit 6
+	// encoding bit 6
 	prefixEndStart, _ := CommonPrefix(r.PathRange.End, ref.PathRange.Start)
 	prefixEndEnd, _ := CommonPrefix(r.PathRange.End, ref.PathRange.End)
 	if len(prefixEndStart) >= len(prefixEndEnd) {
 		encoding1 = encoding1 | 0x02
+		pathEncodingEnd = EncodeRelativePath(pathScheme, r.PathRange.End, ref.PathRange.Start)
+	} else {
+		pathEncodingEnd = EncodeRelativePath(pathScheme, r.PathRange.End, ref.PathRange.End)
 	}
 	if r.PathRange.OpenEnd {
 		encoding1 = encoding1 & 0xFD
 	}
 
-	//encoding big 7
+	// encoding big 7
 	if r.TimeRange.OpenEnd {
 		encoding1 = encoding1 | 0x01
 	}
@@ -280,7 +303,7 @@ func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 		encoding2 = encoding2 | 0x80
 	}
 
-	//encoding bit 9 (1)
+	// encoding bit 9 (1)
 	if (encoding2 & 0x80) == 0x80 {
 		if r.TimeRange.Start >= ref.TimeRange.Start {
 			encoding2 = encoding2 | 0x40
@@ -307,7 +330,7 @@ func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 	if end_to_start <= end_to_end {
 		encoding2 = encoding2 | 0x08
 	}
-	//encoding bit 13 (5)
+	// encoding bit 13 (5)
 	if (encoding2 & 0x08) == 0x08 {
 		if r.TimeRange.End >= ref.TimeRange.Start {
 			encoding2 = encoding2 | 0x04
@@ -316,10 +339,9 @@ func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 		if r.TimeRange.End >= ref.TimeRange.End {
 			encoding2 = encoding2 | 0x04
 		}
-
 	}
 
-	//encoding bit 14, 15 (6,7)
+	// encoding bit 14, 15 (6,7)
 	switch GetWidthMax64Int(end_time_diff) {
 	case 2:
 		encoding2 = encoding2 | 0x01
@@ -329,9 +351,238 @@ func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 		encoding2 = encoding2 | 0x03
 	}
 
+	var end_time_diff_encoding []byte
+	if !r.TimeRange.OpenEnd && ref.TimeRange.OpenEnd {
+		end_time_diff_encoding = EncodeIntMax64(end_time_diff)
+	} else {
+		end_time_diff_encoding = EncodeIntMax64(end_to_start)
+	}
 	// remaining encoding information ->
+	start_time_diff_encoding := EncodeIntMax64(start_time_diff)
 
+	EncodedArray := concat(
+		[]byte{encoding1, encoding2},
+		subspaceIdEncodingStart,
+		subspaceIdEncodingEnd,
+		pathEncodingStart,
+		pathEncodingEnd,
+		start_time_diff_encoding,
+		end_time_diff_encoding,
+	)
+	return EncodedArray
 }
 
-// Volunteer based
-// Personalisable
+func DecodeStreamRange3dRelative[SubspaceId constraints.Ordered, K constraints.Unsigned](
+	DecodeStreamSubspaceId func(bytes *GrowingBytes) SubspaceId,
+	pathScheme types.PathParams[K],
+	bytes *GrowingBytes,
+	ref types.Range3d[SubspaceId],
+) types.Range3d[SubspaceId] {
+	accumulatedBytes := bytes.NextAbsolute(2)
+	firstByte, secondByte := accumulatedBytes[0], accumulatedBytes[1]
+
+	var isSubspaceStartEncoded string
+
+	switch true {
+	case (firstByte & 0xc0) == 0xc0:
+		isSubspaceStartEncoded = "yes"
+	case (firstByte & 0x80) == 0x80:
+		isSubspaceStartEncoded = "ref_end"
+	case (firstByte & 0x40) == 0x40:
+		isSubspaceStartEncoded = "ref_start"
+	default:
+		isSubspaceStartEncoded = "invalid"
+	}
+	if isSubspaceStartEncoded == "invalid" {
+		panic("Invalid 3d range relative to relative 3d range encoding")
+	}
+
+	var isSubspaceEndEncoded string
+
+	switch true {
+	case (firstByte & 0x30) == 0x30:
+		isSubspaceStartEncoded = "yes"
+	case (firstByte & 0x20) == 0x20:
+		isSubspaceStartEncoded = "ref_end"
+	case (firstByte & 0x10) == 0x10:
+		isSubspaceStartEncoded = "ref_start"
+	default:
+		isSubspaceStartEncoded = "open"
+	}
+
+	isPathStartRelativeToRefStart := (firstByte & 0x8) == 0x8
+
+	isRangePathEndOpen := (firstByte & 0x4) == 0x40
+
+	isPathEndEncodedRelToRefStart := (firstByte & 0x2) == 0x2
+
+	isTimeEndOpen := (firstByte & 0x1) == 0x1
+
+	encodeTimeStartRelToRefTimeStart := (secondByte & 0x80) == 0x80
+
+	addStartTimeDiff := (secondByte & 0x40) == 0x40
+
+	compactWidthStartTimeDiff := math.Pow(2, float64((secondByte&0x30)>>4))
+
+	encodeTimeEndRelToRefStart := (secondByte & 0x8) == 0x8
+
+	addEndTimeDiff := (secondByte & 0x4) == 0x4
+
+	compactWidthEndTimeDiff := math.Pow(2, float64(secondByte&0x3))
+
+	bytes.Prune(2)
+
+	var subspaceStart SubspaceId
+
+	switch isSubspaceStartEncoded {
+	case "ref_start":
+		subspaceStart = ref.SubspaceRange.Start
+	case "ref_end":
+		if !ref.SubspaceRange.OpenEnd {
+			subspaceStart = ref.SubspaceRange.End
+		} else {
+			panic("start value cannot be open ended")
+		}
+	case "yes":
+		subspaceStart = DecodeStreamSubspaceId(bytes)
+	}
+
+	var subspaceEnd SubspaceId
+	var subspaceOpenEnd bool
+
+	switch isSubspaceEndEncoded {
+	case "open":
+		subspaceEnd = subspaceStart
+		subspaceOpenEnd = true
+	case "ref_start":
+		subspaceEnd = ref.SubspaceRange.Start
+		subspaceOpenEnd = false
+	case "ref_end":
+		subspaceEnd = ref.SubspaceRange.End
+		subspaceOpenEnd = false
+	case "yes":
+		subspaceEnd = DecodeStreamSubspaceId(bytes)
+		subspaceOpenEnd = false
+	}
+
+	var pathStart types.Path
+
+	if isPathStartRelativeToRefStart {
+		pathStart = DecodeRelPathStream(pathScheme, bytes, ref.PathRange.Start)
+	} else {
+		if ref.PathRange.OpenEnd {
+			panic("The start of a path range cannot be encoded relative to an open end.")
+		}
+		pathStart = DecodeRelPathStream(pathScheme, bytes, ref.PathRange.End)
+	}
+
+	var pathEnd types.Path
+	var pathOpenEnd bool
+
+	if isRangePathEndOpen {
+		pathEnd = types.Path{}
+		pathOpenEnd = true
+	} else if isPathEndEncodedRelToRefStart {
+		pathEnd = DecodeRelPathStream(pathScheme, bytes, ref.PathRange.Start)
+	} else {
+		if ref.PathRange.OpenEnd {
+			panic("The end of a path range cannot be encoded relative to an open end.")
+		}
+		pathEnd = DecodeRelPathStream(pathScheme, bytes, ref.PathRange.End)
+	}
+	accumulatedBytes = bytes.NextAbsolute(int(compactWidthStartTimeDiff))
+
+	startTimeDiff, err := DecodeIntMax64(accumulatedBytes[0:int(compactWidthStartTimeDiff)])
+	if err != nil {
+		panic(err)
+	}
+
+	bytes.Prune(int(compactWidthStartTimeDiff))
+
+	var timeStart uint64
+
+	if encodeTimeStartRelToRefTimeStart {
+		if addStartTimeDiff {
+			timeStart = ref.TimeRange.Start + uint64(startTimeDiff)
+		} else {
+			timeStart = ref.TimeRange.Start - uint64(startTimeDiff)
+		}
+	} else {
+		if ref.TimeRange.OpenEnd {
+			panic("The start of a time cannot be open ended")
+		}
+		if addStartTimeDiff {
+			timeStart = ref.TimeRange.End + uint64(startTimeDiff)
+		} else {
+			timeStart = ref.TimeRange.End - uint64(startTimeDiff)
+		}
+	}
+	var timeEnd uint64
+	var timeOpenEnd bool
+
+	if isTimeEndOpen {
+		timeOpenEnd = true
+		timeEnd = timeStart
+	} else {
+		accumulatedBytes = bytes.NextAbsolute(int(compactWidthEndTimeDiff))
+
+		endTimeDiff, err := DecodeIntMax64(accumulatedBytes[0:int(compactWidthEndTimeDiff)])
+		if err != nil {
+			panic(err)
+		}
+
+		if encodeTimeEndRelToRefStart {
+			if addEndTimeDiff {
+				timeEnd = ref.TimeRange.End + uint64(endTimeDiff)
+			} else {
+				timeEnd = ref.TimeRange.End - uint64(endTimeDiff)
+			}
+		} else {
+			if ref.TimeRange.OpenEnd {
+				panic("end of timerange cannot be encoded relative to open end")
+			}
+			if addEndTimeDiff {
+				timeEnd = ref.TimeRange.End + uint64(endTimeDiff)
+			} else {
+				timeEnd = ref.TimeRange.End - uint64(endTimeDiff)
+			}
+		}
+	}
+	return types.Range3d[SubspaceId]{
+		SubspaceRange: types.Range[SubspaceId]{
+			Start:   subspaceStart,
+			End:     subspaceEnd,
+			OpenEnd: subspaceOpenEnd,
+		},
+		PathRange: types.Range[types.Path]{
+			Start:   pathStart,
+			End:     pathEnd,
+			OpenEnd: pathOpenEnd,
+		},
+		TimeRange: types.Range[uint64]{
+			Start:   timeStart,
+			End:     timeEnd,
+			OpenEnd: timeOpenEnd,
+		},
+	}
+}
+
+func DefaultSubspace3d[SubspaceId constraints.Ordered](defaultSubspaceId SubspaceId) types.Range3d[SubspaceId] {
+	return types.Range3d[SubspaceId]{
+		SubspaceRange: types.Range[SubspaceId]{
+			Start:   defaultSubspaceId,
+			End:     defaultSubspaceId,
+			OpenEnd: true,
+		},
+		PathRange: types.Range[types.Path]{
+			Start:   types.Path{},
+			End:     types.Path{},
+			OpenEnd: true,
+		},
+		TimeRange: types.Range[uint64]{
+			Start:   0,
+			End:     0,
+			OpenEnd: true,
+		},
+	}
+}
