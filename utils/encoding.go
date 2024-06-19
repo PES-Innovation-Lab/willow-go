@@ -104,19 +104,19 @@ func EncodeIntMax64[T constraints.Unsigned](num T) []byte {
 	return bytes
 }
 
-func DecodeIntMax64(encoded []byte) (uint64, error) {
+func DecodeIntMax64(encoded []byte) uint64 {
 	switch len(encoded) {
 	case 1:
-		return uint64(encoded[0]), nil
+		return uint64(encoded[0]),
 
 	case 2:
-		return uint64(binary.BigEndian.Uint16(encoded)), nil
+		return uint64(binary.BigEndian.Uint16(encoded))
 
 	case 4:
-		return uint64(binary.BigEndian.Uint32(encoded)), nil
+		return uint64(binary.BigEndian.Uint32(encoded))
 
 	case 8:
-		return binary.BigEndian.Uint64(encoded), nil
+		return binary.BigEndian.Uint64(encoded)
 	default:
 		panic("invalid length")
 	}
