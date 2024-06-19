@@ -1,13 +1,11 @@
 package types
 
-import (
-	"cmp"
-)
+import "golang.org/x/exp/constraints"
 
 type Rel int
 
 type OrderableGeneric interface {
-	cmp.Ordered | Path
+	constraints.Ordered | Path
 }
 
 const (
