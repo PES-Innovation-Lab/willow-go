@@ -38,7 +38,6 @@ func IsIncludedRange[T types.OrderableGeneric](order types.TotalOrder[T], r type
 }
 
 func IntersectRange[T types.OrderableGeneric](order types.TotalOrder[T], a, b types.Range[T]) (bool, types.Range[T]) {
-
 	if !IsValidRange(order, a) || !IsValidRange(order, b) {
 		fmt.Println("Paths are not valid paths... BOZO CAN'T EVEN PASS PATHS PROPERLY AHH")
 	}
@@ -304,7 +303,7 @@ func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 		encoding2 = encoding2 | 0x80
 	}
 
-	//encoding bit 9 (1)
+	// encoding bit 9 (1)
 	if (encoding2 & 0x80) == 0x80 {
 		if r.TimeRange.Start >= ref.TimeRange.Start {
 			encoding2 = encoding2 | 0x40
@@ -331,7 +330,7 @@ func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 	if end_to_start <= end_to_end {
 		encoding2 = encoding2 | 0x08
 	}
-	//encoding bit 13 (5)
+	// encoding bit 13 (5)
 	if (encoding2 & 0x08) == 0x08 {
 		if r.TimeRange.End >= ref.TimeRange.Start {
 			encoding2 = encoding2 | 0x04
@@ -340,10 +339,9 @@ func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 		if r.TimeRange.End >= ref.TimeRange.End {
 			encoding2 = encoding2 | 0x04
 		}
-
 	}
 
-	//encoding bit 14, 15 (6,7)
+	// encoding bit 14, 15 (6,7)
 	switch GetWidthMax64Int(end_time_diff) {
 	case 2:
 		encoding2 = encoding2 | 0x01
@@ -356,4 +354,24 @@ func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 	// remaining encoding information ->
 	start_time_diff_encoding := EncodeIntMax64(start_time_diff)
 	end_time_diff_encoding := EncodeIntMax64()
+}
+
+func DefaultSubspace3d[SubspaceId constraints.Ordered](defaultSubspaceId SubspaceId) types.Range3d[SubspaceId] {
+	return types.Range3d[SubspaceId]{
+		SubspaceRange: types.Range[SubspaceId]{
+			Start:   defaultSubspaceId,
+			End:     defaultSubspaceId,
+			OpenEnd: true,
+		},
+		PathRange: types.Range[types.Path]{
+			Start:   types.Path{},
+			End:     types.Path{},
+			OpenEnd: true,
+		},
+		TimeRange: types.Range[uint64]{
+			Start:   0,
+			End:     0,
+			OpenEnd: true,
+		},
+	}
 }
