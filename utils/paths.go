@@ -91,7 +91,7 @@ func EncodePath[T constraints.Unsigned](pathParams types.PathParams[T], path typ
 	return componentBytes
 }
 
-func DecodePath[T constraints.Unsigned](pathParams types.PathParams[T], encPath []byte) [][]byte {
+func DecodePath[T constraints.Unsigned](pathParams types.PathParams[T], encPath []byte) types.Path {
 	/*
 	   It checks the number of components in the first "MaxComponentCount" width and then interates through each
 	   Component, checks it's length and extracts the component based on the length
