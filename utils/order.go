@@ -29,6 +29,7 @@ func OrderBytes(a, b []byte) types.Rel {
 }
 
 // OrderTimestamp compares two big.Int values.
+
 func OrderTimestamp(a, b uint64) types.Rel {
 	if a < b {
 		return types.Less
