@@ -409,7 +409,7 @@ func DecodeStreamAreaInArea[SubspaceId constraints.Unsigned](opts DecodeStreamAr
 		bytes.Prune(int(startDiffWidth))
 		path := DecodeRelPathStream(opts.PathScheme, bytes, outer.Path)
 		if includeInnerSybspaceId {
-			subSpaceId, _ = opts.DecodeStreamSubspace.DrcodeStream(bytes)
+			subSpaceId, _ = opts.DecodeStreamSubspace.DecodeStream(bytes)
 		} else {
 			subSpaceId = outer.Subspace_id
 		}
@@ -440,7 +440,7 @@ func DecodeStreamAreaInArea[SubspaceId constraints.Unsigned](opts DecodeStreamAr
 
 	path := DecodeRelPathStream(opts.PathScheme, bytes, outer.Path)
 	if includeInnerSybspaceId {
-		subSpaceId, _ = opts.DecodeStreamSubspace.DrcodeStream(bytes)
+		subSpaceId, _ = opts.DecodeStreamSubspace.DecodeStream(bytes)
 	} else {
 		subSpaceId = outer.Subspace_id
 	}
