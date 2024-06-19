@@ -1,7 +1,6 @@
-package tests
+package utils
 
 import (
-	"cmp"
 	"reflect"
 	"testing"
 
@@ -9,90 +8,74 @@ import (
 	"github.com/PES-Innovation-Lab/willow-go/utils"
 )
 
-type Options[SubspaceType cmp.Ordered] struct {
-	SuccessorSubspace      types.SuccessorFn[SubspaceType]
-	MaxPathLength          int
-	MaxComponentCount      int
-	MaxPathComponentLength int
-	MinimalSubspace        SubspaceType
-}
-
-type testCase struct {
-	name     string
-	opts     Options[int]
-	area     types.Area[int]
-	expected types.Range3d[int]
+func SuccessorSubspace(subspace int64) (int64, bool) {
+	return subspace + 1, true
 }
 
 func TestAreaTo3dRange(t *testing.T) {
-	testCases := []testCase{
+	tests := []struct {
+		name string
+		opts utils.Options[int64]
+		area types.Area[int64]
+		want types.Range3d[int64]
+	}{
 		{
-			name: "Any subspace, empty path",
-			opts: Options[int]{
-				MinimalSubspace: 1,
-				SuccessorSubspace: func(x int) *int {
-					y := x + 1
-					return &y
-				},
+			name: "Test Case 1: Closed Time Range",
+			opts: utils.Options[int64]{
+				MinimalSubspace:   300,
+				SuccessorSubspace: SuccessorSubspace,
 			},
-			area: types.Area[int]{
-				Any_subspace: true,
-				Subspace_id:  0,
-				Path:         types.Path{},
-				Times:        types.Range[uint64]{Start: 10, End: 20, OpenEnd: false},
+			area: types.Area[int64]{
+				Path:        types.Path{[]byte{0, 0, 0, 0}},
+				Subspace_id: 1,
+				Times:       types.Range[uint64]{Start: 500, End: 1000, OpenEnd: false},
 			},
-			expected: types.Range3d[int]{
-				SubspaceRange: types.Range[int]{Start: 1, End: 0, OpenEnd: true},
+			want: types.Range3d[int64]{
+				SubspaceRange: types.Range[int64]{Start: 1, End: 2, OpenEnd: false},
+				PathRange:     types.Range[types.Path]{Start: types.Path{[]byte{0, 0, 0, 0}}, End: types.Path{[]byte{0, 0, 0, 1}}, OpenEnd: false},
+				TimeRange:     types.Range[uint64]{Start: 500, End: 1000, OpenEnd: false},
+			},
+		},
+		{
+			name: "Test Case 2: Open End Time Range",
+			opts: utils.Options[int64]{
+				MinimalSubspace:   400,
+				SuccessorSubspace: SuccessorSubspace,
+			},
+			area: types.Area[int64]{
+				Path:        types.Path{},
+				Subspace_id: 1,
+				Times:       types.Range[uint64]{Start: 500, End: 0, OpenEnd: true},
+			},
+			want: types.Range3d[int64]{
+				SubspaceRange: types.Range[int64]{Start: 1, End: 2, OpenEnd: false},
 				PathRange:     types.Range[types.Path]{Start: types.Path{}, End: types.Path{}, OpenEnd: true},
-				TimeRange:     types.Range[uint64]{Start: 10, End: 20, OpenEnd: false},
+				TimeRange:     types.Range[uint64]{Start: 500, End: 0, OpenEnd: true},
 			},
 		},
 		{
-			name: "Specific subspace, non-empty path",
-			opts: Options[int]{
-				MinimalSubspace: 1,
-				SuccessorSubspace: func(x int) *int {
-					y := x + 1
-					return &y
-				},
+			name: "Test Case 3: Closed End Time Range",
+			opts: utils.Options[int64]{
+				MinimalSubspace:   100,
+				SuccessorSubspace: SuccessorSubspace,
 			},
-			area: types.Area[int]{
-				Any_subspace: false,
-				Subspace_id:  2,
-				Path:         types.Path{[]byte("1"), []byte("2"), []byte("3")},
-				Times:        types.Range[uint64]{Start: 5, End: 15, OpenEnd: true},
+			area: types.Area[int64]{
+				Path:        types.Path{[]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+				Subspace_id: 1,
+				Times:       types.Range[uint64]{Start: 7, End: 13, OpenEnd: false},
 			},
-			expected: types.Range3d[int]{
-				SubspaceRange: types.Range[int]{Start: 2, End: 3, OpenEnd: false},
-				PathRange:     types.Range[types.Path]{Start: types.Path{[]byte("1"), []byte("2"), []byte("3")}, End: types.Path{[]byte("1"), []byte("2"), []byte("4")}, OpenEnd: false},
-				TimeRange:     types.Range[uint64]{Start: 5, End: 15, OpenEnd: true},
+			want: types.Range3d[int64]{
+				SubspaceRange: types.Range[int64]{Start: 1, End: 2, OpenEnd: false},
+				PathRange:     types.Range[types.Path]{Start: types.Path{[]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}, End: types.Path{[]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}}, OpenEnd: false},
+				TimeRange:     types.Range[uint64]{Start: 7, End: 13, OpenEnd: false},
 			},
 		},
-		// Add more test cases as needed
 	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			result := utils.AreaTo3dRange(tc.opts, tc.area)
-			if !equalRange3d(result, tc.expected) {
-				t.Errorf("Expected %v, got %v", tc.expected, result)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := utils.AreaTo3dRange(tt.opts, tt.area); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("AreaTo3dRange() = %v, want %v", got, tt.want)
 			}
 		})
 	}
-}
-
-func equalRange3d[T cmp.Ordered](r1, r2 types.Range3d[T]) bool {
-	return equalRange(r1.SubspaceRange, r2.SubspaceRange) &&
-		equalRangePath(r1.PathRange, r2.PathRange) &&
-		equalRange(r1.TimeRange, r2.TimeRange)
-}
-
-func equalRange[T cmp.Ordered](r1, r2 types.Range[T]) bool {
-	return r1.Start == r2.Start && r1.End == r2.End && r1.OpenEnd == r2.OpenEnd
-}
-
-func equalRangePath(r1, r2 types.Range[types.Path]) bool {
-	return reflect.DeepEqual(r1.Start, r2.Start) &&
-		reflect.DeepEqual(r1.End, r2.End) &&
-		r1.OpenEnd == r2.OpenEnd
 }
