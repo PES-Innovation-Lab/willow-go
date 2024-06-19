@@ -213,7 +213,7 @@ func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 	pathScheme types.PathParams[T],
 	r types.Range3d[SubspaceId],
 	ref types.Range3d[SubspaceId],
-) {
+) []byte {
 	start_to_start := AbsDiffuint64(r.TimeRange.Start, ref.TimeRange.Start)
 
 	if ref.TimeRange.OpenEnd {
@@ -232,11 +232,11 @@ func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 	var encoding1 byte = 0x00
 	var encoding2 byte = 0x00
 
-	var subspaceIdEncoding1 []byte
-	var subspaceIdEncoding2 []byte
+	var subspaceIdEncodingStart []byte
+	var subspaceIdEncodingEnd []byte
 
-	var pathEncoding1 []byte
-	var pathEncoding2 []byte
+	var pathEncodingStart []byte
+	var pathEncodingEnd []byte
 
 	// Encode byte 1
 
@@ -247,7 +247,7 @@ func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 		encoding1 = encoding1 | 0x80
 	} else {
 		encoding1 = encoding1 | 0xC0
-		subspaceIdEncoding1 = encodeSubspaceId(r.SubspaceRange.Start)
+		subspaceIdEncodingStart = encodeSubspaceId(r.SubspaceRange.Start)
 	}
 
 	// eoncoding bits at 2, 3
@@ -259,7 +259,7 @@ func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 		encoding1 = encoding1 | 0x20
 	} else {
 		encoding1 = encoding1 | 0x30
-		subspaceIdEncoding2 = encodeSubspaceId(r.SubspaceRange.End)
+		subspaceIdEncodingEnd = encodeSubspaceId(r.SubspaceRange.End)
 	}
 
 	// encoding bit 4
@@ -268,9 +268,9 @@ func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 
 	if len(prefixStartStart) >= len(prefixStartEnd) {
 		encoding1 = encoding1 | 0x08
-		pathEncoding1 = EncodeRelativePath(pathScheme, r.PathRange.Start, ref.PathRange.Start)
+		pathEncodingStart = EncodeRelativePath(pathScheme, r.PathRange.Start, ref.PathRange.Start)
 	} else {
-		pathEncoding1 = EncodeRelativePath(pathScheme, r.PathRange.Start, ref.PathRange.End)
+		pathEncodingStart = EncodeRelativePath(pathScheme, r.PathRange.Start, ref.PathRange.End)
 	}
 
 	// encoding bit 5
@@ -283,9 +283,9 @@ func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 	prefixEndEnd, _ := CommonPrefix(r.PathRange.End, ref.PathRange.End)
 	if len(prefixEndStart) >= len(prefixEndEnd) {
 		encoding1 = encoding1 | 0x02
-		pathEncoding2 = EncodeRelativePath(pathScheme, r.PathRange.End, ref.PathRange.Start)
+		pathEncodingEnd = EncodeRelativePath(pathScheme, r.PathRange.End, ref.PathRange.Start)
 	} else {
-		pathEncoding2 = EncodeRelativePath(pathScheme, r.PathRange.End, ref.PathRange.End)
+		pathEncodingEnd = EncodeRelativePath(pathScheme, r.PathRange.End, ref.PathRange.End)
 	}
 	if r.PathRange.OpenEnd {
 		encoding1 = encoding1 & 0xFD
@@ -351,9 +351,25 @@ func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 		encoding2 = encoding2 | 0x03
 	}
 
+	var end_time_diff_encoding []byte
+	if !r.TimeRange.OpenEnd && ref.TimeRange.OpenEnd {
+		end_time_diff_encoding = EncodeIntMax64(end_time_diff)
+	} else {
+		end_time_diff_encoding = EncodeIntMax64(end_to_start)
+	}
 	// remaining encoding information ->
 	start_time_diff_encoding := EncodeIntMax64(start_time_diff)
-	end_time_diff_encoding := EncodeIntMax64()
+
+	EncodedArray := concat(
+		[]byte{encoding1, encoding2},
+		subspaceIdEncodingStart,
+		subspaceIdEncodingEnd,
+		pathEncodingStart,
+		pathEncodingEnd,
+		start_time_diff_encoding,
+		end_time_diff_encoding,
+	)
+	return EncodedArray
 }
 
 func DefaultSubspace3d[SubspaceId constraints.Ordered](defaultSubspaceId SubspaceId) types.Range3d[SubspaceId] {
