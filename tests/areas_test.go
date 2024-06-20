@@ -171,7 +171,7 @@ func TestEncodeAreaInArea(t *testing.T) {
 			encoded := utils.EncodeAreaInArea(opts, vector.inner, vector.outer)
 			t.Logf("Encoded bytes: %v", encoded)
 
-			decoded := utils.DecodeAreaInArea(utils.DecodeAreaInAreaOptions[uint64]{
+			decoded, _ := utils.DecodeAreaInArea(utils.DecodeAreaInAreaOptions[uint64]{
 				PathScheme: types.PathParams[uint64]{
 					MaxComponentCount:  255,
 					MaxComponentLength: 255,

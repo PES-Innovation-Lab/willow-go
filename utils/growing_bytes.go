@@ -7,19 +7,19 @@ import (
 // Defer processing of bytestrings until a certain chunk size (length, in bytes) has been reached.
 // Put the array of bytes into the resolver
 type DeferredUntilLength struct {
-	length   int
 	resolver chan []byte
+	length   int
 }
 
 // GrowingBytes objects allows us to process bytestreams in a nonblocking fashion with buffered channels and
 // also provdes us with useful helper functions.
 
 type GrowingBytes struct {
-	Array                  []byte               //Output array of bytes
-	Incoming               chan []byte          // Buffered channel
-	HasUnfulfilledRequests chan struct{}        // Channel to signal there are unfulfilled requests
-	DeferredUntilLength    *DeferredUntilLength // Defer processing of bytes until length Array size >= deferring length
-	Mu                     sync.Mutex           // Mutex lock for synchrnoisation
+	Incoming               chan []byte
+	HasUnfulfilledRequests chan struct{}
+	DeferredUntilLength    *DeferredUntilLength
+	Array                  []byte
+	Mu                     sync.Mutex
 }
 
 // Construct a new new Growing Bytes instance and return a pointer to it
