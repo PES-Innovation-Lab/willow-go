@@ -416,8 +416,11 @@ var compactWidthEndMasks = map[int]int{
 	8: 0x3,
 }
 
-func DecodeStreamAreaInArea[SubspaceId constraints.Unsigned](opts DecodeStreamAreaInAreaOptions[SubspaceId], bytes *GrowingBytes, outer types.Area[SubspaceId]) (types.Area[SubspaceId], error) {
-	// TO-DO finish
+func DecodeStreamAreaInArea[SubspaceId constraints.Unsigned](
+	opts DecodeStreamAreaInAreaOptions[SubspaceId],
+	bytes *GrowingBytes,
+	outer types.Area[SubspaceId],
+) (types.Area[SubspaceId], error) {
 	accumulatedBytes := bytes.NextAbsolute(1)
 	flags := accumulatedBytes[0]
 

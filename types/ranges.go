@@ -15,9 +15,9 @@ type SubspaceRange[T cmp.Ordered] struct {
 }
 
 type Range3d[SubspaceId OrderableGeneric] struct {
-	TimeRange     Range[uint64]
-	PathRange     Range[Path]
 	SubspaceRange Range[SubspaceId]
+	PathRange     Range[Path]
+	TimeRange     Range[uint64]
 }
 
 type Position3d[SubspaceId OrderableGeneric] struct {
