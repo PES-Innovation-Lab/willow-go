@@ -11,11 +11,11 @@ import (
 
 // Define the options struct
 type Options[SubspaceType constraints.Ordered] struct {
+	MinimalSubspace        SubspaceType
 	SuccessorSubspace      types.SuccessorFn[SubspaceType]
 	MaxPathLength          int
 	MaxComponentCount      int
 	MaxPathComponentLength int
-	MinimalSubspace        SubspaceType
 }
 
 type EntryOpts[SubspaceId, PayloadDigest constraints.Ordered, K constraints.Unsigned] struct {
@@ -42,8 +42,8 @@ type DecodeAreaInAreaOptions[SubspaceId constraints.Unsigned] struct {
 }
 
 type Result[SubspaceId constraints.Unsigned] struct {
-	Area types.Area[SubspaceId]
 	Err  error
+	Area types.Area[SubspaceId]
 }
 
 type DecodeStreamAreaInAreaOptions[SubspaceId constraints.Unsigned] struct {
@@ -533,7 +533,11 @@ func DecodeStreamAreaInArea[SubspaceId constraints.Unsigned](
 
 /** Encode an {@linkcode Entry} relative to an {@linkcode Area}. */
 
-func EncodeEntryInNamespaceArea[NamespaceId, SubspaceId, PayloadDigest constraints.Unsigned](opts EncodeEntryInNamespaceAreaOptions[SubspaceId, PayloadDigest], entry types.Entry[NamespaceId, SubspaceId, PayloadDigest], outer types.Area[SubspaceId]) []byte {
+func EncodeEntryInNamespaceArea[NamespaceId, SubspaceId, PayloadDigest constraints.Unsigned](
+	opts EncodeEntryInNamespaceAreaOptions[SubspaceId, PayloadDigest],
+	entry types.Entry[NamespaceId, SubspaceId, PayloadDigest],
+	outer types.Area[SubspaceId],
+) []byte {
 	var timeDiff uint64
 	if outer.Times.OpenEnd {
 		timeDiff = entry.Timestamp - outer.Times.Start
