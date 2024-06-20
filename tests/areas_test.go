@@ -1,7 +1,10 @@
 package utils
 
 import (
+	"errors"
+	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/PES-Innovation-Lab/willow-go/types"
@@ -75,6 +78,116 @@ func TestAreaTo3dRange(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := utils.AreaTo3dRange(tt.opts, tt.area); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("AreaTo3dRange() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// Helper function to convert a string path to types.Path
+func NewPath(path string) types.Path {
+	components := strings.Split(path, "/")
+	pathBytes := make(types.Path, len(components))
+	for i, component := range components {
+		pathBytes[i] = []byte(component)
+	}
+	return pathBytes
+}
+
+func TestEncodeAreaInArea(t *testing.T) {
+	type args struct {
+		opts  utils.EncodeAreaOpts[uint64]
+		inner types.Area[uint64]
+		outer types.Area[uint64]
+	}
+
+	areaInAreaVectors := []struct {
+		inner types.Area[uint64]
+		outer types.Area[uint64]
+	}{
+		{
+			inner: types.Area[uint64]{
+				Subspace_id: 1,
+				Times: types.Range[uint64]{
+					Start:   10,
+					End:     20,
+					OpenEnd: false,
+				},
+				Path: NewPath("inner/path"),
+			},
+			outer: types.Area[uint64]{
+				Subspace_id: 1,
+				Times: types.Range[uint64]{
+					Start:   0,
+					End:     30,
+					OpenEnd: false,
+				},
+				Path: NewPath("inner/path2"),
+			},
+		},
+		{
+			inner: types.Area[uint64]{
+				Subspace_id: 1,
+				Times: types.Range[uint64]{
+					Start:   15,
+					End:     utils.REALLY_BIG_INT,
+					OpenEnd: true,
+				},
+				Path: NewPath("inner/long/path"),
+			},
+			outer: types.Area[uint64]{
+				Subspace_id: 1,
+				Times: types.Range[uint64]{
+					Start:   0,
+					End:     50,
+					OpenEnd: false,
+				},
+				Path: NewPath("inner/long/path2"),
+			},
+		},
+	}
+
+	for _, vector := range areaInAreaVectors {
+		fmt.Println("Nai")
+		t.Run("Encode and decode areas", func(t *testing.T) {
+			opts := utils.EncodeAreaOpts[uint64]{
+				PathScheme: types.PathParams[uint64]{
+					MaxComponentCount:  255,
+					MaxComponentLength: 255,
+					MaxPathLength:      255,
+				},
+				EncodeSubspace: func(v uint64) []byte {
+					return []byte{byte(v)}
+				},
+				OrderSubspace: func(a, b uint64) types.Rel {
+					if a < b {
+						return types.Less
+					} else if a > b {
+						return types.Greater
+					}
+					return types.Equal
+				},
+			}
+
+			encoded := utils.EncodeAreaInArea(opts, vector.inner, vector.outer)
+			t.Logf("Encoded bytes: %v", encoded)
+
+			decoded := utils.DecodeAreaInArea(utils.DecodeAreaInAreaOptions[uint64]{
+				PathScheme: types.PathParams[uint64]{
+					MaxComponentCount:  255,
+					MaxComponentLength: 255,
+					MaxPathLength:      255,
+				},
+				DecodeSubspaceId: func(encoded []byte) (uint64, error) {
+					if len(encoded) == 0 {
+						return 0, errors.New("encoded data is empty")
+					}
+					return uint64(encoded[0]), nil
+				},
+			}, encoded, vector.outer)
+			t.Logf("Decoded area: %+v", decoded)
+
+			if !reflect.DeepEqual(vector.inner, decoded) {
+				t.Errorf("Test failed. Expected: %+v, got: %+v", vector.inner, decoded)
 			}
 		})
 	}

@@ -37,7 +37,7 @@ type EncodeAreaInAreaLengthOptions[SubspaceId constraints.Unsigned] struct {
 }
 
 type DecodeAreaInAreaOptions[SubspaceId constraints.Unsigned] struct {
-	decodeSubspaceId EncodingScheme[SubspaceId, uint]
+	DecodeSubspaceId func(encoded []byte) (SubspaceId, error)
 	PathScheme       types.PathParams[SubspaceId]
 }
 
@@ -215,7 +215,7 @@ func EncodeAreaInArea[SubspaceId constraints.Unsigned](opts EncodeAreaOpts[Subsp
 
 	var innerEnd uint64
 
-	if !inner.Times.OpenEnd {
+	if inner.Times.OpenEnd {
 		innerEnd = REALLY_BIG_INT
 	} else {
 		innerEnd = inner.Times.End
@@ -223,7 +223,7 @@ func EncodeAreaInArea[SubspaceId constraints.Unsigned](opts EncodeAreaOpts[Subsp
 
 	var outerEnd uint64
 
-	if !outer.Times.OpenEnd {
+	if outer.Times.OpenEnd {
 		outerEnd = REALLY_BIG_INT
 	} else {
 		outerEnd = outer.Times.End
@@ -245,7 +245,7 @@ func EncodeAreaInArea[SubspaceId constraints.Unsigned](opts EncodeAreaOpts[Subsp
 		flags |= 0x80
 	}
 
-	if !inner.Times.OpenEnd {
+	if inner.Times.OpenEnd {
 		flags |= 0x40
 	}
 
@@ -281,7 +281,7 @@ func EncodeAreaInArea[SubspaceId constraints.Unsigned](opts EncodeAreaOpts[Subsp
 
 	startDiffBytes := EncodeIntMax64(startDiff)
 	var endDiffBytes []byte
-	if !inner.Times.OpenEnd {
+	if inner.Times.OpenEnd {
 		endDiffBytes = []byte{}
 	} else {
 		endDiffBytes = EncodeIntMax64(endDiff)
@@ -368,7 +368,7 @@ func DecodeAreaInArea[SubspaceId constraints.Unsigned](opts DecodeAreaInAreaOpti
 		subspacePos := pathPos + EncodePathRelativeLength(opts.PathScheme, path, outer.Path)
 		var subspaceId SubspaceId
 		if includeInnerSubspaceId {
-			subspaceId, _ = opts.decodeSubspaceId.Decode(encodedInner[subspacePos:])
+			subspaceId, _ = opts.DecodeSubspaceId(encodedInner[subspacePos:])
 		} else {
 			subspaceId = outer.Subspace_id
 		}
@@ -378,7 +378,7 @@ func DecodeAreaInArea[SubspaceId constraints.Unsigned](opts DecodeAreaInAreaOpti
 		} else {
 			innerStart = outer.Times.Start - startDiff
 		}
-		return types.Area[SubspaceId]{Path: path, Subspace_id: subspaceId, Times: types.Range[uint64]{Start: innerStart, End: 0, OpenEnd: true}} // just recheck the return of Subspace_id
+		return types.Area[SubspaceId]{Path: path, Subspace_id: subspaceId, Times: types.Range[uint64]{Start: innerStart, End: REALLY_BIG_INT, OpenEnd: true}} // just recheck the return of Subspace_id
 	}
 	endDiffPos := 1 + startDiffWidth
 	pathPos := endDiffPos + endDiffWidth
@@ -389,7 +389,7 @@ func DecodeAreaInArea[SubspaceId constraints.Unsigned](opts DecodeAreaInAreaOpti
 	subspacePos := pathPos + EncodePathRelativeLength(opts.PathScheme, path, outer.Path)
 	var subspaceId SubspaceId
 	if includeInnerSubspaceId {
-		subspaceId, _ = opts.decodeSubspaceId.Decode(encodedInner[subspacePos:])
+		subspaceId, _ = opts.DecodeSubspaceId(encodedInner[subspacePos:])
 	} else {
 		subspaceId = outer.Subspace_id
 	}
