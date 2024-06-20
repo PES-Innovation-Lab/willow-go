@@ -64,13 +64,15 @@ func DecodeIntMax32[T constraints.Unsigned](bytes []byte, max T) (uint32, error)
 		return uint32(binary.BigEndian.Uint16(bytes)), nil
 	case 4:
 		return binary.BigEndian.Uint32(bytes), nil
+
+	default:
+		// Otherwise it's 24 bit.
+		a := binary.BigEndian.Uint16(bytes[:2])
+		b := uint32(bytes[2])
+
+		return (uint32(a) << 8) + b, nil
 	}
 
-	// Otherwise it's 24 bit.
-	a := binary.BigEndian.Uint16(bytes[:2])
-	b := uint32(bytes[2])
-
-	return (uint32(a) << 8) + b, nil
 }
 
 func GetWidthMax64Int[T constraints.Unsigned](num T) int {
@@ -118,6 +120,6 @@ func DecodeIntMax64(encoded []byte) (uint64, error) {
 	case 8:
 		return binary.BigEndian.Uint64(encoded), nil
 	default:
-		panic("invalid length")
+		return 0, errors.New("invalid byte slice length")
 	}
 }
