@@ -351,7 +351,7 @@ func EncodeAreaInAreaLength[SubspaceId constraints.Unsigned](opts EncodeAreaInAr
 	return 1 + subspaceLen + pathLen + startDiffLen + endDiffLen
 }
 
-func DecodeAreaInArea[SubspaceId constraints.Unsigned](opts DecodeAreaInAreaOptions[SubspaceId], encodedInner []byte, outer types.Area[SubspaceId]) types.Area[SubspaceId] {
+func DecodeAreaInArea[SubspaceId constraints.Unsigned](opts DecodeAreaInAreaOptions[SubspaceId], encodedInner []byte, outer types.Area[SubspaceId]) (types.Area[SubspaceId], error) {
 	flags := encodedInner[0]
 	includeInnerSubspaceId := (flags & 0x80) == 0x80
 	hasOpenEnd := (flags & 0x40) == 0x40
@@ -363,12 +363,21 @@ func DecodeAreaInArea[SubspaceId constraints.Unsigned](opts DecodeAreaInAreaOpti
 	if hasOpenEnd {
 		pathPos := 1 + startDiffWidth
 		subarray := encodedInner[1:pathPos]
-		startDiff, _ := DecodeIntMax64(subarray)
+
+		startDiff, err := DecodeIntMax64(subarray)
+		if err != nil {
+			return types.Area[SubspaceId]{}, fmt.Errorf("error decoding start diff: %w", err)
+		}
+
 		path := DecodeRelativePath[SubspaceId](opts.PathScheme, encodedInner[pathPos:], outer.Path)
 		subspacePos := pathPos + EncodePathRelativeLength(opts.PathScheme, path, outer.Path)
 		var subspaceId SubspaceId
 		if includeInnerSubspaceId {
-			subspaceId, _ = opts.decodeSubspaceId.Decode(encodedInner[subspacePos:])
+			var err error
+			subspaceId, err = opts.decodeSubspaceId.Decode(encodedInner[subspacePos:])
+			if err != nil {
+				return types.Area[SubspaceId]{}, fmt.Errorf("error decoding subspace: %w", err)
+			}
 		} else {
 			subspaceId = outer.Subspace_id
 		}
@@ -378,13 +387,19 @@ func DecodeAreaInArea[SubspaceId constraints.Unsigned](opts DecodeAreaInAreaOpti
 		} else {
 			innerStart = outer.Times.Start - startDiff
 		}
-		return types.Area[SubspaceId]{Path: path, Subspace_id: subspaceId, Times: types.Range[uint64]{Start: innerStart, End: 0, OpenEnd: true}} // just recheck the return of Subspace_id
+		return types.Area[SubspaceId]{Path: path, Subspace_id: subspaceId, Times: types.Range[uint64]{Start: innerStart, End: 0, OpenEnd: true}}, nil // just recheck the return of Subspace_id
 	}
 	endDiffPos := 1 + startDiffWidth
 	pathPos := endDiffPos + endDiffWidth
 
-	startDiff, _ := DecodeIntMax64(encodedInner[1:endDiffPos])
-	endDiff, _ := DecodeIntMax64(encodedInner[endDiffPos:pathPos])
+	startDiff, err := DecodeIntMax64(encodedInner[1:endDiffPos])
+	if err != nil {
+		return types.Area[SubspaceId]{}, fmt.Errorf("error decoding start diff: %w", err)
+	}
+	endDiff, err := DecodeIntMax64(encodedInner[endDiffPos:pathPos])
+	if err != nil {
+		return types.Area[SubspaceId]{}, fmt.Errorf("error decoding end diff: %w", err)
+	}
 	path := DecodeRelativePath[SubspaceId](opts.PathScheme, encodedInner[pathPos:], outer.Path)
 	subspacePos := pathPos + EncodePathRelativeLength(opts.PathScheme, path, outer.Path)
 	var subspaceId SubspaceId
@@ -406,7 +421,7 @@ func DecodeAreaInArea[SubspaceId constraints.Unsigned](opts DecodeAreaInAreaOpti
 		innerEnd = outer.Times.End - endDiff
 	}
 
-	return types.Area[SubspaceId]{Path: path, Subspace_id: subspaceId, Times: types.Range[uint64]{Start: innerStart, End: innerEnd, OpenEnd: false}}
+	return types.Area[SubspaceId]{Path: path, Subspace_id: subspaceId, Times: types.Range[uint64]{Start: innerStart, End: innerEnd, OpenEnd: false}}, nil
 }
 
 var compactWidthEndMasks = map[int]int{
@@ -437,11 +452,18 @@ func DecodeStreamAreaInArea[SubspaceId constraints.Unsigned](
 
 	if hasOpenEnd {
 		accumulatedBytes = bytes.NextAbsolute(int(startDiffWidth))
-		startDiff, _ := DecodeIntMax64(accumulatedBytes[0:int(startDiffWidth)])
+		startDiff, err := DecodeIntMax64(accumulatedBytes[0:int(startDiffWidth)])
+		if err != nil {
+			return types.Area[SubspaceId]{}, fmt.Errorf("error decoding startdiff: %v", err)
+		}
 		bytes.Prune(int(startDiffWidth))
 		path := DecodeRelPathStream(opts.PathScheme, bytes, outer.Path)
 		if includeInnerSybspaceId {
-			subSpaceId, _ = opts.DecodeStreamSubspace.DecodeStream(bytes)
+			var err error
+			subSpaceId, err = opts.DecodeStreamSubspace.DecodeStream(bytes)
+			if err != nil {
+				return types.Area[SubspaceId]{}, fmt.Errorf("error decoding subspace: %v", err)
+			}
 		} else {
 			subSpaceId = outer.Subspace_id
 		}
@@ -463,16 +485,25 @@ func DecodeStreamAreaInArea[SubspaceId constraints.Unsigned](
 	}
 	accumulatedBytes = bytes.NextAbsolute(int(startDiffWidth))
 
-	startDiff, _ := DecodeIntMax64(accumulatedBytes[0:int(startDiffWidth)])
+	startDiff, err := DecodeIntMax64(accumulatedBytes[0:int(startDiffWidth)])
+	if err != nil {
+		return types.Area[SubspaceId]{}, fmt.Errorf("error decoding startdiff: %v", err)
+	}
 	bytes.Prune(int(startDiffWidth))
 
 	accumulatedBytes = bytes.NextAbsolute(int(endDiffWidth))
-	endDif, _ := DecodeIntMax64(accumulatedBytes[0:int(endDiffWidth)])
+	endDif, err := DecodeIntMax64(accumulatedBytes[0:int(endDiffWidth)])
+	if err != nil {
+		return types.Area[SubspaceId]{}, fmt.Errorf("error decoding enddiff: %v", err)
+	}
 	bytes.Prune(int(endDiffWidth))
 
 	path := DecodeRelPathStream(opts.PathScheme, bytes, outer.Path)
 	if includeInnerSybspaceId {
-		subSpaceId, _ = opts.DecodeStreamSubspace.DecodeStream(bytes)
+		subSpaceId, err = opts.DecodeStreamSubspace.DecodeStream(bytes)
+		if err != nil {
+			return types.Area[SubspaceId]{}, fmt.Errorf("error decoding subspace: %v", err)
+		}
 	} else {
 		subSpaceId = outer.Subspace_id
 	}
