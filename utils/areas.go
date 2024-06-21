@@ -383,7 +383,7 @@ func DecodeAreaInArea[SubspaceId constraints.Unsigned](opts DecodeAreaInAreaOpti
 		} else {
 			innerStart = outer.Times.Start - startDiff
 		}
-		return types.Area[SubspaceId]{Path: path, Subspace_id: subspaceId, Times: types.Range[uint64]{Start: innerStart, End: 0, OpenEnd: true}}, nil // just recheck the return of Subspace_id
+		return types.Area[SubspaceId]{Path: path, Subspace_id: subspaceId, Times: types.Range[uint64]{Start: innerStart, End: REALLY_BIG_INT, OpenEnd: true}}, nil // just recheck the return of Subspace_id
 	}
 	endDiffPos := 1 + startDiffWidth
 	pathPos := endDiffPos + endDiffWidth
