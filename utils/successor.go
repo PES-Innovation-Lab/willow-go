@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"log"
+
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"golang.org/x/exp/constraints"
 )
@@ -8,88 +10,71 @@ import (
 /** Returns the successor to a path given a `Path` and `PathScheme`.  */
 func SuccessorPath[T constraints.Unsigned](path types.Path, scheme types.PathParams[T]) types.Path {
 	if len(path) == 0 {
-		nextPath := types.Path{make([]byte, 1)}
-
-		valid, _ := IsValidPath(nextPath, scheme)
-
-		if valid {
-			return nextPath
-		}
-		return nil
-
+		return types.Path{[]byte{}}
 	}
-
-	workingPath := make(types.Path, len(path))
-	copy(workingPath, path)
+	if T(len(path)) < scheme.MaxComponentCount {
+		return PathAppend(path, []byte{}, scheme)
+	}
 
 	for i := len(path) - 1; i >= 0; i-- {
-		component := workingPath[i]
-
-		simplestNextComponent := append(component, 0)
-
-		simplestNextPath := make(types.Path, len(path))
-		copy(simplestNextPath, path)
-		simplestNextPath[i] = simplestNextComponent
-
-		valid, _ := IsValidPath(simplestNextPath, scheme)
-
-		if valid {
-			return simplestNextPath
+		newComponent := TryAppendZeroByte(path[i], scheme)
+		if newComponent != nil {
+			return PathAppend(path[:i], newComponent, scheme)
 		}
-
-		//Otherwise
-
-		incrementedComponent := SuccessorBytesFixedWidth(component)
-
-		if incrementedComponent != nil {
-			nextPath := append(path[:i], incrementedComponent)
-			return nextPath
+		newComponent = SuccessorBytesFixedWidth(path[i])
+		if newComponent != nil {
+			return PathAppend(path, newComponent, scheme)
 		}
-
-		//In the case of an overflow
-
-		workingPath = workingPath[:len(workingPath)-1]
 	}
-
-	if len(workingPath) == 0 {
-		return nil
-	}
-
-	return workingPath
+	return nil
 }
 
 /** Return a successor to a prefix, that is, the next element that is not a prefix of the given path. */
-func SuccessorPrefix(path types.Path) types.Path {
-	if len(path) == 0 {
-		return nil
-	}
-
-	workingPath := make(types.Path, len(path))
-	copy(workingPath, path)
-
+func SuccessorPrefix[T constraints.Unsigned](path types.Path, pathParams types.PathParams[T]) types.Path {
 	for i := len(path) - 1; i >= 0; i-- {
-		component := workingPath[i]
-
-		incrementedComponent := SuccessorBytesFixedWidth(component)
-
-		if incrementedComponent != nil {
-			nextPath := append(path[:i], incrementedComponent)
-			return nextPath
+		successorComp := TryAppendZeroByte(path[i], pathParams)
+		if successorComp != nil {
+			return PathAppend(path[:i], successorComp, pathParams)
 		}
-
-		if len(component) == 0 {
-			nextPath := append(path[:i], []byte{0})
-			return nextPath
+		prefixSuccessor := PrefixSuccessor(path[i])
+		if prefixSuccessor != nil {
+			return PathAppend(path[:i], prefixSuccessor, pathParams)
 		}
+	}
+	return nil
+}
 
-		workingPath = workingPath[:len(workingPath)-1]
+func PathAppend[T constraints.Unsigned](path types.Path, component []byte, scheme types.PathParams[T]) types.Path {
+	if T(len(path)+1) > scheme.MaxComponentCount {
+		log.Fatal("Too many Components! The path components exceeds max component count")
+	}
+	pathLength := len(component)
+	for _, component := range path {
+		pathLength += len(component)
+	}
+	if T(pathLength) > scheme.MaxPathLength {
+		log.Fatal("Path length too long, consider decreasing the length of the components")
 	}
 
-	if len(workingPath) == 0 {
+	return append(path, component)
+}
+
+func TryAppendZeroByte[T constraints.Unsigned](component []byte, scheme types.PathParams[T]) []byte {
+	if T(len(component)) == scheme.MaxComponentLength {
 		return nil
 	}
+	newComponent := append(component, 0)
+	return newComponent
+}
 
-	return workingPath
+func PrefixSuccessor(component []byte) []byte {
+	for i := len(component) - 1; i >= 0; i-- {
+		if component[i] != 255 {
+			component = append(component[:i], component[i]+1)
+			return component
+		}
+	}
+	return nil
 }
 
 /** Return the succeeding bytestring of the given bytestring without increasing that bytestring's length.  */
