@@ -44,6 +44,7 @@ func SuccessorPrefix[T constraints.Unsigned](path types.Path, pathParams types.P
 	return nil
 }
 
+//Does all path checks before appending a component to a path!
 func PathAppend[T constraints.Unsigned](path types.Path, component []byte, scheme types.PathParams[T]) types.Path {
 	if T(len(path)+1) > scheme.MaxComponentCount {
 		log.Fatal("Too many Components! The path components exceeds max component count")
@@ -59,6 +60,7 @@ func PathAppend[T constraints.Unsigned](path types.Path, component []byte, schem
 	return append(path, component)
 }
 
+//If the component length does not exceed max component length, it appends a zero to the byte, else returns nil.
 func TryAppendZeroByte[T constraints.Unsigned](component []byte, scheme types.PathParams[T]) []byte {
 	if T(len(component)) == scheme.MaxComponentLength {
 		return nil
@@ -67,6 +69,7 @@ func TryAppendZeroByte[T constraints.Unsigned](component []byte, scheme types.Pa
 	return newComponent
 }
 
+//This function goes through each byte of a component adds one if it is not greater than 255 and retrn the slice until that specific byte!
 func PrefixSuccessor(component []byte) []byte {
 	for i := len(component) - 1; i >= 0; i-- {
 		if component[i] != 255 {
