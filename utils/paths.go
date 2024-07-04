@@ -163,14 +163,14 @@ func DecodePathStream[T constraints.Unsigned](pathParams types.PathParams[T], by
 	var path types.Path
 
 	for i := 0; i < int(componentCount); i++ {
-		bytes.NextAbsolute(componentLengthWidth)
+		accumulatedBytes := bytes.NextAbsolute(componentLengthWidth)
 
-		lengthBytes := bytes.Array[0:componentLengthWidth]
+		lengthBytes := accumulatedBytes[0:componentLengthWidth]
 		componentLength, _ := DecodeIntMax32(lengthBytes, pathParams.MaxComponentLength)
 
-		bytes.NextAbsolute(componentLengthWidth + componentLengthWidth)
+		newAccumulatedBytes := bytes.NextAbsolute(componentLengthWidth + componentLengthWidth)
 
-		pathComponent := bytes.Array[componentLengthWidth : componentLengthWidth+int(componentLength)]
+		pathComponent := newAccumulatedBytes[componentLengthWidth : componentLengthWidth+int(componentLength)]
 
 		path = append(path, pathComponent)
 

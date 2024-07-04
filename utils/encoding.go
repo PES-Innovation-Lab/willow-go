@@ -14,6 +14,7 @@ func BigIntToBytes(bigint uint64) []byte {
 	return bytes
 }
 
+// Number of bytes in a a number
 func GetWidthMax32Int[T constraints.Unsigned](num T) int {
 	switch true {
 	case uint(num) < 1<<8:
@@ -26,6 +27,8 @@ func GetWidthMax32Int[T constraints.Unsigned](num T) int {
 		return 4
 	}
 }
+
+// Encode number
 
 func EncodeIntMax32[T constraints.Unsigned](num, max T) []byte {
 	width := GetWidthMax32Int(max)
@@ -46,6 +49,8 @@ func EncodeIntMax32[T constraints.Unsigned](num, max T) []byte {
 
 	return bytes
 }
+
+// Deocde 32 bit number
 
 func DecodeIntMax32[T constraints.Unsigned](bytes []byte, max T) (uint32, error) {
 	bytesToDecodeLength := GetWidthMax32Int(max)
@@ -75,6 +80,8 @@ func DecodeIntMax32[T constraints.Unsigned](bytes []byte, max T) (uint32, error)
 
 }
 
+// Get number of bytes in bigint
+
 func GetWidthMax64Int[T constraints.Unsigned](num T) int {
 	switch true {
 	case uint(num) < 1<<8:
@@ -88,6 +95,7 @@ func GetWidthMax64Int[T constraints.Unsigned](num T) int {
 	}
 }
 
+// Encode big integer
 func EncodeIntMax64[T constraints.Unsigned](num T) []byte {
 	width := GetWidthMax64Int(num)
 	bytes := make([]byte, width)
@@ -105,6 +113,8 @@ func EncodeIntMax64[T constraints.Unsigned](num T) []byte {
 
 	return bytes
 }
+
+// Decode big integer
 
 func DecodeIntMax64(encoded []byte) (uint64, error) {
 	switch len(encoded) {

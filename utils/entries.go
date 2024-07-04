@@ -97,7 +97,7 @@ func DecodeEntry[NamespaceKey, SubspaceKey, PayloadDigest constraints.Ordered, V
 	payloadLengthPos := timestampPos + 8
 	payloadLength := binary.BigEndian.Uint64(encEntry[payloadLengthPos:])
 	// payload digest takes up 8 bytes
-	payloadDigestPos := payloadLength + 8
+	payloadDigestPos := payloadLengthPos + 8
 
 	payloadDigest, err := opts.PayloadScheme.Decode(encEntry[payloadDigestPos:])
 	if err != nil {
@@ -147,11 +147,13 @@ func EncodeEntryRelativeEntry[NamespaceId, SubspaceId, PayloadDigest constraints
 	}
 	var addOrSubtractTimeDiff int
 	// Add or subtract
-	if entry.Timestamp-ref.Timestamp > 0 {
+
+	if entry.Timestamp > ref.Timestamp {
 		addOrSubtractTimeDiff = 0x20
 	} else {
 		addOrSubtractTimeDiff = 0x0
 	}
+	fmt.Println(addOrSubtractTimeDiff)
 	// 2-bit integer n such that 2^n gives compact_width(time_diff)
 	compactWidthTimeDiffFlag := CompactWidthEndMasks[GetWidthMax64Int(timeDiff)] << 2
 	// 2-bit integer n such that 2^n gives compact_width(e.payload_length)
@@ -228,6 +230,7 @@ func DecodeStreamEntryRelativeEntry[NamespaceId, SubspaceId, PayloadDigest const
 		isNamespaceEncoded := (header & 0x80) == 0x80
 		isSubspaceEncoded := (header & 0x40) == 0x40
 		addTimeDiff := (header & 0x20) == 0x20
+
 		compactWidthTimeDiff := math.Pow(2, float64((header&0xc)>>2))
 		compactWidthPayloadLength := math.Pow(2, float64(header&0x3))
 
@@ -241,6 +244,7 @@ func DecodeStreamEntryRelativeEntry[NamespaceId, SubspaceId, PayloadDigest const
 
 		} else {
 			namespaceId = ref.Namespace_id
+
 		}
 
 		var subspaceId SubspaceId
@@ -249,8 +253,10 @@ func DecodeStreamEntryRelativeEntry[NamespaceId, SubspaceId, PayloadDigest const
 			subspaceStream := opts.DecodeStreamSubspace(bytes)
 
 			subspaceId = <-subspaceStream
+
 		} else {
 			subspaceId = ref.Subspace_id
+
 		}
 
 		path := DecodeRelPathStream[ValueType](opts.PathScheme, bytes, ref.Path)
@@ -261,6 +267,7 @@ func DecodeStreamEntryRelativeEntry[NamespaceId, SubspaceId, PayloadDigest const
 			resultChan <- DecodeResult[NamespaceId, SubspaceId, PayloadDigest]{Err: fmt.Errorf("failed to decode time diff: %w", err)}
 			return
 		}
+
 		bytes.Prune(int(compactWidthTimeDiff))
 
 		payloadLengthBytes := bytes.NextAbsolute(int(compactWidthPayloadLength))

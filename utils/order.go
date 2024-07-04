@@ -13,7 +13,7 @@ func OrderBytes(a, b []byte) types.Rel {
 
 	for i := 0; i < minLen; i++ {
 		if a[i] < b[i] {
-			return types.Greater
+			return types.Less
 		} else if a[i] > b[i] {
 			return types.Greater
 		}
@@ -54,9 +54,9 @@ func OrderPath(a, b types.Path) types.Rel {
 	}
 
 	if len(a) < len(b) {
-		return -1
+		return types.Less
 	} else if len(a) > len(b) {
-		return 1
+		return types.Greater
 	}
-	return 0
+	return types.Equal
 }
