@@ -2,8 +2,6 @@ package types
 
 import "golang.org/x/exp/constraints"
 
-// TODO: Depends on encoding tyopes
-
 type PathParams[ValueType constraints.Unsigned] struct {
 	/*
 	  Setting up Path parameters, we are setting each type to be unisgned as these parameters cannot be negative

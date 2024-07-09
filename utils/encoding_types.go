@@ -9,21 +9,21 @@ import (
 // Define Growing Bytes here
 // figure out the promise type thing
 
-type EncodingScheme[ValueType types.OrderableGeneric, K constraints.Unsigned] interface {
-	Encode(value ValueType) []byte
-	Decode(encoded []byte) (ValueType, error)
-	EncodedLength(value ValueType) K
-	DecodeStream(value *GrowingBytes) (ValueType, error)
+type EncodingScheme[ValueType types.OrderableGeneric, K constraints.Unsigned] struct {
+	Encode        func(value ValueType) []byte
+	Decode        func(encoded []byte) (ValueType, error)
+	EncodedLength func(value ValueType) K
+	DecodeStream  func(value *GrowingBytes) (ValueType, error)
 }
 
-type PrivyEncodingScheme[ValueType types.OrderableGeneric, PrivyType any, K constraints.Unsigned] interface {
+type PrivyEncodingScheme[ValueType types.OrderableGeneric, PrivyType any, K constraints.Unsigned] struct {
 	// e.g. Value type here is a SetupBindReadCapability
 	// the privy type is what both sides know - in this case,
 	// the outer area and the namespace.
-	Encode(value ValueType, privy PrivyType) []byte
-	Decode(encoded []byte, privy PrivyType) (ValueType, error)
-	EncodedLength(value ValueType, privy PrivyType) K
-	DecodeStream(value *GrowingBytes) (ValueType, error)
+	Encode        func(value ValueType, privy PrivyType) []byte
+	Decode        func(encoded []byte, privy PrivyType) (ValueType, error)
+	EncodedLength func(value ValueType, privy PrivyType) K
+	DecodeStream  func(value *GrowingBytes) (ValueType, error)
 	// Although it would seem natural to put the privy type in the params,
 	// Before calling this function we cannot know what this message is privy to.
 	// e.g. if this is an encoded SetupBindReadCapability
