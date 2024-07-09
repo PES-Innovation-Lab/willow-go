@@ -148,7 +148,7 @@ func IntersectArea[SubspaceType constraints.Ordered](orderSubspace types.TotalOr
 
 /** Convert an `Area` to a `Range3d`. */
 //THIS FUNCTION NEEDS TO BE FIXED
-func AreaTo3dRange[T constraints.Ordered](opts Options[T], area types.Area[T]) types.Range3d[T] {
+func AreaTo3dRange[T constraints.Ordered, K constraints.Unsigned](opts Options[T], area types.Area[T], pathParams types.PathParams[K]) types.Range3d[T] {
 	var subspace_range types.Range[T]
 	if !area.Any_subspace {
 		sucSubspace, foundSuccessor := opts.SuccessorSubspace(area.Subspace_id)
@@ -174,7 +174,7 @@ func AreaTo3dRange[T constraints.Ordered](opts Options[T], area types.Area[T]) t
 	startPath := make(types.Path, len(area.Path))
 	copy(startPath, area.Path)
 
-	end := SuccessorPrefix(area.Path) // Use the copied startPath
+	end := SuccessorPrefix(area.Path, pathParams) // Use the copied startPath
 	var choice bool
 	if isEmpty(end) {
 		end = types.Path{}

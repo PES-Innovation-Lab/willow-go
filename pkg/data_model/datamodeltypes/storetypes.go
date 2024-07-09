@@ -76,9 +76,3 @@ type LengthyEntry[NamespaceId, SubspaceId, PayloadDigest constraints.Ordered] st
 	entry     types.Entry[NamespaceId, SubspaceId, PayloadDigest]
 	Available uint64
 }
-
-type Payload[T constraints.Unsigned] struct {
-	bytes(offset T) []byte
-	stream(offset T) <-chan []byte
-	Length() uint64
-}
