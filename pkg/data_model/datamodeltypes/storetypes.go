@@ -77,7 +77,7 @@ type LengthyEntry[NamespaceId, SubspaceId, PayloadDigest constraints.Ordered] st
 	Available uint64
 }
 
-type Payload[T constraints.Unsigned] interface {
+type Payload[T constraints.Unsigned] struct {
 	bytes(offset T) []byte
 	stream(offset T) <-chan []byte
 	Length() uint64
