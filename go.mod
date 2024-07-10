@@ -2,7 +2,10 @@ module github.com/PES-Innovation-Lab/willow-go
 
 go 1.22.3
 
-require golang.org/x/exp v0.0.0-20240604190554-fc45aab8b7f8
+require (
+	github.com/stretchr/testify v1.9.0
+	golang.org/x/exp v0.0.0-20240604190554-fc45aab8b7f8
+)
 
 require (
 	github.com/DataDog/zstd v1.4.5 // indirect

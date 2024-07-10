@@ -1,0 +1,53 @@
+package datamodeltypes
+
+import (
+	"github.com/PES-Innovation-Lab/willow-go/types"
+	"golang.org/x/exp/constraints"
+)
+
+type EntryDriver[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint constraints.Ordered] struct {
+	MakeStorage             func(namespace NamespaceId) KDTreeStorage[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint]
+	PayloadReferenceCounter PayloadReferenceCounter[PayloadDigest]
+}
+
+type PayloadReferenceCounter[PayloadDigest constraints.Ordered] interface {
+	Increment(payloadDigest PayloadDigest) chan uint
+	Decrement(payloadDigest PayloadDigest) chan uint
+	Count(payloadDigest PayloadDigest) chan uint
+}
+
+type KDTreeStorage[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint constraints.Ordered] struct {
+	/** Retrieve an entry at a subspace and path. */
+	Get func(subspace SubspaceId, path types.Path) chan struct {
+		Entry         types.Entry[NamespaceId, SubspaceId, PayloadDigest]
+		AuthTokenHash PayloadDigest
+	}
+	/** Insert a new entry. */
+	Insert func(opts struct {
+		Subspace      SubspaceId
+		Path          types.Path
+		PayloadDigest PayloadDigest
+		Timestamp     uint64
+		PayloadLength uint64
+		AuthTokenHash PayloadDigest
+	}) chan error
+
+	/** Update the available payload bytes for a given entry. */
+
+	UpdateAvailablePayload func(subspace SubspaceId, path types.Path) chan bool
+	/** Remove an entry. */
+	Remove func(entry types.Entry[NamespaceId, SubspaceId, PayloadDigest]) chan error
+	// Used during sync.
+
+	/** Summarise a given `Range3d` by mapping the included set of `Entry` to ` PreFingerprint`.  */
+	Summarise func(range3d types.Range3d[SubspaceId]) chan struct {
+		Fingerprint PreFingerPrint
+		Size        uint64
+	}
+	/** Split a range into two smaller ranges. */
+	SplitRange func(range3d types.Range3d[SubspaceId], knownSize uint) chan []types.Range3d[SubspaceId]
+	Query      func(range3d types.Range3d[SubspaceId], reverse bool) []struct {
+		Entry         types.Entry[NamespaceId, SubspaceId, PayloadDigest]
+		AuthTokenHash PayloadDigest
+	}
+}

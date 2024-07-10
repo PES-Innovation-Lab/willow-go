@@ -100,15 +100,13 @@ type StoreOpts[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPri
 	Namespace     NamespaceId
 	Schemes       StoreSchemes[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]
 	EntryDriver   EntryDriver[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint]
-	PayloadDriver PayloadDriver[PayloadDigest]
+	PayloadDriver PayloadDriver[PayloadDigest, K]
 }
 
 type Payload struct {
-	bytesWithOffset       func(offset int) []byte
-	bytes                 func() chan byte
-	bytesStreamWithoffset func(offset int) chan []byte
-	bytesStream           func() chan []byte
-	Length                func() uint64
+	Bytes           func() []byte
+	BytesWithOffset func(offset int) ([]byte, error)
+	Length          func() (uint64, error)
 }
 
 type EntryInput[SubspacePublicKey constraints.Ordered] struct {
