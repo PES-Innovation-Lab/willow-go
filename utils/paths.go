@@ -81,7 +81,7 @@ func EncodePath[T constraints.Unsigned](pathParams types.PathParams[T], path typ
 	   The way path gets encoded is, the first "MaxComponentCount" width bytes are number of components,
 	   the next number of components is the length of the component followed by the respective component.
 	*/
-	componentCountBytes := EncodeIntMax32(T(len(path)), pathParams.MaxPathLength)
+	componentCountBytes := EncodeIntMax32(T(len(path)), pathParams.MaxComponentCount)
 	componentBytes := componentCountBytes
 	for _, component := range path {
 		lengthBytesComponent := EncodeIntMax32(T(len(component)), pathParams.MaxComponentLength)
