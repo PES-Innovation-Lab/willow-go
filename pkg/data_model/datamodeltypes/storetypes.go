@@ -72,6 +72,6 @@ type EntryInput[SubspacePublicKey constraints.Ordered] struct {
 	Timestamp uint64
 }
 type LengthyEntry[NamespaceId, SubspaceId, PayloadDigest constraints.Ordered] struct {
-	entry     types.Entry[NamespaceId, SubspaceId, PayloadDigest]
+	Entry     types.Entry[NamespaceId, SubspaceId, PayloadDigest]
 	Available uint64
 }
