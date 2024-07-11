@@ -5,9 +5,19 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-type EntryDriver[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint constraints.Ordered] struct {
-	MakeStorage             func(namespace NamespaceId) KDTreeStorage[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint]
+type EntryDriver[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint constraints.Ordered, T KvPart, K constraints.Unsigned] struct {
+	KDTreeStorage           KDTreeStorage[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint, T, K]
+	MakeStorage             func(namespace NamespaceId)
 	PayloadReferenceCounter PayloadReferenceCounter[PayloadDigest]
+	GetPayloadLength        func(digest PayloadDigest) uint64
+	Opts                    struct {
+		KVDriver          KvDriver[T]
+		NamespaceScheme   NamespaceScheme[NamespaceId, K]
+		SubspaceScheme    SubspaceScheme[NamespaceId, K]
+		PayloadScheme     PayloadScheme[PayloadDigest, K]
+		PathParams        types.PathParams[K]
+		FingerprintScheme FingerprintScheme[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint, K]
+	}
 }
 
 type PayloadReferenceCounter[PayloadDigest constraints.Ordered] interface {
@@ -16,7 +26,18 @@ type PayloadReferenceCounter[PayloadDigest constraints.Ordered] interface {
 	Count(payloadDigest PayloadDigest) chan uint
 }
 
-type KDTreeStorage[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint constraints.Ordered] struct {
+type KDTreeStorage[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint constraints.Ordered, T KvPart, K constraints.Unsigned] struct {
+	KVDriver KvDriver[T]
+
+	Opts struct {
+		Namespace         NamespaceId
+		SubspaceScheme    SubspaceScheme[NamespaceId, K]
+		PayloadScheme     PayloadScheme[PayloadDigest, K]
+		PathParams        types.PathParams[K]
+		FingerprintScheme FingerprintScheme[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint, K]
+		GetPayloadLength  func(digest PayloadDigest) uint64
+	}
+
 	/** Retrieve an entry at a subspace and path. */
 	Get func(subspace SubspaceId, path types.Path) chan struct {
 		Entry         types.Entry[NamespaceId, SubspaceId, PayloadDigest]
@@ -46,7 +67,8 @@ type KDTreeStorage[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint constr
 	}
 	/** Split a range into two smaller ranges. */
 	SplitRange func(range3d types.Range3d[SubspaceId], knownSize uint) chan []types.Range3d[SubspaceId]
-	Query      func(range3d types.Range3d[SubspaceId], reverse bool) []struct {
+	/** 3D Range Query **/
+	Query func(range3d types.Range3d[SubspaceId], reverse bool) []struct {
 		Entry         types.Entry[NamespaceId, SubspaceId, PayloadDigest]
 		AuthTokenHash PayloadDigest
 	}
