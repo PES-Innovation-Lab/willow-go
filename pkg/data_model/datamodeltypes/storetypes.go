@@ -37,10 +37,10 @@ type FingerprintScheme[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, F
 	FingerPrintSingleton func(entry LengthyEntry[NamespaceId, SubspaceId, PayloadDigest]) chan PreFingerPrint
 	FingerPrintCombine   func(a, b PreFingerPrint) PreFingerPrint
 	FingerPrintFinalise  func(fp PreFingerPrint) FingerPrint
-	neutral              PreFingerPrint
-	neutralFinalised     FingerPrint
-	isEqual              func(a, b FingerPrint) bool
-	encoding             utils.EncodingScheme[FingerPrint, K]
+	Neutral              PreFingerPrint
+	NeutralFinalised     FingerPrint
+	IsEqual              func(a, b FingerPrint) bool
+	Encoding             utils.EncodingScheme[FingerPrint, K]
 }
 
 type StoreSchemes[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint constraints.Ordered, K constraints.Unsigned, AuthorisationOpts interface{}, AuthorisationToken string] struct {
