@@ -1,13 +1,13 @@
 package datamodeltypes
 
 import (
+	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/Kdtree"
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"golang.org/x/exp/constraints"
 )
 
 type EntryDriver[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint constraints.Ordered, T KvPart, K constraints.Unsigned] struct {
-	KDTreeStorage           KDTreeStorage[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint, T, K]
-	MakeStorage             func(namespace NamespaceId)
+	MakeStorage             func(namespace NamespaceId) KDTreeStorage[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint, T, K]
 	PayloadReferenceCounter PayloadReferenceCounter[PayloadDigest]
 	GetPayloadLength        func(digest PayloadDigest) uint64
 	Opts                    struct {
@@ -28,6 +28,8 @@ type PayloadReferenceCounter[PayloadDigest constraints.Ordered] interface {
 
 type KDTreeStorage[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint constraints.Ordered, T KvPart, K constraints.Unsigned] struct {
 	KVDriver KvDriver[T]
+
+	KDTree *Kdtree.KDTree[Kdtree.KDNodeKey[SubspaceId]]
 
 	Opts struct {
 		Namespace         NamespaceId
