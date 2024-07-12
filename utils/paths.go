@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"log"
 
@@ -75,12 +76,12 @@ func CommonPrefix(first types.Path, second types.Path) (types.Path, error) {
 	return first[0:index], nil
 }
 
+/*
+this function takes in a path and a pathParams variable relted to it, we take the path,
+The way path gets encoded is, the first "MaxComponentCount" width bytes are number of components,
+the next number of components is the length of the component followed by the respective component.
+*/
 func EncodePath[T constraints.Unsigned](pathParams types.PathParams[T], path types.Path) []byte {
-	/*
-	   this function takes in a path and a pathParams variable relted to it, we take the path,
-	   The way path gets encoded is, the first "MaxComponentCount" width bytes are number of components,
-	   the next number of components is the length of the component followed by the respective component.
-	*/
 	componentCountBytes := EncodeIntMax32(T(len(path)), pathParams.MaxComponentCount)
 	componentBytes := componentCountBytes
 	for _, component := range path {
@@ -91,17 +92,22 @@ func EncodePath[T constraints.Unsigned](pathParams types.PathParams[T], path typ
 	return componentBytes
 }
 
-func DecodePath[T constraints.Unsigned](pathParams types.PathParams[T], encPath []byte) types.Path {
-	/*
-	   It checks the number of components in the first "MaxComponentCount" width and then interates through each
-	   Component, checks it's length and extracts the component based on the length
-	*/
+/*
+It checks the number of components in the first "MaxComponentCount" width and then interates through each
+Component, checks it's length and extracts the component based on the length.
+
+Returns:
+- The length of the encoded path input which was used (it's not necessary the input contains only the encoded path, it may contain other things trailing the path)
+- The decoded path :)
+- ERROR LMAO XD L BOZO CAN'T WRITE ERRORLESS CODE
+*/
+func DecodePath[T constraints.Unsigned](pathParams types.PathParams[T], encPath []byte) (int, types.Path, error) {
 	maxCountWidth := GetWidthMax32Int(pathParams.MaxComponentCount)
 	componentCountBytes := encPath[0:maxCountWidth]
 
 	componentCount, err := DecodeIntMax32(componentCountBytes, pathParams.MaxComponentCount)
 	if err != nil {
-		log.Fatalf("error: %s", err)
+		return 0, nil, errors.New("failed to decode component length: " + err.Error())
 	}
 	pos := maxCountWidth
 
@@ -118,9 +124,8 @@ func DecodePath[T constraints.Unsigned](pathParams types.PathParams[T], encPath 
 
 		path = append(path, pathComponent)
 		pos += maxComponentLengthWidth + int(lengthComponent)
-
 	}
-	return path
+	return pos, path, nil
 }
 
 func EncodePathLength[T constraints.Unsigned](pathParams types.PathParams[T], path types.Path) T {
@@ -192,7 +197,10 @@ func DecodeRelativePath[T constraints.Unsigned](
 
 	prefix := refernce[0:prefixLength]
 
-	suffix := DecodePath(pathParams, encRelPath[prefixLengthWidth:])
+	_, suffix, err := DecodePath(pathParams, encRelPath[prefixLengthWidth:])
+	if err != nil {
+		log.Fatalf("decode path failed XD skill issue. failed in paths.go, line 187: %s", err)
+	}
 
 	return append(prefix, suffix...)
 }

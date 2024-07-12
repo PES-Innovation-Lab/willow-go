@@ -14,7 +14,10 @@ func BigIntToBytes(bigint uint64) []byte {
 	return bytes
 }
 
-// Number of bytes in a a number
+/*
+Number of bytes required to store the input number. Input is a maximum of 32 bits.
+If input overflows, it still returns 4.
+*/
 func GetWidthMax32Int[T constraints.Unsigned](num T) int {
 	switch true {
 	case uint(num) < 1<<8:
@@ -51,7 +54,9 @@ func EncodeIntMax32[T constraints.Unsigned](num, max T) []byte {
 }
 
 // Deocde 32 bit number
-
+/*
+	Decodes a byte slice back into a number. Number can be a maximum of 32 bits.
+*/
 func DecodeIntMax32[T constraints.Unsigned](bytes []byte, max T) (uint32, error) {
 	bytesToDecodeLength := GetWidthMax32Int(max)
 
