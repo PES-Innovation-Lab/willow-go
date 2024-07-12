@@ -216,7 +216,7 @@ func TestEncodeDecodePath(t *testing.T) {
 
 	for _, vector := range PathEncodingVectors {
 		encoded := utils.EncodePath(vector.PathParams, vector.Path)
-		decoded := utils.DecodePath(vector.PathParams, encoded)
+		_, decoded, _ := utils.DecodePath(vector.PathParams, encoded)
 		if !reflect.DeepEqual(vector.Path, decoded) {
 			t.Errorf("Test failed! Expected %v, but got %v", vector.Path, decoded)
 		}
