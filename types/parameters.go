@@ -12,3 +12,8 @@ type PathParams[ValueType constraints.Unsigned] struct {
 	MaxComponentLength ValueType
 	MaxPathLength      ValueType
 }
+
+type SignatureScheme[PublicKey, SecretKey, Signature any] struct {
+	Sign   func(publicKey PublicKey, secretKey SecretKey, bytestring []byte) Signature
+	Verify func(publicKey PublicKey, signature Signature, bytestring []byte) bool
+}
