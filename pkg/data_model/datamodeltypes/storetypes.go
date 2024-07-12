@@ -3,39 +3,9 @@ package datamodeltypes
 import (
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/PES-Innovation-Lab/willow-go/utils"
-	"github.com/cockroachdb/pebble"
+
 	"golang.org/x/exp/constraints"
 )
-
-type KvPart interface {
-	[]byte | constraints.Ordered
-}
-
-type KvValue any
-
-type KvKey[T KvPart] struct {
-	Key []T
-}
-
-type ListOpts struct {
-	Reverse   bool
-	Limit     uint
-	BatchSize uint
-}
-
-type KvDriver struct {
-	Db            *pebble.DB
-	Close         func(Db *pebble.DB) error
-	Get           func(Db *pebble.DB, key []byte) ([]byte, error)
-	Set           func(Db *pebble.DB, key []byte, value []byte) error
-	Delete        func(Db *pebble.DB, key []byte) error
-	Clear         func(Db *pebble.DB) error
-	ListAllValues func(Db *pebble.DB) ([]struct {
-		Key   []byte
-		Value []byte
-	}, error)
-	Batch func(Db *pebble.DB) (*pebble.Batch, error)
-}
 
 type NamespaceScheme[NamespaceId constraints.Ordered, K constraints.Unsigned] struct {
 	utils.EncodingScheme[NamespaceId, K]
@@ -67,10 +37,10 @@ type FingerprintScheme[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, F
 	FingerPrintSingleton func(entry LengthyEntry[NamespaceId, SubspaceId, PayloadDigest]) chan PreFingerPrint
 	FingerPrintCombine   func(a, b PreFingerPrint) PreFingerPrint
 	FingerPrintFinalise  func(fp PreFingerPrint) FingerPrint
-	neutral              PreFingerPrint
-	neutralFinalised     FingerPrint
-	isEqual              func(a, b FingerPrint) bool
-	encoding             utils.EncodingScheme[FingerPrint, K]
+	Neutral              PreFingerPrint
+	NeutralFinalised     FingerPrint
+	IsEqual              func(a, b FingerPrint) bool
+	Encoding             utils.EncodingScheme[FingerPrint, K]
 }
 
 type StoreSchemes[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint constraints.Ordered, K constraints.Unsigned, AuthorisationOpts interface{}, AuthorisationToken string] struct {
@@ -82,10 +52,10 @@ type StoreSchemes[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, Finger
 	FingerprintScheme   FingerprintScheme[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint, K]
 }
 
-type StoreOpts[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint constraints.Ordered, K constraints.Unsigned, AuthorisationOpts interface{}, AuthorisationToken string] struct {
+type StoreOpts[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint constraints.Ordered, K constraints.Unsigned, AuthorisationOpts interface{}, AuthorisationToken string, T KvPart] struct {
 	Namespace     NamespaceId
 	Schemes       StoreSchemes[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]
-	EntryDriver   EntryDriver[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint]
+	EntryDriver   EntryDriver[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint, T, K]
 	PayloadDriver PayloadDriver[PayloadDigest, K]
 }
 
@@ -102,6 +72,6 @@ type EntryInput[SubspacePublicKey constraints.Ordered] struct {
 	Timestamp uint64
 }
 type LengthyEntry[NamespaceId, SubspaceId, PayloadDigest constraints.Ordered] struct {
-	entry     types.Entry[NamespaceId, SubspaceId, PayloadDigest]
+	Entry     types.Entry[NamespaceId, SubspaceId, PayloadDigest]
 	Available uint64
 }
