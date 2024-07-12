@@ -87,14 +87,14 @@ func (pd *PayloadDriver[PayloadDigest, T]) Set(payload []byte) (PayloadDigest, d
 	digest := <-pd.PayloadScheme.FromBytes(payload)
 	pd.EnsureDir()
 	filepath := filepath.Join(pd.path, pd.GetKey(digest))
-	os.WriteFile(filepath, payload, 0755)
+	os.WriteFile(filepath, payload, 0777)
 	var retPayload datamodeltypes.Payload = pd.GetPayload(filepath)
 	return digest, retPayload, uint64(len(payload))
 }
 
 func (pd *PayloadDriver[PayloadDigest, T]) EnsureDir(args ...string) (string, error) {
 	path := filepath.Join(append([]string{pd.path}, args...)...)
-	err := os.MkdirAll(path, 0755)
+	err := os.MkdirAll(path, 0777)
 	fmt.Println(err, path)
 	if err != nil {
 		return "", err
@@ -133,16 +133,11 @@ func copyFile(from, to string) error {
 }
 
 func (pd *PayloadDriver[PayloadDigest, T]) Receive(payload []byte, offset int64, expectedLength uint64, expectedDigest PayloadDigest) (PayloadDigest, uint64, datamodeltypes.CommitType, datamodeltypes.RejectType, error) {
-	fmt.Println("Starting Receive function")
-	fmt.Printf("Payload length: %d, Offset: %d, Expected Length: %d\n", len(payload), offset, expectedLength)
-	fmt.Printf("Expected Digest: %v\n", expectedDigest)
 
-	// Ensure the staging directory exists
-	stagingDirPath, err := pd.EnsureDir("staging")
+	_, err := pd.EnsureDir("staging")
 	if err != nil {
 		panic("Unable to locate the staging file: " + err.Error())
 	}
-	fmt.Printf("Staging directory path: %s\n", stagingDirPath)
 
 	// Generate a temporary file name
 	randBytes, err := getRandomBytes()
@@ -150,15 +145,12 @@ func (pd *PayloadDriver[PayloadDigest, T]) Receive(payload []byte, offset int64,
 		panic("Unable to generate random bytes: " + err.Error())
 	}
 	tempKey := base32.StdEncoding.EncodeToString(randBytes)
-	fmt.Printf("Generated temporary key: %s\n", tempKey)
 
 	stagingFilePath := filepath.Join(pd.path, "staging", tempKey)
-	fmt.Printf("Staging file path: %s\n", stagingFilePath)
 
 	// If offset is greater than 0, copy the existing partial file to staging
 	if offset > 0 {
 		partialFilePath := filepath.Join(pd.path, "partial", pd.GetKey(expectedDigest))
-		fmt.Printf("Copying partial file from: %s to: %s\n", partialFilePath, stagingFilePath)
 		err := copyFile(partialFilePath, stagingFilePath)
 		if err != nil {
 			panic("Unable to copy file: " + err.Error())
@@ -168,26 +160,22 @@ func (pd *PayloadDriver[PayloadDigest, T]) Receive(payload []byte, offset int64,
 	// Open the file in the appropriate mode
 	var file *os.File
 	if offset == 0 {
-		fmt.Println("Opening staging file for writing from scratch")
-		file, err = os.OpenFile(stagingFilePath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
+		file, err = os.OpenFile(stagingFilePath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	} else {
-		fmt.Println("Opening staging file for appending")
-		file, err = os.OpenFile(stagingFilePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
+		file, err = os.OpenFile(stagingFilePath, os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0777)
 	}
 	if err != nil {
 		panic("Unable to open file: " + err.Error())
 	}
 	defer file.Close()
-	fmt.Printf("Staging file opened successfully: %s\n", stagingFilePath)
 
 	// If offset is greater than 0, truncate and seek
 	if offset > 0 {
-		fmt.Printf("Truncating file to offset: %d\n", offset)
 		err = file.Truncate(offset)
 		if err != nil {
 			panic("Unable to truncate file: " + err.Error())
+
 		}
-		fmt.Println("Seeking to offset")
 		_, err = file.Seek(offset, 0)
 		if err != nil {
 			panic("Unable to seek file: " + err.Error())
@@ -197,12 +185,9 @@ func (pd *PayloadDriver[PayloadDigest, T]) Receive(payload []byte, offset int64,
 	// Write the payload to the file
 	writer := io.Writer(file)
 	receivedLen := offset + int64(len(payload))
-	fmt.Printf("Writing payload of length: %d\n", len(payload))
 	if _, err := writer.Write(payload); err != nil {
-		fmt.Println("Error writing payload:", err)
 		panic("Unable to write payload: " + err.Error())
 	}
-	fmt.Println("Payload written successfully")
 
 	// Read the entire file to calculate the digest
 	file.Seek(0, 0)
@@ -211,16 +196,12 @@ func (pd *PayloadDriver[PayloadDigest, T]) Receive(payload []byte, offset int64,
 	if err != nil {
 		panic("Unable to read file: " + err.Error())
 	}
-	fmt.Println("File read successfully for digest calculation")
 
 	// Calculate the digest
 	digest := <-pd.PayloadScheme.FromBytes(readData)
-	fmt.Printf("%s", readData)
-	fmt.Printf("Calculated digest: %v\n", digest)
 
 	// Commit function to move the file to the final destination
 	commit := func(isCompletePayload bool) {
-		fmt.Println("Starting commit function")
 		_, err = pd.EnsureDir("partial")
 		if err != nil {
 			fmt.Printf("Unable to ensure partial directory: %v\n", err)
@@ -234,10 +215,8 @@ func (pd *PayloadDriver[PayloadDigest, T]) Receive(payload []byte, offset int64,
 			pd.EnsureDir("partial")
 			committedFilePath = filepath.Join(pd.path, "partial", pd.GetKey(expectedDigest))
 			err = copyFile(stagingFilePath, committedFilePath)
-			// fmt.Println(err)
 			err = os.Remove(stagingFilePath)
 		}
-		fmt.Printf("Committing file from: %s to: %s\n", stagingFilePath, committedFilePath)
 		if err != nil {
 			fmt.Println("Unable to commit file:", err)
 		} else {
@@ -247,7 +226,6 @@ func (pd *PayloadDriver[PayloadDigest, T]) Receive(payload []byte, offset int64,
 
 	// Reject function to delete the staging file
 	reject := func() {
-		fmt.Printf("Rejecting file, removing: %s\n", stagingFilePath)
 		err = os.Remove(stagingFilePath)
 		if err != nil {
 			fmt.Printf("Unable to remove staging file: %v\n", err)
@@ -256,6 +234,5 @@ func (pd *PayloadDriver[PayloadDigest, T]) Receive(payload []byte, offset int64,
 		}
 	}
 
-	fmt.Println("Returning from Receive function")
 	return digest, uint64(receivedLen), commit, reject, nil
 }
