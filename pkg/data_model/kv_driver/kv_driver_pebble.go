@@ -12,11 +12,20 @@ import (
 	"github.com/cockroachdb/pebble"
 )
 
-func isFirstPrefixOfSecond[T datamodeltypes.KvPart](a, b datamodeltypes.KvKey[T]) bool {
+func isFirstPrefixOfSecond[T datamodeltypes.KvPart](a, b datamodeltypes.KvKey[T]) (bool, error) {
 	if len(a.Key) > len(b.Key) {
-		return false
+		return false, nil
 	}
-    for 
+	for index, component := range a.Key {
+		res, err := CompareTwoKeyParts(component, b.Key[index])
+		if err != nil {
+			return false, err
+		}
+		if res != 0 {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func CompareTwoKeyParts[T datamodeltypes.KvPart](a, b T) (types.Rel, error) {
@@ -51,25 +60,26 @@ func CompareTwoKeyParts[T datamodeltypes.KvPart](a, b T) (types.Rel, error) {
 			}
 		}
 	}
-	return 0, errors.New("The type of KV part is not matching with allowed types!")
+	return 0, errors.New("the type of KV part is not matching with allowed types")
 }
 
-func CompareKeys[T datamodeltypes.KvPart](a, b datamodeltypes.KvKey[T]) (bool, error) {
+func CompareKeys[T datamodeltypes.KvPart](a, b datamodeltypes.KvKey[T]) (types.Rel, error) {
 	if len(a.Key) > len(b.Key) {
-		return false, nil
+		return 1, nil
+	} else if len(a.Key) < len(b.Key) {
+		return -1, nil
 	} else {
 		for i, ele := range a.Key {
 			res, err := CompareTwoKeyParts(ele, b.Key[i])
 			if err != nil {
-				log.Fatal(err)
+				return 0, err
 			}
 			if res != 0 {
-				return false, nil
+				return res, nil
 			}
-			return true, nil
 		}
 	}
-	return false, errors.New("Oops something went wrong!")
+	return 0, nil
 }
 
 func Close(Db *pebble.DB) error {
@@ -80,12 +90,12 @@ func Close(Db *pebble.DB) error {
 	return nil
 }
 
-func Get(Db *pebble.DB, key []byte) (datamodeltypes.KvValue, error) {
+func Get(Db *pebble.DB, key []byte) ([]byte, error) {
 	value, closer, err := Db.Get(key)
+	defer closer.Close()
 	if err != nil {
 		return nil, err
 	}
-	closer.Close()
 	return value, nil
 }
 
@@ -105,39 +115,70 @@ func Delete(Db *pebble.DB, key []byte) error {
 	return nil
 }
 
-func List[T datamodeltypes.KvPart](
-	Db *pebble.DB, selector datamodeltypes.ListSelector[T],
-	opts datamodeltypes.ListOpts,
-) ([]datamodeltypes.EntryIterator[T], error) {
-	var reverse bool
-	var limit uint
-	var batchSize uint
-	var prefix datamodeltypes.KvKey[T]
-	var start datamodeltypes.KvKey[T]
-	var end datamodeltypes.KvKey[T]
+func Clear(Db *pebble.DB) error {
+	iter, err := Db.NewIter(nil)
+	if err != nil {
+		return err
+	}
+	for iter.First(); iter.Valid(); iter.Next() {
+		err := Db.Delete(iter.Key(), pebble.Sync)
+		if err != nil {
+			return err
+		}
+	}
+	if err := iter.Close(); err != nil {
+		return errors.New("failed to close the iterator")
+	}
+	return nil
+}
 
-	if !reflect.DeepEqual(opts, datamodeltypes.ListOpts{}) {
-		reverse = opts.Reverse
-		limit = opts.Limit
-		batchSize = opts.BatchSize
-	} else {
-		reverse = false
-		limit = 0
-		batchSize = 0
+func ListAllValues(Db *pebble.DB) ([]struct {
+	Key   []byte
+	Value []byte
+}, error,
+) {
+	var values []struct {
+		Key   []byte
+		Value []byte
+	}
+	iter, err := Db.NewIter(nil)
+	if err != nil {
+		return nil, err
 	}
 
-	if limit == 0 {
-		return nil, nil
+	defer func() {
+		if err := iter.Close(); err != nil {
+			log.Fatal("error in closing the iter")
+		}
+	}()
+	for iter.First(); iter.Valid(); iter.Next() {
+		key := iter.Key()
+		value, closer, err := Db.Get(iter.Key())
+		if err != nil {
+			return nil, err
+		}
+		closer.Close()
+		values = append(values, struct {
+			Key   []byte
+			Value []byte
+		}{Key: key, Value: value})
 	}
-	if reflect.DeepEqual(selector.Prefix, datamodeltypes.KvKey[T]{}) {
-		prefix = datamodeltypes.KvKey[T]{}
-	} else {
-		prefix = selector.Prefix
-	}
+	return values, nil
+}
 
-	start = selector.Start
-	end = selector.End
+func Batch(Db *pebble.DB) (*pebble.Batch, error) {
+	batch := Db.NewBatch()
+	return batch, nil
+}
 
-	if reflect.DeepEqual(prefix, datamodeltypes.KvKey[T]{}) {
+func CreateEntryDriver[T datamodeltypes.KvPart](Db *pebble.DB) (datamodeltypes.KvDriver, error) {
+	entryDriver := datamodeltypes.KvDriver{
+		Db:            Db,
+		Get:           Get,
+		Set:           Set,
+		Clear:         Clear,
+		ListAllValues: ListAllValues,
+		Batch:         Batch,
 	}
+	return entryDriver, nil
 }
