@@ -89,7 +89,7 @@ func DecodeKey[T constraints.Unsigned](encodedKey []byte, pathParams types.PathP
 /* decodeSubspaceId decodes the subspaceId from []byte */
 func decodeSubspaceId[T constraints.Unsigned](subspaceBytes []byte) (T, error) {
 	var subspaceId T
-	buf := bytes.NewReader(subspaceBytes)
+	encodedPayloadDigest := bytes.NewReader(subspaceBytes)
 
 	// Determine the length of the subspaceId
 	length := len(subspaceBytes)
@@ -101,21 +101,21 @@ func decodeSubspaceId[T constraints.Unsigned](subspaceBytes []byte) (T, error) {
 		subspaceId = T(value)
 	case 2:
 		var value uint16
-		err := binary.Read(buf, binary.BigEndian, &value)
+		err := binary.Read(encodedPayloadDigest, binary.BigEndian, &value)
 		if err != nil {
 			return 0, fmt.Errorf("failed to decode int16: %v", err)
 		}
 		subspaceId = T(value)
 	case 4:
 		var value uint32
-		err := binary.Read(buf, binary.BigEndian, &value)
+		err := binary.Read(encodedPayloadDigest, binary.BigEndian, &value)
 		if err != nil {
 			return 0, fmt.Errorf("failed to decode int32: %v", err)
 		}
 		subspaceId = T(value)
 	case 8:
 		var value uint64
-		err := binary.Read(buf, binary.BigEndian, &value)
+		err := binary.Read(encodedPayloadDigest, binary.BigEndian, &value)
 		if err != nil {
 			return 0, fmt.Errorf("failed to decode int64: %v", err)
 		}
@@ -123,4 +123,48 @@ func decodeSubspaceId[T constraints.Unsigned](subspaceBytes []byte) (T, error) {
 	}
 
 	return subspaceId, nil
+}
+
+// Takes in payload digest, payload length and returns a flattened array of both
+// First 8 bytes is payload length and the rest of the bytes are payload digest
+func EncodeEntryValues(payloadDigest string, payloadLength uint64) []byte {
+	var encodedValues []byte
+	encodedPayloadLength := encodePayloadLength(payloadLength)
+	encodedValues = append(encodedValues, encodedPayloadLength...)
+	encodedPayloadDigest := encodePayloadDigest(payloadDigest)
+
+	encodedValues = append(encodedValues, encodedPayloadLength...)
+	encodedValues = append(encodedValues, encodedPayloadDigest...)
+
+	return encodedValues
+}
+
+// Takes in encoded value and returns decoded payloadDigest and payload length
+// First 8 bytes are payload length, so takes amd comverts it into uint64 and then returns payload digest next
+func DecodeEntryValues[T constraints.Ordered](encodedValue []byte) (uint64, string) {
+	encodedPayloadLength := encodedValue[0:8]
+	encodedPayloadDigest := encodedValue[8:]
+	payloadLength := decodePayloadLength(encodedPayloadLength)
+	payloadDigest := decodePayloadDigest(encodedPayloadDigest)
+
+	return payloadLength, payloadDigest
+}
+
+func encodePayloadLength(payloadLength uint64) []byte {
+	var encoded []byte
+	binary.BigEndian.PutUint64(encoded, payloadLength)
+	return encoded
+}
+
+func decodePayloadLength(encodedPayloadLength []byte) uint64 {
+	payloadLength := binary.BigEndian.Uint64(encodedPayloadLength)
+	return payloadLength
+}
+
+func encodePayloadDigest(payloadDigest string) []byte {
+	return []byte(payloadDigest)
+}
+
+func decodePayloadDigest(buf []byte) string {
+	return string(buf)
 }
