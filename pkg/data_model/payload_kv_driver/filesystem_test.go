@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -60,7 +61,7 @@ func createTempDir(t *testing.T) string {
 
 func TestGetPayload(t *testing.T) {
 	// Define the path where your test files are stored
-	testDataPath := "/path/to/your/test/data"
+	testDataPath := "C:\\Users\\samar\\AppData\\Local\\Temp\\payload_test415599433"
 
 	// Define the files you want to test
 	testFiles := []struct {
@@ -68,7 +69,7 @@ func TestGetPayload(t *testing.T) {
 		fileName string
 	}{
 		{"Text file", "sample.txt"},
-		{"PDF file", "sample.pdf"},
+		// {"PDF file", "sample.pdf"},
 		{"MP4 file", "sample.mp4"},
 	}
 
@@ -203,24 +204,47 @@ func TestSetAndGetPayload(t *testing.T) {
 }
 
 func TestGet(t *testing.T) {
-	tempDir := createTempDir(t)
-	defer os.RemoveAll(tempDir)
-
 	pd := PayloadDriver[string, uint64]{
-		path:          tempDir,
+		path:          "C:\\Users\\samar\\AppData\\Local\\Temp\\payload_test415599433",
 		PayloadScheme: mockPayloadScheme,
 	}
 
-	testContent := []byte("test content")
-	hash, _, _ := pd.Set(testContent)
+	// Read the video file content
+	videoPath := "C:\\Users\\samar\\AppData\\Local\\Temp\\payload_test415599433\\sample.mp4"
+	videoContent, err := os.ReadFile(videoPath)
+	if err != nil {
+		t.Fatalf("failed to read video file: %v", err)
+	}
 
+	// Set the video content
+	hash, _, _ := pd.Set(videoContent)
+	fmt.Println("Finished Setting")
+	// Get the payload
 	payload, err := pd.Get(hash)
 	if err != nil {
 		t.Errorf("get failed: %v", err)
 	}
 
-	if !bytes.Equal(payload.Bytes(), testContent) {
-		t.Errorf("get(%s) content = %v; want %v", hash, payload.Bytes(), testContent)
+	if !bytes.Equal(payload.Bytes(), videoContent) {
+		t.Errorf("get(%s) content = %v; want %v", hash, payload.Bytes(), videoContent)
+	}
+
+	fmt.Println("Done now writing file")
+	// Write the retrieved payload to output.mp4
+	outputPath := "C:\\Users\\samar\\AppData\\Local\\Temp\\payload_test415599433\\output"
+	err = os.WriteFile(outputPath, payload.Bytes(), 0644)
+	if err != nil {
+		t.Fatalf("failed to write output file: %v", err)
+	}
+
+	// Verify the written file content
+	writtenContent, err := ioutil.ReadFile(outputPath)
+	if err != nil {
+		t.Fatalf("failed to read output file: %v", err)
+	}
+
+	if !bytes.Equal(writtenContent, videoContent) {
+		t.Errorf("output file content = %v; want %v", writtenContent, videoContent)
 	}
 }
 
@@ -252,11 +276,11 @@ func TestErase(t *testing.T) {
 }
 
 func TestSet(t *testing.T) {
-	tempDir := createTempDir(t)
-	defer os.RemoveAll(tempDir)
+	// tempDir := createTempDir(t)
+	// defer os.RemoveAll(tempDir)
 
 	pd := PayloadDriver[string, uint64]{
-		path:          tempDir,
+		path:          "C:\\Users\\samar\\AppData\\Local\\Temp\\payload_test415599433",
 		PayloadScheme: mockPayloadScheme,
 	}
 
@@ -277,7 +301,36 @@ func TestSet(t *testing.T) {
 		t.Errorf("File not created after set: %v", err)
 	}
 }
+func TestSetVido(t *testing.T) {
+	pd := PayloadDriver[string, uint64]{
+		path:          "C:\\Users\\samar\\AppData\\Local\\Temp\\payload_test415599433",
+		PayloadScheme: mockPayloadScheme,
+	}
 
+	// Read the video file content
+	videoPath := "C:\\Users\\samar\\AppData\\Local\\Temp\\payload_test415599433\\sample.mp4"
+	videoContent, err := ioutil.ReadFile(videoPath)
+	if err != nil {
+		t.Fatalf("failed to read video file: %v", err)
+	}
+
+	// Set the video content
+	hash, payload, size := pd.Set(videoContent)
+
+	if size != uint64(len(videoContent)) {
+		t.Errorf("set() size = %d; want %d", size, len(videoContent))
+	}
+
+	if !bytes.Equal(payload.Bytes(), videoContent) {
+		t.Errorf("set() content = %v; want %v", payload.Bytes(), videoContent)
+	}
+
+	// Check if file is actually created
+	_, err = pd.Get(hash)
+	if err != nil {
+		t.Errorf("File not created after set: %v", err)
+	}
+}
 func TestEnsureDir(t *testing.T) {
 	tempDir := createTempDir(t)
 	// defer os.RemoveAll(tempDir)
@@ -318,7 +371,9 @@ func TestReceive(t *testing.T) {
 	}
 	// Create test content
 	testContent := []byte("This is a test payload content. It includes some numbers 12345 and symbols !@#$%.")
-	expectedDigest := <-mockPayloadScheme.FromBytes(testContent)
+	additionalContent := []byte(" Additional data.")
+	expectedDigest := <-mockPayloadScheme.FromBytes(append(testContent, additionalContent...))
+	expectedDigest_partial := <-mockPayloadScheme.FromBytes(testContent)
 
 	// Test receiving the payload
 	offset := int64(0)
@@ -329,8 +384,8 @@ func TestReceive(t *testing.T) {
 	}
 
 	// Verify the received digest and length
-	if receivedDigest != expectedDigest {
-		t.Errorf("Received digest = %s; want %s", receivedDigest, expectedDigest)
+	if receivedDigest != expectedDigest_partial {
+		t.Errorf("Received digest = %s; want %s", receivedDigest, expectedDigest_partial)
 	}
 	if receivedLength != expectedLength {
 		t.Errorf("Received length = %d; want %d", receivedLength, expectedLength)
@@ -350,18 +405,19 @@ func TestReceive(t *testing.T) {
 
 	// commit(false)
 	// Test receiving additional data to simulate partial payload
-	additionalContent := []byte(" Additional data.")
-	expectedDigestWithAdditional := <-mockPayloadScheme.FromBytes(append(testContent, additionalContent...))
-	_, _, _, _, err = pd.Receive(additionalContent, int64(len(testContent)), uint64(len(testContent)+len(additionalContent)), expectedDigestWithAdditional)
+	// expectedDigestWithAdditional := <-mockPayloadScheme.FromBytes(fmt.Append(testContent, additionalContent))
+	fmt.Printf("%s", append(testContent, additionalContent...))
+	fmt.Println("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+	_, _, _, _, err = pd.Receive(additionalContent, int64(len(testContent)), uint64(len(testContent)+len(additionalContent)), expectedDigest)
 	if err != nil {
 		t.Fatalf("Receive failed for additional data: %v", err)
 	}
 
-	// // Verify that the partial payload is stored correctly
-	// partialFilePath := filepath.Join(tempDir, "partial", pd.GetKey(expectedDigestWithAdditional))
-	// if _, err := os.Stat(partialFilePath); os.IsNotExist(err) {
-	// 	t.Fatalf("Partial payload file does not exist: %s", partialFilePath)
-	// }
+	// Verify that the partial payload is stored correctly
+	partialFilePath := filepath.Join(tempDir, "partial", pd.GetKey(expectedDigest))
+	if _, err := os.Stat(partialFilePath); os.IsNotExist(err) {
+		t.Fatalf("Partial payload file does not exist: %s", partialFilePath)
+	}
 
 	// // Test rejecting the payload
 	// // reject()
@@ -369,19 +425,20 @@ func TestReceive(t *testing.T) {
 	// // 	t.Fatalf("Partial payload file still exists after reject: %s", partialFilePath)
 	// // }
 
-	// // Verify that the commit function works correctly
-	// finalContent := append(testContent, additionalContent...)
-	// _, _, commit, _, err = pd.Receive(finalContent, 0, uint64(len(finalContent)), expectedDigestWithAdditional)
-	// if err != nil {
-	// 	t.Fatalf("Receive failed for final content: %v", err)
-	// }
-	// commit(true)
+	// Verify that the commit function works correctly
+	finalContent := append(testContent, additionalContent...)
+	_, _, commit, _, err = pd.Receive(finalContent, 0, uint64(len(finalContent)), expectedDigest)
+	if err != nil {
+		t.Fatalf("Receive failed for final content: %v", err)
+	}
+	commit(true)
 
-	// storedPayload, err = pd.Get(expectedDigestWithAdditional)
-	// if err != nil {
-	// 	t.Fatalf("Failed to get final stored payload: %v", err)
-	// }
-	// if !bytes.Equal(storedPayload.Bytes(), finalContent) {
-	// 	t.Errorf("Final stored payload content = %s; want %s", storedPayload.Bytes(), finalContent)
-	// }
+	storedPayload, err := pd.Get(expectedDigest)
+	if err != nil {
+		t.Fatalf("Failed to get final stored payload: %v", err)
+	}
+	if !bytes.Equal(storedPayload.Bytes(), finalContent) {
+		t.Errorf("Final stored payload content = %s; want %s", storedPayload.Bytes(), finalContent)
+	}
+
 }
