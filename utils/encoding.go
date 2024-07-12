@@ -31,7 +31,7 @@ func GetWidthMax32Int[T constraints.Unsigned](num T) int {
 	}
 }
 
-// Encode number
+// Encode max 32 bit number
 
 func EncodeIntMax32[T constraints.Unsigned](num, max T) []byte {
 	width := GetWidthMax32Int(max)

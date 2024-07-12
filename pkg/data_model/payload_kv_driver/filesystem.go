@@ -1,8 +1,10 @@
 package payloadDriver
 
 import (
+	"crypto/rand"
 	"encoding/base32"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -15,12 +17,12 @@ type PayloadDriver[PayloadDigest constraints.Ordered, T constraints.Unsigned] st
 	PayloadScheme datamodeltypes.PayloadScheme[PayloadDigest, T]
 }
 
-func (pd *PayloadDriver[PayloadDigest, T]) getKey(hash PayloadDigest) string {
+func (pd *PayloadDriver[PayloadDigest, T]) GetKey(hash PayloadDigest) string {
 	encoded := pd.PayloadScheme.Encode(hash)
 	return base32.StdEncoding.EncodeToString(encoded)
 }
 
-func (pd *PayloadDriver[PayloadDigest, T]) getPayload(filepath string) datamodeltypes.Payload {
+func (pd *PayloadDriver[PayloadDigest, T]) GetPayload(filepath string) datamodeltypes.Payload {
 	return datamodeltypes.Payload{
 		Bytes: func() []byte {
 			bytes, _ := os.ReadFile(filepath)
@@ -36,7 +38,7 @@ func (pd *PayloadDriver[PayloadDigest, T]) getPayload(filepath string) datamodel
 			fileInfo, _ := file.Stat()
 			size := fileInfo.Size()
 			if offset >= int(size) {
-				return nil, fmt.Errorf("Offset is greater than file size")
+				return nil, fmt.Errorf("offset is greater than file size")
 			}
 
 			bytes := make([]byte, size-int64(offset))
@@ -61,18 +63,18 @@ func (pd *PayloadDriver[PayloadDigest, T]) getPayload(filepath string) datamodel
 
 }
 
-func (pd *PayloadDriver[PayloadDigest, T]) get(PayloadHash PayloadDigest) (datamodeltypes.Payload, error) {
-	filepath := filepath.Join(pd.path, pd.getKey(PayloadHash))
+func (pd *PayloadDriver[PayloadDigest, T]) Get(PayloadHash PayloadDigest) (datamodeltypes.Payload, error) {
+	filepath := filepath.Join(pd.path, pd.GetKey(PayloadHash))
 	_, err := os.Lstat(filepath)
 	if err != nil {
 		return datamodeltypes.Payload{}, err
 	}
 
-	return pd.getPayload(filepath), nil
+	return pd.GetPayload(filepath), nil
 }
 
-func (pd *PayloadDriver[PayloadDigest, T]) erase(PayloadHash PayloadDigest) (bool, error) {
-	filepath := filepath.Join(pd.path, pd.getKey(PayloadHash))
+func (pd *PayloadDriver[PayloadDigest, T]) Erase(PayloadHash PayloadDigest) (bool, error) {
+	filepath := filepath.Join(pd.path, pd.GetKey(PayloadHash))
 	err := os.Remove(filepath)
 	if err != nil {
 		return false, err
@@ -81,21 +83,179 @@ func (pd *PayloadDriver[PayloadDigest, T]) erase(PayloadHash PayloadDigest) (boo
 	return true, nil
 }
 
-func (pd *PayloadDriver[PayloadDigest, T]) set(payload []byte) (PayloadDigest, datamodeltypes.Payload, uint64) {
+func (pd *PayloadDriver[PayloadDigest, T]) Set(payload []byte) (PayloadDigest, datamodeltypes.Payload, uint64) {
 	digest := <-pd.PayloadScheme.FromBytes(payload)
-	pd.ensureDir()
-	filepath := filepath.Join(pd.path, pd.getKey(digest))
+	pd.EnsureDir()
+	filepath := filepath.Join(pd.path, pd.GetKey(digest))
 	os.WriteFile(filepath, payload, 0755)
-	var retPayload datamodeltypes.Payload = pd.getPayload(filepath)
+	var retPayload datamodeltypes.Payload = pd.GetPayload(filepath)
 	return digest, retPayload, uint64(len(payload))
 }
 
-func (pd *PayloadDriver[PayloadDigest, T]) ensureDir(args ...string) (string, error) {
+func (pd *PayloadDriver[PayloadDigest, T]) EnsureDir(args ...string) (string, error) {
 	path := filepath.Join(append([]string{pd.path}, args...)...)
 	err := os.MkdirAll(path, 0755)
+	fmt.Println(err, path)
 	if err != nil {
 		return "", err
 	}
 
 	return path, nil
+}
+
+func getRandomBytes() ([]byte, error) {
+	bytes := make([]byte, 32)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return nil, err
+	}
+	return bytes, nil
+}
+
+func copyFile(from, to string) error {
+	src, err := os.Open(from)
+	if err != nil {
+		fmt.Println("asdasd", err)
+		return err
+	}
+	defer src.Close()
+
+	dst, err := os.Create(to) // Use os.Create to truncate the destination file if it exists
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	defer dst.Close()
+
+	_, err = io.Copy(dst, src)
+	fmt.Println(err)
+	return err
+}
+
+func (pd *PayloadDriver[PayloadDigest, T]) Receive(payload []byte, offset int64, expectedLength uint64, expectedDigest PayloadDigest) (PayloadDigest, uint64, datamodeltypes.CommitType, datamodeltypes.RejectType, error) {
+	fmt.Println("Starting Receive function")
+	fmt.Printf("Payload length: %d, Offset: %d, Expected Length: %d\n", len(payload), offset, expectedLength)
+	fmt.Printf("Expected Digest: %v\n", expectedDigest)
+
+	// Ensure the staging directory exists
+	stagingDirPath, err := pd.EnsureDir("staging")
+	if err != nil {
+		panic("Unable to locate the staging file: " + err.Error())
+	}
+	fmt.Printf("Staging directory path: %s\n", stagingDirPath)
+
+	// Generate a temporary file name
+	randBytes, err := getRandomBytes()
+	if err != nil {
+		panic("Unable to generate random bytes: " + err.Error())
+	}
+	tempKey := base32.StdEncoding.EncodeToString(randBytes)
+	fmt.Printf("Generated temporary key: %s\n", tempKey)
+
+	stagingFilePath := filepath.Join(pd.path, "staging", tempKey)
+	fmt.Printf("Staging file path: %s\n", stagingFilePath)
+
+	// If offset is greater than 0, copy the existing partial file to staging
+	if offset > 0 {
+		partialFilePath := filepath.Join(pd.path, "partial", pd.GetKey(expectedDigest))
+		fmt.Printf("Copying partial file from: %s to: %s\n", partialFilePath, stagingFilePath)
+		err := copyFile(partialFilePath, stagingFilePath)
+		if err != nil {
+			panic("Unable to copy file: " + err.Error())
+		}
+	}
+
+	// Open the file in the appropriate mode
+	var file *os.File
+	if offset == 0 {
+		fmt.Println("Opening staging file for writing from scratch")
+		file, err = os.OpenFile(stagingFilePath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
+	} else {
+		fmt.Println("Opening staging file for appending")
+		file, err = os.OpenFile(stagingFilePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
+	}
+	if err != nil {
+		panic("Unable to open file: " + err.Error())
+	}
+	defer file.Close()
+	fmt.Printf("Staging file opened successfully: %s\n", stagingFilePath)
+
+	// If offset is greater than 0, truncate and seek
+	if offset > 0 {
+		fmt.Printf("Truncating file to offset: %d\n", offset)
+		err = file.Truncate(offset)
+		if err != nil {
+			panic("Unable to truncate file: " + err.Error())
+		}
+		fmt.Println("Seeking to offset")
+		_, err = file.Seek(offset, 0)
+		if err != nil {
+			panic("Unable to seek file: " + err.Error())
+		}
+	}
+
+	// Write the payload to the file
+	writer := io.Writer(file)
+	receivedLen := offset + int64(len(payload))
+	fmt.Printf("Writing payload of length: %d\n", len(payload))
+	if _, err := writer.Write(payload); err != nil {
+		fmt.Println("Error writing payload:", err)
+		panic("Unable to write payload: " + err.Error())
+	}
+	fmt.Println("Payload written successfully")
+
+	// Read the entire file to calculate the digest
+	file.Seek(0, 0)
+	readData := make([]byte, receivedLen)
+	_, err = file.Read(readData)
+	if err != nil {
+		panic("Unable to read file: " + err.Error())
+	}
+	fmt.Println("File read successfully for digest calculation")
+
+	// Calculate the digest
+	digest := <-pd.PayloadScheme.FromBytes(readData)
+	fmt.Printf("%s", readData)
+	fmt.Printf("Calculated digest: %v\n", digest)
+
+	// Commit function to move the file to the final destination
+	commit := func(isCompletePayload bool) {
+		fmt.Println("Starting commit function")
+		_, err = pd.EnsureDir("partial")
+		if err != nil {
+			fmt.Printf("Unable to ensure partial directory: %v\n", err)
+		}
+
+		var committedFilePath string
+		if isCompletePayload {
+			committedFilePath = filepath.Join(pd.path, pd.GetKey(expectedDigest))
+			err = os.Rename(stagingFilePath, committedFilePath)
+		} else {
+			pd.EnsureDir("partial")
+			committedFilePath = filepath.Join(pd.path, "partial", pd.GetKey(expectedDigest))
+			err = copyFile(stagingFilePath, committedFilePath)
+			// fmt.Println(err)
+			err = os.Remove(stagingFilePath)
+		}
+		fmt.Printf("Committing file from: %s to: %s\n", stagingFilePath, committedFilePath)
+		if err != nil {
+			fmt.Println("Unable to commit file:", err)
+		} else {
+			fmt.Println("File committed successfully")
+		}
+	}
+
+	// Reject function to delete the staging file
+	reject := func() {
+		fmt.Printf("Rejecting file, removing: %s\n", stagingFilePath)
+		err = os.Remove(stagingFilePath)
+		if err != nil {
+			fmt.Printf("Unable to remove staging file: %v\n", err)
+		} else {
+			fmt.Println("Staging file removed successfully")
+		}
+	}
+
+	fmt.Println("Returning from Receive function")
+	return digest, uint64(receivedLen), commit, reject, nil
 }
