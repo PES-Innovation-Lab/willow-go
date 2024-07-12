@@ -94,13 +94,13 @@ func CompareKeys[T datamodeltypes.KvPart](a, b datamodeltypes.KvKey[T]) (types.R
 	return 0, nil
 }
 
-// func Close(Db *pebble.DB) error {
-// 	err := Db.Close()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
+func Close(Db *pebble.DB) error {
+	err := Db.Close()
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 func Get(Db *pebble.DB, key []byte) ([]byte, error) {
 	value, closer, err := Db.Get(key)
@@ -111,21 +111,21 @@ func Get(Db *pebble.DB, key []byte) ([]byte, error) {
 	return value, nil
 }
 
-// func Set(Db *pebble.DB, key, value []byte) error {
-// 	err := Db.Set(key, value, pebble.Sync)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
+func Set(Db *pebble.DB, key, value []byte) error {
+	err := Db.Set(key, value, pebble.Sync)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
-// func Delete(Db *pebble.DB, key []byte) error {
-// 	err := Db.Delete(key, pebble.Sync)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
+func Delete(Db *pebble.DB, key []byte) error {
+	err := Db.Delete(key, pebble.Sync)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 func Clear(Db *pebble.DB) error {
 	iter, err := Db.NewIter(nil)
