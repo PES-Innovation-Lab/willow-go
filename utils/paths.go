@@ -99,11 +99,11 @@ Component, checks it's length and extracts the component based on the length.
 Returns:
 - The length of the encoded path input which was used (it's not necessary the input contains only the encoded path, it may contain other things trailing the path)
 - The decoded path :)
-- ERROR LMAO XD L BOZO CAN'T WRITE ERRORLESS CODE
+- error, LMAO XD L BOZO CAN'T WRITE ERRORLESS CODE
 */
 func DecodePath[T constraints.Unsigned](pathParams types.PathParams[T], encPath []byte) (int, types.Path, error) {
-	maxCountWidth := GetWidthMax32Int(pathParams.MaxComponentCount)
-	componentCountBytes := encPath[0:maxCountWidth]
+	maxCountWidth := GetWidthMax32Int(pathParams.MaxComponentCount) // the maximum bytes required to store the maximum component count parameter
+	componentCountBytes := encPath[0:maxCountWidth]                 // grabbing the maximum possible bytes required to store component ocunt param
 
 	componentCount, err := DecodeIntMax32(componentCountBytes, pathParams.MaxComponentCount)
 	if err != nil {
