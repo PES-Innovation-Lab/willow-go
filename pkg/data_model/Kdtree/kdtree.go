@@ -25,8 +25,8 @@ var ErrTreeNotSetup = fmt.Errorf("tree is not setup, make sure you create the tr
 type Comparable[T any] interface {
 	fmt.Stringer
 	Order(rhs T, dim int) Relation
-	Dist(rhs T) int
 	DistDim(rhs T, dim int) int
+	Dist(rhs T) int
 	Encode() []byte
 }
 

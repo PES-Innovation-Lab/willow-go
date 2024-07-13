@@ -233,3 +233,62 @@ func EncodePathRelativeLength[T constraints.Unsigned](pathParams types.PathParam
 	suffixLength := len(suffix)
 	return prefixLengthLength + suffixLength
 }
+
+// PathDistance calculates the distance between two paths
+func PathDistance(lhs, rhs types.Path) int {
+	dist := 0
+
+	// Determine the maximum length of the paths
+	maxLen := max(len(lhs), len(rhs))
+
+	// Iterate over each byte slice in the paths
+	for i := 0; i < maxLen; i++ {
+		var lhsBytes, rhsBytes []byte
+
+		if i < len(lhs) {
+			lhsBytes = lhs[i]
+		} else {
+			lhsBytes = []byte{}
+		}
+
+		if i < len(rhs) {
+			rhsBytes = rhs[i]
+		} else {
+			rhsBytes = []byte{}
+		}
+
+		// Determine the maximum length of the byte slices
+		maxBytesLen := max(len(lhsBytes), len(rhsBytes))
+
+		// Iterate over each byte in the byte slices
+		for j := 0; j < maxBytesLen; j++ {
+			var lhsByte, rhsByte byte
+
+			if j < len(lhsBytes) {
+				lhsByte = lhsBytes[j]
+			} else {
+				lhsByte = 0
+			}
+
+			if j < len(rhsBytes) {
+				rhsByte = rhsBytes[j]
+			} else {
+				rhsByte = 0
+			}
+
+			// Calculate the squared difference for each byte
+			diff := int(lhsByte) - int(rhsByte)
+			dist += diff * diff
+		}
+	}
+
+	return dist
+}
+
+// Helper function to find the maximum of two integers
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
