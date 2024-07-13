@@ -57,14 +57,14 @@ func encodeSubspaceId[T constraints.Unsigned](subspace T) ([]byte, error) {
 	default:
 		return nil, fmt.Errorf("unsupported subspace type: %T", subspace)
 	}
-
+	fmt.Println(subspaceBytes)
 	return subspaceBytes, nil
 }
 
 /* Decodes the key from the kv store into the timestamp, subspaceId, and path */
-func DecodeKey[T constraints.Unsigned](encodedKey []byte, pathParams types.PathParams[T]) (uint64, T, types.Path, error) {
+func DecodeKey(encodedKey []byte, pathParams types.PathParams[uint64]) (uint64, uint64, types.Path, error) {
 	var timestamp uint64
-	var subspaceId T
+	var subspaceId uint64
 
 	// Read timestamp from the encoded key
 	timestampBytes := encodedKey[:8]
@@ -73,54 +73,101 @@ func DecodeKey[T constraints.Unsigned](encodedKey []byte, pathParams types.PathP
 	// Decode path
 	pathEndIndex, decodedPath, err := utils.DecodePath(pathParams, encodedKey[8:])
 	if err != nil {
-		return 0, *new(T), nil, fmt.Errorf("failed to decode path: %w", err)
+		return 0, 0, nil, fmt.Errorf("failed to decode path: %w", err)
 	}
 
 	// Decode subspaceId
 	subspaceBytes := encodedKey[8+pathEndIndex:]
-	_, err = decodeSubspaceId[T](subspaceBytes)
+	subspaceId, err = decodeSubspaceId(subspaceBytes)
 	if err != nil {
-		return 0, *new(T), nil, fmt.Errorf("failed to decode subspaceId: %w", err)
+		return 0, 0, nil, fmt.Errorf("failed to decode subspaceId: %w", err)
 	}
 
 	return timestamp, subspaceId, decodedPath, nil
 }
 
 /* decodeSubspaceId decodes the subspaceId from []byte */
-func decodeSubspaceId[T constraints.Unsigned](subspaceBytes []byte) (T, error) {
-	var subspaceId T
-	buf := bytes.NewReader(subspaceBytes)
-
-	// Determine the length of the subspaceId
+func decodeSubspaceId(subspaceBytes []byte) (uint64, error) {
+	var subspaceId uint64
 	length := len(subspaceBytes)
 
-	switch length {
-	case 1:
-		var value uint8
-		value = uint8(subspaceBytes[0])
-		subspaceId = T(value)
-	case 2:
-		var value uint16
-		err := binary.Read(buf, binary.BigEndian, &value)
-		if err != nil {
-			return 0, fmt.Errorf("failed to decode int16: %v", err)
-		}
-		subspaceId = T(value)
-	case 4:
-		var value uint32
-		err := binary.Read(buf, binary.BigEndian, &value)
-		if err != nil {
-			return 0, fmt.Errorf("failed to decode int32: %v", err)
-		}
-		subspaceId = T(value)
-	case 8:
-		var value uint64
-		err := binary.Read(buf, binary.BigEndian, &value)
-		if err != nil {
-			return 0, fmt.Errorf("failed to decode int64: %v", err)
-		}
-		subspaceId = T(value)
+	if length > 8 {
+		return 0, fmt.Errorf("subspaceId byte array too long: %d bytes", length)
+	}
+
+	// Create an 8-byte array and copy subspaceBytes into the rightmost part
+	paddedSubspaceBytes := make([]byte, 8)
+	copy(paddedSubspaceBytes[8-length:], subspaceBytes)
+
+	buf := bytes.NewReader(paddedSubspaceBytes)
+	err := binary.Read(buf, binary.BigEndian, &subspaceId)
+	if err != nil {
+		return 0, fmt.Errorf("failed to decode uint64: %v", err)
 	}
 
 	return subspaceId, nil
 }
+
+// /* Decodes the key from the kv store into the timestamp, subspaceId, and path */
+// func DecodeKey[T constraints.Unsigned](encodedKey []byte, pathParams types.PathParams[T]) (uint64, T, types.Path, error) {
+// 	var timestamp uint64
+// 	var subspaceId T
+
+// 	// Read timestamp from the encoded key
+// 	timestampBytes := encodedKey[:8]
+// 	timestamp = binary.BigEndian.Uint64(timestampBytes)
+
+// 	// Decode path
+// 	pathEndIndex, decodedPath, err := utils.DecodePath(pathParams, encodedKey[8:])
+// 	if err != nil {
+// 		return 0, *new(T), nil, fmt.Errorf("failed to decode path: %w", err)
+// 	}
+
+// 	// Decode subspaceId
+// 	subspaceBytes := encodedKey[8+pathEndIndex:]
+// 	subspaceId, err = decodeSubspaceId[T](subspaceBytes)
+// 	if err != nil {
+// 		return 0, *new(T), nil, fmt.Errorf("failed to decode subspaceId: %w", err)
+// 	}
+
+// 	return timestamp, subspaceId, decodedPath, nil
+// }
+
+// /* decodeSubspaceId decodes the subspaceId from []byte */
+// func decodeSubspaceId[T constraints.Unsigned](subspaceBytes []byte) (T, error) {
+// 	var subspaceId T
+// 	buf := bytes.NewReader(subspaceBytes)
+
+// 	// Determine the length of the subspaceId
+// 	length := len(subspaceBytes)
+
+// 	switch length {
+// 	case 1:
+// 		var value uint8
+// 		value = uint8(subspaceBytes[0])
+// 		subspaceId = T(value)
+// 	case 2:
+// 		var value uint16
+// 		err := binary.Read(buf, binary.BigEndian, &value)
+// 		if err != nil {
+// 			return 0, fmt.Errorf("failed to decode int16: %v", err)
+// 		}
+// 		subspaceId = T(value)
+// 	case 4:
+// 		var value uint32
+// 		err := binary.Read(buf, binary.BigEndian, &value)
+// 		if err != nil {
+// 			return 0, fmt.Errorf("failed to decode int32: %v", err)
+// 		}
+// 		subspaceId = T(value)
+// 	case 8:
+// 		var value uint64
+// 		err := binary.Read(buf, binary.BigEndian, &value)
+// 		if err != nil {
+// 			return 0, fmt.Errorf("failed to decode int64: %v", err)
+// 		}
+// 		subspaceId = T(value)
+// 	}
+
+// 	return subspaceId, nil
+// }

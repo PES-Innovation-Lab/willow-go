@@ -8,6 +8,10 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
+type WillowKDTree[T KDNodeKey[P], P constraints.Ordered] struct {
+	Dimensions int
+	Root       *KdNode[T]
+}
 type KDNodeKey[SubspaceId constraints.Ordered] struct {
 	Timestamp uint64
 	Subspace  SubspaceId
@@ -15,31 +19,35 @@ type KDNodeKey[SubspaceId constraints.Ordered] struct {
 }
 
 func (lhs KDNodeKey[SubspaceId]) Order(rhs KDNodeKey[SubspaceId], dim int) Relation {
+	dimensions := 3
+	for i := 0; i < dimensions; i++ {
+		switch dim {
+		case 0:
+			// Compare timestamps
+			switch utils.OrderTimestamp(lhs.Timestamp, rhs.Timestamp) {
+			case -1:
+				return Lesser
+			case 1:
+				return Greater
+			}
 
-	switch dim {
-	case 0:
-		// Compare timestamps
-		switch utils.OrderTimestamp(lhs.Timestamp, rhs.Timestamp) {
-		case -1:
-			return Lesser
 		case 1:
-			return Greater
-		}
-	case 1:
-		// Compare subspace IDs
-		if lhs.Subspace < rhs.Subspace {
-			return Lesser
-		} else if lhs.Subspace > rhs.Subspace {
-			return Greater
-		}
-	case 2:
-		switch utils.OrderPath(lhs.Path, rhs.Path) {
-		case -1:
-			return Lesser
-		case 1:
-			return Greater
-		}
+			// Compare subspace IDs
+			if lhs.Subspace < rhs.Subspace {
+				return Lesser
+			} else if lhs.Subspace > rhs.Subspace {
+				return Greater
+			}
+		case 2:
+			switch utils.OrderPath(lhs.Path, rhs.Path) {
+			case -1:
+				return Lesser
+			case 1:
+				return Greater
+			}
 
+		}
+		dim = (dim + 1) % dimensions
 	}
 	return Equal
 }
@@ -65,7 +73,7 @@ func (lhs KDNodeKey[SubspaceId]) DistDim(rhs KDNodeKey[SubspaceId], dim int) int
 
 func (lhs KDNodeKey[SubspaceId]) Dist(rhs KDNodeKey[SubspaceId]) int {
 	// TODO for distances between keys (Size of Range Query)
-	return 1
+	return int(1)
 }
 
 func (lhs KDNodeKey[SubspaceId]) Encode() []byte {
@@ -75,4 +83,22 @@ func (lhs KDNodeKey[SubspaceId]) Encode() []byte {
 
 func (lhs KDNodeKey[SubspaceId]) String() string {
 	return fmt.Sprintf("[%v,%v,%v]", lhs.Timestamp, lhs.Subspace, lhs.Path)
+}
+
+func (kdt WillowKDTree[T, P]) Query(QueryRange types.Range3d[P]) []T {
+	dim := 0
+	res := *new([]T)
+	kdt.QueryHelper(QueryRange, dim, kdt.Root, &res)
+}
+
+func (kdt WillowKDTree[T, P]) QueryHelper(
+	QueryRange types.Range3d[P],
+	dim int,
+	Node *KdNode[T],
+	res *[]T) {
+	if Node == nil {
+		return
+	}
+	subspace, path, timestamp := Node.Value.Subspace, Node.Value.Path, Node.Value.Timestamp
+
 }

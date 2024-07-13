@@ -32,7 +32,10 @@ func GetWidthMax32Int[T constraints.Unsigned](num T) int {
 }
 
 // Encode max 32 bit number
-
+/*
+	Takes your path length, which is your component count. Takes the maximum possible component count.
+	Returns your component count encoded in the maximum possible bytes required to store max component count.
+*/
 func EncodeIntMax32[T constraints.Unsigned](num, max T) []byte {
 	width := GetWidthMax32Int(max)
 

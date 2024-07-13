@@ -25,28 +25,28 @@ var ErrTreeNotSetup = fmt.Errorf("tree is not setup, make sure you create the tr
 type Comparable[T any] interface {
 	fmt.Stringer
 	Order(rhs T, dim int) Relation
-	Dist(rhs T) int
 	DistDim(rhs T, dim int) int
+	Dist(rhs T) int
 	Encode() []byte
 }
 
 type KDTree[T Comparable[T]] struct {
-	dimensions int
-	root       *kdNode[T]
-	isSetup    bool
-	zeroVal    T
-	sz         int
+	Dimensions int
+	Root       *KdNode[T]
+	IsSetup    bool
+	ZeroVal    T
+	Sz         int
 }
 
-type kdNode[T Comparable[T]] struct {
-	value T
-	left  *kdNode[T]
-	right *kdNode[T]
+type KdNode[T Comparable[T]] struct {
+	Value T
+	Left  *KdNode[T]
+	Right *KdNode[T]
 }
 
-func NewKDNode[T Comparable[T]](value T) *kdNode[T] {
-	return &kdNode[T]{
-		value: value,
+func NewKDNode[T Comparable[T]](value T) *KdNode[T] {
+	return &KdNode[T]{
+		Value: value,
 	}
 }
 
@@ -62,66 +62,66 @@ func NewKDTreeWithValues[T Comparable[T]](d int, vs []T) *KDTree[T] {
 	root := insertAllNew[T](vs, initialIndices, 0)
 	// root := insertAllOld(d, vs, 0)
 	return &KDTree[T]{
-		dimensions: d,
-		root:       root,
-		isSetup:    true,
-		sz:         sz,
+		Dimensions: d,
+		Root:       root,
+		IsSetup:    true,
+		Sz:         sz,
 	}
 }
 
 func (t *KDTree[T]) FindMin(targetDimension int) (T, bool) {
-	if t.root == nil || targetDimension >= t.dimensions {
-		return t.zeroVal, false
+	if t.Root == nil || targetDimension >= t.Dimensions {
+		return t.ZeroVal, false
 	}
-	res := findMin(t.dimensions, targetDimension, 0, t.root)
+	res := findMin(t.Dimensions, targetDimension, 0, t.Root)
 	if res == nil {
-		return t.zeroVal, false
+		return t.ZeroVal, false
 	}
 	return *res, true
 }
 
 func (t *KDTree[T]) NearestNeighbor(value T) (T, bool) {
-	res := nearestNeighbor(t.dimensions, &value, nil, 0, t.root)
+	res := nearestNeighbor(t.Dimensions, &value, nil, 0, t.Root)
 	if res == nil {
-		return t.zeroVal, false
+		return t.ZeroVal, false
 	}
 	return *res, true
 }
 
 func (t *KDTree[T]) Add(value T) bool {
-	if t.root == nil {
-		t.root = NewKDNode(value)
+	if t.Root == nil {
+		t.Root = NewKDNode(value)
 		return true
 	}
-	res := add(t.dimensions, value, 0, t.root)
+	res := add(t.Dimensions, value, 0, t.Root)
 	if res {
-		t.sz++
+		t.Sz++
 	}
 	return res
 }
 
 func (t *KDTree[T]) Delete(value T) bool {
 	ok := false
-	t.root, ok = deleteNode(t.dimensions, value, 0, t.root)
+	t.Root, ok = deleteNode(t.Dimensions, value, 0, t.Root)
 	if ok {
-		t.sz--
+		t.Sz--
 	}
 	return ok
 }
 
 func (t *KDTree[T]) String() string {
 	b := strings.Builder{}
-	var q queue.Queue[*kdNode[T]] = queue.NewLLQueue[*kdNode[T]]()
-	q.Push(t.root)
+	var q queue.Queue[*KdNode[T]] = queue.NewLLQueue[*KdNode[T]]()
+	q.Push(t.Root)
 	for !q.Empty() {
 		sz := q.Size()
 		for i := 0; i < sz; i++ {
 			n, _ := q.Pop()
 			if n != nil {
-				b.WriteString(n.value.String())
+				b.WriteString(n.Value.String())
 				b.WriteString(", ")
-				q.Push(n.left)
-				q.Push(n.right)
+				q.Push(n.Left)
+				q.Push(n.Right)
 			} else {
 				b.WriteString("nil, ")
 			}
@@ -134,13 +134,13 @@ func (t *KDTree[T]) String() string {
 const encodingVersion uint32 = 0
 
 func (t *KDTree[T]) Encode() []byte {
-	encodedPreorderItems := preorderTraversal(t.root)
+	encodedPreorderItems := preorderTraversal(t.Root)
 	itemCount := len(encodedPreorderItems)
-	if itemCount != t.sz {
-		msg := fmt.Sprintf("itemCount (%d) and t.sz (%d) don't have the same size! Some bookkeeping has gone wrong!", itemCount, t.sz)
+	if itemCount != t.Sz {
+		msg := fmt.Sprintf("itemCount (%d) and t.sz (%d) don't have the same size! Some bookkeeping has gone wrong!", itemCount, t.Sz)
 		panic(msg)
 	}
-	encodedInorderIndices := inorderTraversal(t.root, t.sz)
+	encodedInorderIndices := inorderTraversal(t.Root, t.Sz)
 
 	builder := flatbuffers.NewBuilder(256)
 
@@ -178,7 +178,7 @@ func (t *KDTree[T]) Encode() []byte {
 
 	kdtree.KDTreeStart(builder)
 	kdtree.KDTreeAddVersionNumber(builder, encodingVersion)
-	kdtree.KDTreeAddDimensions(builder, uint32(t.dimensions))
+	kdtree.KDTreeAddDimensions(builder, uint32(t.Dimensions))
 	kdtree.KDTreeAddInorderIndices(builder, inorderIndices)
 	kdtree.KDTreeAddItems(builder, items)
 	encodedKDTree := kdtree.KDTreeEnd(builder)
@@ -221,22 +221,22 @@ func NewKDTreeFromBytes[T Comparable[T]](encodedBytes []byte, decodeItemFunc fun
 	return NewKDTreeWithValues(dimensions, items)
 }
 
-func preorderTraversal[T Comparable[T]](r *kdNode[T]) [][]byte {
+func preorderTraversal[T Comparable[T]](r *KdNode[T]) [][]byte {
 	var res [][]byte
 	preorderTraversalImpl(r, &res)
 	return res
 }
 
-func preorderTraversalImpl[T Comparable[T]](r *kdNode[T], res *[][]byte) {
+func preorderTraversalImpl[T Comparable[T]](r *KdNode[T], res *[][]byte) {
 	if r == nil {
 		return
 	}
-	*res = append(*res, r.value.Encode())
-	preorderTraversalImpl(r.left, res)
-	preorderTraversalImpl(r.right, res)
+	*res = append(*res, r.Value.Encode())
+	preorderTraversalImpl(r.Left, res)
+	preorderTraversalImpl(r.Right, res)
 }
 
-func inorderTraversal[T Comparable[T]](r *kdNode[T], sz int) []int {
+func inorderTraversal[T Comparable[T]](r *KdNode[T], sz int) []int {
 	preorderIndex := 0
 	inorderIndex := 0
 	res := make([]int, sz)
@@ -244,20 +244,20 @@ func inorderTraversal[T Comparable[T]](r *kdNode[T], sz int) []int {
 	return res
 }
 
-func inorderTraversalImpl[T Comparable[T]](r *kdNode[T], preorderIndex, inorderIndex *int, res *[]int) {
+func inorderTraversalImpl[T Comparable[T]](r *KdNode[T], preorderIndex, inorderIndex *int, res *[]int) {
 	if r == nil {
 		return
 	}
 	currPreorderIndex := *preorderIndex
 	*preorderIndex++
-	inorderTraversalImpl(r.left, preorderIndex, inorderIndex, res)
+	inorderTraversalImpl(r.Left, preorderIndex, inorderIndex, res)
 	currInorderIndex := *inorderIndex
 	*inorderIndex++
 	(*res)[currInorderIndex] = currPreorderIndex
-	inorderTraversalImpl(r.right, preorderIndex, inorderIndex, res)
+	inorderTraversalImpl(r.Right, preorderIndex, inorderIndex, res)
 }
 
-func insertAllNew[T Comparable[T]](vs []T, initialIndices [][]int, cd int) *kdNode[T] {
+func insertAllNew[T Comparable[T]](vs []T, initialIndices [][]int, cd int) *KdNode[T] {
 	if len(initialIndices[0]) == 0 {
 		return nil
 	}
@@ -300,8 +300,8 @@ func insertAllNew[T Comparable[T]](vs []T, initialIndices [][]int, cd int) *kdNo
 	copy(initialIndices[dims-1], temp)
 
 	ncd := (cd + 1) % dims
-	n.left = insertAllNew(vs, lh, ncd)
-	n.right = insertAllNew(vs, uh, ncd)
+	n.Left = insertAllNew(vs, lh, ncd)
+	n.Right = insertAllNew(vs, uh, ncd)
 	return n
 }
 
@@ -319,72 +319,72 @@ func iotaSlice(n int) []int {
 	return s
 }
 
-func deleteNode[T Comparable[T]](d int, value T, cd int, r *kdNode[T]) (*kdNode[T], bool) {
+func deleteNode[T Comparable[T]](d int, value T, cd int, r *KdNode[T]) (*KdNode[T], bool) {
 	if r == nil {
 		return nil, false
 	}
 	ncd := (cd + 1) % d
 	ok := false
-	if r.value.Dist(value) == 0 {
+	if r.Value.Dist(value) == 0 {
 		ok = true
-		if r.right != nil {
-			r.value = *findMin(d, cd, ncd, r.right)
-			r.right, ok = deleteNode(d, r.value, ncd, r.right)
-		} else if r.left != nil {
-			r.value = *findMin(d, cd, ncd, r.left)
-			r.right, ok = deleteNode(d, r.value, ncd, r.left)
-			r.left = nil
+		if r.Right != nil {
+			r.Value = *findMin(d, cd, ncd, r.Right)
+			r.Right, ok = deleteNode(d, r.Value, ncd, r.Right)
+		} else if r.Left != nil {
+			r.Value = *findMin(d, cd, ncd, r.Left)
+			r.Right, ok = deleteNode(d, r.Value, ncd, r.Left)
+			r.Left = nil
 		} else {
 			r = nil
 		}
-	} else if value.Order(r.value, cd) == Lesser {
-		r.left, ok = deleteNode(d, value, ncd, r.left)
+	} else if value.Order(r.Value, cd) == Lesser {
+		r.Left, ok = deleteNode(d, value, ncd, r.Left)
 	} else {
-		r.right, ok = deleteNode(d, value, ncd, r.right)
+		r.Right, ok = deleteNode(d, value, ncd, r.Right)
 	}
 	return r, ok
 }
 
-func add[T Comparable[T]](d int, value T, cd int, r *kdNode[T]) bool {
-	if value.Dist(r.value) == 0 {
+func add[T Comparable[T]](d int, value T, cd int, r *KdNode[T]) bool {
+	if value.Dist(r.Value) == 0 {
 		return false
 	}
 
 	ncd := (cd + 1) % d
-	rel := value.Order(r.value, cd)
+	rel := value.Order(r.Value, cd)
 	if rel == Lesser {
-		if r.left == nil {
-			r.left = NewKDNode(value)
+		if r.Left == nil {
+			r.Left = NewKDNode(value)
 		} else {
-			return add(d, value, ncd, r.left)
+			return add(d, value, ncd, r.Left)
 		}
 	} else {
-		if r.right == nil {
-			r.right = NewKDNode(value)
+		if r.Right == nil {
+			r.Right = NewKDNode(value)
 		} else {
-			return add(d, value, ncd, r.right)
+			return add(d, value, ncd, r.Right)
 		}
 	}
 	return true
 }
 
-func nearestNeighbor[T Comparable[T]](d int, v, nn *T, cd int, r *kdNode[T]) *T {
+func nearestNeighbor[T Comparable[T]](d int, v, nn *T, cd int, r *KdNode[T]) *T {
 	if r == nil {
 		return nil
 	}
 
-	var nextBranch, otherBranch *kdNode[T]
-	if (*v).Order(r.value, cd) == Lesser /* [cd] < r.value[cd]*/ {
-		nextBranch, otherBranch = r.left, r.right
+	var nextBranch, otherBranch *KdNode[T]
+	if (*v).Order(r.Value, cd) == Lesser /* [cd] < r.value[cd]*/ {
+		nextBranch, otherBranch = r.Left, r.Right
 	} else {
-		nextBranch, otherBranch = r.right, r.left
+		nextBranch, otherBranch = r.Right, r.Left
 	}
 	ncd := (cd + 1) % d
 	nn = nearestNeighbor(d, v, nn, ncd, nextBranch)
-	nn = closest(v, nn, &r.value)
+	nn = closest(v, nn, &r.Value)
 
 	nearestDist := abs(distance(v, nn))
-	dist := abs((*v).DistDim(r.value, cd))
+	dist := abs((*v).DistDim(r.Value, cd))
 
 	if dist <= nearestDist {
 		nn = closest(v, nearestNeighbor(d, v, nn, ncd, otherBranch), nn)
@@ -421,7 +421,7 @@ func distance[T Comparable[T]](src, dst *T) int {
 	return (*src).Dist(*dst)
 }
 
-func findMin[T Comparable[T]](d, tcd, cd int, r *kdNode[T]) *T {
+func findMin[T Comparable[T]](d, tcd, cd int, r *KdNode[T]) *T {
 	if r == nil {
 		return nil
 	}
@@ -429,29 +429,29 @@ func findMin[T Comparable[T]](d, tcd, cd int, r *kdNode[T]) *T {
 	var lMin *T
 	var rMin *T
 	ncd := (cd + 1) % d
-	lMin = findMin(d, tcd, ncd, r.left)
+	lMin = findMin(d, tcd, ncd, r.Left)
 	if tcd != cd {
-		rMin = findMin(d, tcd, ncd, r.right)
+		rMin = findMin(d, tcd, ncd, r.Right)
 	}
 	if lMin == nil && rMin == nil {
-		return &r.value
+		return &r.Value
 	} else if lMin == nil {
-		if (*rMin).Order(r.value, tcd) == Lesser {
+		if (*rMin).Order(r.Value, tcd) == Lesser {
 			return rMin
 		}
-		return &r.value
+		return &r.Value
 	} else if rMin == nil {
-		if (*lMin).Order(r.value, tcd) == Lesser {
+		if (*lMin).Order(r.Value, tcd) == Lesser {
 			return lMin
 		}
-		return &r.value
+		return &r.Value
 	} else {
 		// temp := []*T{lMin, rMin, &r.value}
 		// sort.Slice(temp, func(i, j int) bool {
 		// 	return (*temp[i]).Order(*temp[j], tcd) == Lesser
 		// })
 		// return temp[0]
-		return min(lMin, min(rMin, &r.value, tcd), tcd)
+		return min(lMin, min(rMin, &r.Value, tcd), tcd)
 	}
 }
 
