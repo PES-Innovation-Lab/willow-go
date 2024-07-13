@@ -8,9 +8,9 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-type WillowKDTree[T KDNodeKey[P], P constraints.Ordered] struct {
+type WillowKDTree[P constraints.Ordered] struct {
 	Dimensions int
-	Root       *KdNode[T]
+	Root       *KdNode[KDNodeKey[P]]
 }
 type KDNodeKey[SubspaceId constraints.Ordered] struct {
 	Timestamp uint64
@@ -85,17 +85,17 @@ func (lhs KDNodeKey[SubspaceId]) String() string {
 	return fmt.Sprintf("[%v,%v,%v]", lhs.Timestamp, lhs.Subspace, lhs.Path)
 }
 
-func (kdt WillowKDTree[T, P]) Query(QueryRange types.Range3d[P]) []T {
+func (kdt WillowKDTree[P]) Query(QueryRange types.Range3d[P]) []KDNodeKey[P] {
 	dim := 0
-	res := *new([]T)
+	res := *new([]KDNodeKey[P])
 	kdt.QueryHelper(QueryRange, dim, kdt.Root, &res)
 }
 
-func (kdt WillowKDTree[T, P]) QueryHelper(
+func (kdt WillowKDTree[P]) QueryHelper(
 	QueryRange types.Range3d[P],
 	dim int,
-	Node *KdNode[T],
-	res *[]T) {
+	Node *KdNode[KDNodeKey[P]],
+	res *[]KDNodeKey[P]) {
 	if Node == nil {
 		return
 	}
