@@ -8,10 +8,11 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-type WillowKDTree[T KDNodeKey[P], P constraints.Ordered] struct {
-	Dimensions int
-	Root       *KdNode[T]
-}
+// type WillowKDTree[T KDNodeKey[P], P constraints.Ordered] struct {
+// 	Dimensions int
+// 	Root       *KdNode[T]
+// }
+
 type KDNodeKey[SubspaceId constraints.Ordered] struct {
 	Timestamp uint64
 	Subspace  SubspaceId
@@ -85,20 +86,56 @@ func (lhs KDNodeKey[SubspaceId]) String() string {
 	return fmt.Sprintf("[%v,%v,%v]", lhs.Timestamp, lhs.Subspace, lhs.Path)
 }
 
-func (kdt WillowKDTree[T, P]) Query(QueryRange types.Range3d[P]) []T {
+func Query[T constraints.Ordered](kdt *(KDTree[KDNodeKey[T]]), QueryRange types.Range3d[T]) []KDNodeKey[T] {
 	dim := 0
-	res := *new([]T)
-	kdt.QueryHelper(QueryRange, dim, kdt.Root, &res)
+	var res []KDNodeKey[T]
+	QueryHelper(kdt.Root, QueryRange, dim, &res)
+	return res
 }
 
-func (kdt WillowKDTree[T, P]) QueryHelper(
-	QueryRange types.Range3d[P],
-	dim int,
-	Node *KdNode[T],
-	res *[]T) {
+func QueryHelper[T constraints.Ordered](Node *KdNode[KDNodeKey[T]], QueryRange types.Range3d[T], dim int, res *[]KDNodeKey[T]) {
 	if Node == nil {
 		return
 	}
-	subspace, path, timestamp := Node.Value.Subspace, Node.Value.Path, Node.Value.Timestamp
+	Timestamp, Subspace, Path := Node.Value.Timestamp, Node.Value.Subspace, Node.Value.Path
+	Position := types.Position3d[T]{
+		Subspace: Subspace,
+		Path:     Path,
+		Time:     Timestamp,
+	}
 
+	inRange := utils.IsIncluded3d[T](utils.OrderSubspace, QueryRange, Position)
+
+	switch dim % 3 {
+	case 0:
+		if utils.OrderTimestamp(Timestamp, QueryRange.TimeRange.Start) >= 0 {
+			QueryHelper[T](Node.Left, QueryRange, dim+1, res)
+		}
+		if QueryRange.TimeRange.OpenEnd || utils.OrderTimestamp(Timestamp, QueryRange.TimeRange.End) <= 0 {
+			if inRange {
+				*res = append(*res, Node.Value)
+			}
+			QueryHelper[T](Node.Right, QueryRange, dim+1, res)
+		}
+	case 1:
+		if utils.OrderSubspace(Subspace, QueryRange.SubspaceRange.Start) >= 0 {
+			QueryHelper[T](Node.Left, QueryRange, dim+1, res)
+		}
+		if QueryRange.SubspaceRange.OpenEnd || utils.OrderSubspace(Subspace, QueryRange.SubspaceRange.End) <= 0 {
+			if inRange {
+				*res = append(*res, Node.Value)
+			}
+			QueryHelper[T](Node.Right, QueryRange, dim+1, res)
+		}
+	case 2:
+		if utils.OrderPath(Path, QueryRange.PathRange.Start) >= 0 {
+			QueryHelper[T](Node.Left, QueryRange, dim+1, res)
+		}
+		if QueryRange.PathRange.OpenEnd || utils.OrderPath(Path, QueryRange.PathRange.End) <= 0 {
+			if inRange {
+				*res = append(*res, Node.Value)
+			}
+			QueryHelper[T](Node.Right, QueryRange, dim+1, res)
+		}
+	}
 }
