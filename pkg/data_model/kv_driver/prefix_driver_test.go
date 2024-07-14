@@ -21,7 +21,7 @@ func TestPrefixesOf(t *testing.T) {
 	// Set up the KDTree with sample values
 	kdtree := Kdtree.NewKDTreeWithValues[Kdtree.KDNodeKey[uint64]](3, []Kdtree.KDNodeKey[uint64]{
 		{Timestamp: 500, Subspace: 0, Path: types.Path{{0}}},
-		{Timestamp: 600, Subspace: 0, Path: types.Path{{0}, {1}}},
+		{Timestamp: 600, Subspace: 1, Path: types.Path{{0}, {1}}},
 		{Timestamp: 700, Subspace: 0, Path: types.Path{{1}}},
 	})
 
@@ -32,14 +32,14 @@ func TestPrefixesOf(t *testing.T) {
 	}
 
 	// Define the path for the test
-	path := types.Path{{0}, {5}, {2}, {50}}
+	path := types.Path{{0}, {1}, {2}, {50}}
 
 	// Execute the PrefixesOf function
 	res := DriverPrefixesOf(path, pathParams, kdtree)
-	fmt.Println(res)
 	// Verify the results
 	expected := []Kdtree.KDNodeKey[uint64]{
 		{Timestamp: 500, Subspace: 0, Path: types.Path{{0}}},
+		{Timestamp: 600, Subspace: 1, Path: types.Path{{0}, {1}}},
 	}
 
 	if len(res) != len(expected) {
@@ -57,8 +57,8 @@ func TestPrefixedBy(t *testing.T) {
 	// Set up the KDTree with sample values
 	kdtree := Kdtree.NewKDTreeWithValues[Kdtree.KDNodeKey[uint64]](3, []Kdtree.KDNodeKey[uint64]{
 		{Timestamp: 500, Subspace: 0, Path: types.Path{{0}}},
-		{Timestamp: 600, Subspace: 0, Path: types.Path{{2}, {10}, {99}}},
-		{Timestamp: 700, Subspace: 0, Path: types.Path{{1}}},
+		{Timestamp: 600, Subspace: 0, Path: types.Path{{0}, {10}, {99}}},
+		{Timestamp: 700, Subspace: 0, Path: types.Path{{0}, {2}}},
 	})
 
 	pathParams := types.PathParams[uint64]{
@@ -72,12 +72,12 @@ func TestPrefixedBy(t *testing.T) {
 
 	// Execute the PrefixedBy function
 	res := PrefixedBy(path, pathParams, kdtree)
-
+	fmt.Println()
 	// Verify the results
 	expected := []Kdtree.KDNodeKey[uint64]{
 		{Timestamp: 500, Subspace: 0, Path: types.Path{{0}}},
-		{Timestamp: 600, Subspace: 0, Path: types.Path{{2}, {10}, {99}}},
-		{Timestamp: 700, Subspace: 0, Path: types.Path{{1}}},
+		{Timestamp: 600, Subspace: 0, Path: types.Path{{0}, {10}, {99}}},
+		{Timestamp: 700, Subspace: 0, Path: types.Path{{0}, {2}}},
 	}
 
 	if len(res) != len(expected) {

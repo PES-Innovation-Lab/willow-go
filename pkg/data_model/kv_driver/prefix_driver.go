@@ -9,16 +9,14 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-func DriverPrefixesOf[T constraints.Ordered](path types.Path, pathParams types.PathParams[uint64], kdt *Kdtree.KDTree[Kdtree.KDNodeKey[T]]) []Kdtree.KDNodeKey[T] {
-	prefixes := utils.PrefixesOf(path)
+func DriverPrefixesOf[T constraints.Ordered](Path types.Path, pathParams types.PathParams[uint64], kdt *Kdtree.KDTree[Kdtree.KDNodeKey[T]]) []Kdtree.KDNodeKey[T] {
+	prefixes := utils.PrefixesOf(Path)
 	prefixes = prefixes[1:(len(prefixes) - 1)]
 
 	var results []Kdtree.KDNodeKey[T]
 	var nothing T
-	fmt.Println(prefixes[1])
 
 	for _, prefix := range prefixes {
-		fmt.Println(prefix)
 		subspaceRange := types.Range[T]{
 			Start:   nothing,
 			End:     nothing,
@@ -47,6 +45,7 @@ func DriverPrefixesOf[T constraints.Ordered](path types.Path, pathParams types.P
 		results = append(results, queryResults...)
 	}
 
+	fmt.Println(results)
 	return results
 }
 
@@ -76,5 +75,6 @@ func PrefixedBy[T constraints.Ordered](Path types.Path, PathParams types.PathPar
 		PathRange:     pathRange,
 		TimeRange:     timeRange,
 	}
+	fmt.Println(range3d, kdt)
 	return Kdtree.Query(kdt, range3d)
 }
