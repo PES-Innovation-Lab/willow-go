@@ -52,7 +52,7 @@ type FragmentKit interface {
 func (FragmentKitComplete[NamespaceId]) isFragmentKit()              {}
 func (FragmentKitSelective[NamespaceId, SubspaceId]) isFragmentKit() {}
 
-type PaiScheme[ReadCapability, PsiScalar any, NamespaceId, SubspaceId constraints.Ordered, K constraints.Unsigned, PsiGroup types.OrderableGeneric] struct {
+type PaiScheme[ReadCapability, PsiScalar, NamespaceId, SubspaceId constraints.Ordered, K constraints.Unsigned, PsiGroup types.OrderableGeneric] struct {
 	fragmentToGroup     func(NamespaceId, SubspaceId) PsiGroup
 	getScalar           func() PsiScalar
 	scalarMult          func(group PsiGroup, scalar PsiScalar) PsiGroup
