@@ -12,7 +12,7 @@ import (
 	"github.com/cockroachdb/pebble"
 )
 
-func isFirstPrefixOfSecond[T datamodeltypes.KvPart](a, b datamodeltypes.KvKey[T]) (bool, error) {
+func IsFirstPrefixOfSecond[T datamodeltypes.KvPart](a, b datamodeltypes.KvKey[T]) (bool, error) {
 	if len(a.Key) > len(b.Key) {
 		return false, nil
 	}
