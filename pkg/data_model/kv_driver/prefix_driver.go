@@ -49,13 +49,13 @@ func DriverPrefixesOf[T constraints.Ordered, K constraints.Unsigned](Path types.
 	return results
 }
 
-func PrefixedBy[T constraints.Ordered, K constraints.Unsigned](Path types.Path, PathParams types.PathParams[K], kdt *(Kdtree.KDTree[Kdtree.KDNodeKey[T]])) []Kdtree.KDNodeKey[T] {
-	var nothing T
+func PrefixedBy[T constraints.Ordered, K constraints.Unsigned](Subspace T, Path types.Path, PathParams types.PathParams[K], kdt *(Kdtree.KDTree[Kdtree.KDNodeKey[T]])) []Kdtree.KDNodeKey[T] {
+	// var nothing T
 
 	subspaceRange := types.Range[T]{
-		Start:   nothing,
-		End:     nothing,
-		OpenEnd: true,
+		Start:   Subspace,
+		End:     Subspace,
+		OpenEnd: false,
 	}
 
 	pathRange := types.Range[types.Path]{

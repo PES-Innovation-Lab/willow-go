@@ -31,7 +31,7 @@ func SuccessorPath[T constraints.Unsigned](rawpath types.Path, scheme types.Path
 	return nil
 }
 
-/** Return a successor to a prefix, that is, the next element that is not a prefix of the given path. */
+/** Return a successor to a prefix, that is, the next element that is not prefixed by the given path. */
 func SuccessorPrefix[T constraints.Unsigned](rawpath types.Path, pathParams types.PathParams[T]) types.Path {
 	path := make(types.Path, len(rawpath))
 	copy(path, rawpath)

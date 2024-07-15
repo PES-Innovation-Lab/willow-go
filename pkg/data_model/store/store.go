@@ -5,27 +5,31 @@ import (
 	"sync"
 	"time"
 
+	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/Kdtree"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/kv_driver"
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/PES-Innovation-Lab/willow-go/utils"
 	"golang.org/x/exp/constraints"
 )
-type Store[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint constraints.Ordered, K constraints.Unsigned, AuthorisationOpts any, AuthorisationToken string, T datamodeltypes.KvPart] struct {
-    Schemes datamodeltypes.StoreSchemes[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint, K , AuthorisationOpts, AuthorisationToken]
-	EntryDriver datamodeltypes.EntryDriver[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint, T, K]
-	PayloadDriver datamodeltypes.PayloadDriver[PayloadDigest, K]
-	Storage datamodeltypes.KDTreeStorage[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint, T, K]
-	NameSpaceId NamespaceId
-	IngestionMutexLock sync.Mutex
-	PrunableEntries func (Subspace SubspaceId, Path types.Path, Timestamp uint64) ([]struct{entry types.Entry[NamespaceId, SubspaceId, PayloadDigest];authTokenHash PayloadDigest}, error)
 
+type Store[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint constraints.Ordered, K constraints.Unsigned, AuthorisationOpts any, AuthorisationToken string, T datamodeltypes.KvPart] struct {
+	Schemes            datamodeltypes.StoreSchemes[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]
+	EntryDriver        datamodeltypes.EntryDriver[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint, T, K]
+	PayloadDriver      datamodeltypes.PayloadDriver[PayloadDigest, K]
+	Storage            datamodeltypes.KDTreeStorage[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint, T, K]
+	NameSpaceId        NamespaceId
+	IngestionMutexLock sync.Mutex
+	PrunableEntries    func(Subspace SubspaceId, Path types.Path, Timestamp uint64) ([]struct {
+		entry         types.Entry[NamespaceId, SubspaceId, PayloadDigest]
+		authTokenHash PayloadDigest
+	}, error)
 }
 
 func (s *Store[NameSpaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken, T]) Set(
-	input datamodeltypes.EntryInput[SubspaceId], 
+	input datamodeltypes.EntryInput[SubspaceId],
 	authorisation AuthorisationOpts,
-	) []types.Entry[NameSpaceId, SubspaceId, PayloadDigest]{
+) []types.Entry[NameSpaceId, SubspaceId, PayloadDigest] {
 	timestamp := input.Timestamp
 	if timestamp == 0 {
 		timestamp = uint64(time.Now().UnixMicro())
@@ -33,12 +37,12 @@ func (s *Store[NameSpaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPri
 	digest, _, length := s.PayloadDriver.Set(input.Payload)
 
 	entry := types.Entry[NameSpaceId, SubspaceId, PayloadDigest]{
-		Subspace_id: input.Subspace,
+		Subspace_id:    input.Subspace,
 		Payload_digest: digest,
-		Path: input.Path,
+		Path:           input.Path,
 		Payload_length: length,
-		Timestamp: timestamp,
-		Namespace_id: s.NameSpaceId,
+		Timestamp:      timestamp,
+		Namespace_id:   s.NameSpaceId,
 	}
 	authToken := s.Schemes.AuthorisationScheme.Authorise(entry, authorisation)
 
@@ -56,29 +60,29 @@ func (s *Store[NameSpaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPri
 func (s *Store[NameSpaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken, T]) IngestEntry(
 	entry types.Entry[NameSpaceId, SubspaceId, PayloadDigest],
 	authorisation AuthorisationToken,
-	) ([]types.Entry[NameSpaceId, SubspaceId, PayloadDigest], error) {
+) ([]types.Entry[NameSpaceId, SubspaceId, PayloadDigest], error) {
 
 	s.IngestionMutexLock.Lock() // Locked so that no parallel entry insertions can happen
 
 	//Check if the namespace id of the entry and the current namespace match!
-	if s.Schemes.NamespaceScheme.IsEqual(s.NameSpaceId, entry.Namespace_id){
+	if s.Schemes.NamespaceScheme.IsEqual(s.NameSpaceId, entry.Namespace_id) {
 		s.IngestionMutexLock.Unlock()
 		log.Fatal("failed to ingest entry\nnamespace does not match store namespace")
 	}
 
 	//Check if the authorisation token is valid
-	if !(s.Schemes.AuthorisationScheme.IsAuthoriseWrite(entry, authorisation)){
+	if !(s.Schemes.AuthorisationScheme.IsAuthoriseWrite(entry, authorisation)) {
 		s.IngestionMutexLock.Unlock()
 		log.Fatal("failed to ingest entry\nauthorisation failed")
 	}
-	
+
 	//Get all the prefixes of the entry path to be inserted, iterate through them
 	//and check if a newer prefix exists, if it does, then this entry is not allowed to be inserted!
 	//this is wrt to prefix pruning and this case is not allowed.
 	for _, prefix := range kv_driver.DriverPrefixesOf(entry.Path, s.Schemes.PathParams, s.Storage.KDTree) {
-		if(prefix.Timestamp >= entry.Timestamp){
+		if prefix.Timestamp >= entry.Timestamp {
 			s.IngestionMutexLock.Unlock()
-			log.Fatal("failed to ingest entry\nnewer prefix already exists in store")	
+			log.Fatal("failed to ingest entry\nnewer prefix already exists in store")
 		}
 	}
 
@@ -96,11 +100,11 @@ func (s *Store[NameSpaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPri
 				//Check timestamps for newer entry
 				s.IngestionMutexLock.Unlock()
 				log.Fatal("failed to ingest entry\nnewer entry already exists in store")
-			}else if otherEntry.Entry.Payload_digest >= entry.Payload_digest{
+			} else if otherEntry.Entry.Payload_digest >= entry.Payload_digest {
 				//Check payload digests for newer entry
 				s.IngestionMutexLock.Unlock()
 				log.Fatal("failed to ingest entry\nnewer prefix already exists in store")
-			}else if otherEntry.Entry.Payload_length == entry.Payload_length{
+			} else if otherEntry.Entry.Payload_length == entry.Payload_length {
 				//Check payload lengths for newer entry
 				s.IngestionMutexLock.Unlock()
 				log.Fatal("failed to ingest entry\nnewer prefix already exists in store")
@@ -118,26 +122,26 @@ func (s *Store[NameSpaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPri
 			}
 			//TO-DO: remove the entry from entry KV
 		}
-	} else{
+	} else {
 		//If the error returned from get is some other error, then print it and exit
 		log.Fatal(err)
 	}
 
 	//Insert the entry into the storage
 	//This function also returns the entries which are pruned due to the insertion of the current entry
-	prunedEntries, err := s.InsertEntry(struct{
-		Path types.Path
-		Subspace SubspaceId
+	prunedEntries, err := s.InsertEntry(struct {
+		Path      types.Path
+		Subspace  SubspaceId
 		Timestamp uint64
-		Hash PayloadDigest
-		Length uint64
+		Hash      PayloadDigest
+		Length    uint64
 		AuthToken AuthorisationToken
 	}{
-		Path: entry.Path,
-		Subspace: entry.Subspace_id,
+		Path:      entry.Path,
+		Subspace:  entry.Subspace_id,
 		Timestamp: entry.Timestamp,
-		Hash: entry.Payload_digest,
-		Length: entry.Payload_length,
+		Hash:      entry.Payload_digest,
+		Length:    entry.Payload_length,
 		AuthToken: authorisation,
 	})
 	//If there is an error in inserting the entry, print it and exit
@@ -149,29 +153,36 @@ func (s *Store[NameSpaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPri
 	s.IngestionMutexLock.Unlock()
 
 	//Return the pruned entries and the entry which was inserted with no errors
-	return prunedEntries, nil 
+	return prunedEntries, nil
 }
 
 func (s *Store[NameSpaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken, T]) InsertEntry(
-	entry struct{
-		Path types.Path
-		Subspace SubspaceId
+	entry struct {
+		Path      types.Path
+		Subspace  SubspaceId
 		Timestamp uint64
-		Hash PayloadDigest
-		Length uint64
+		Hash      PayloadDigest
+		Length    uint64
 		AuthToken AuthorisationToken
-	}) ([]types.Entry[NameSpaceId, SubspaceId, PayloadDigest] ,error) {
+	}) ([]types.Entry[NameSpaceId, SubspaceId, PayloadDigest], error) {
 
 	//Encode the authorisation token and get the digest of the token
 	encodedToken := s.Schemes.AuthorisationScheme.TokenEncoding.Encode(entry.AuthToken)
 	tokenDigest, _, _ := s.PayloadDriver.Set(encodedToken)
 
 	//Insert the entry into the storage
-	err := s.Storage.Insert(struct{Subspace SubspaceId; Path types.Path; PayloadDigest PayloadDigest; Timestamp uint64; PayloadLength uint64; AuthTokenHash PayloadDigest}{
-		Subspace: entry.Subspace,
-		Path: entry.Path,
+	err := s.Storage.Insert(struct {
+		Subspace      SubspaceId
+		Path          types.Path
+		PayloadDigest PayloadDigest
+		Timestamp     uint64
+		PayloadLength uint64
+		AuthTokenHash PayloadDigest
+	}{
+		Subspace:      entry.Subspace,
+		Path:          entry.Path,
 		PayloadDigest: entry.Hash,
-		Timestamp: entry.Timestamp,
+		Timestamp:     entry.Timestamp,
 		PayloadLength: entry.Length,
 		AuthTokenHash: tokenDigest,
 	})
@@ -198,7 +209,7 @@ func (s *Store[NameSpaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPri
 		if err != nil {
 			log.Fatal(err)
 		}
-		
+
 		//Decrement the payload reference counter of the entry
 		count := s.EntryDriver.PayloadReferenceCounter.Decrement(entry.authTokenHash)
 		//If the count is 0, which means no entry is pointing to it, remove the payload itself from the payload driver
@@ -211,4 +222,19 @@ func (s *Store[NameSpaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPri
 
 	//Return the pruned entries with no errors
 	return prunedEntries, nil
+}
+
+func PrunableEntries[T constraints.Ordered, K constraints.Unsigned](kdt *(Kdtree.KDTree[Kdtree.KDNodeKey[T]]), entry types.Position3d[T], params types.PathParams[K]) []Kdtree.KDNodeKey[T] {
+	// converting the 3D position to a 3D RANGE OMG SO COOL. this is done inside prefixedby func
+	// prefizedby func basically does all the work, this is just a wrapper
+
+	prunableEntries := kv_driver.PrefixedBy(entry.Subspace, entry.Path, params, kdt)
+	final_prunables := make([]Kdtree.KDNodeKey[T], 0, len(prunableEntries))
+	for _, prune_candidate := range prunableEntries {
+		if prune_candidate.Timestamp < entry.Time {
+			final_prunables = append(final_prunables, prune_candidate)
+		}
+	}
+
+	return final_prunables
 }
