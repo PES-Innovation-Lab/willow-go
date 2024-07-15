@@ -1,13 +1,11 @@
 package Kdtree
 
 import (
-	"fmt"
-
 	"github.com/PES-Innovation-Lab/willow-go/types"
 )
 
 func Kdtest() {
-	kdtree := NewKDTreeWithValues[KDNodeKey[int]](3, []KDNodeKey[int]{
+	var _ *KDTree[KDNodeKey[int]] = NewKDTreeWithValues[KDNodeKey[int]](3, []KDNodeKey[int]{
 		{Timestamp: 500,
 			Subspace: 0,
 			Path:     types.Path{{0}, {2}},
@@ -39,7 +37,5 @@ func Kdtest() {
 		{Timestamp: 2400, Subspace: 0, Path: types.Path{{19}, {20}}}, */
 		{Timestamp: 2500, Subspace: 4, Path: types.Path{{20}, {21}, {22}}},
 	})
-
-	fmt.Println(kdtree.String())
 
 }

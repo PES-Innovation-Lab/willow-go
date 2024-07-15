@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -45,6 +46,7 @@ func TestPrefixesOf(t *testing.T) {
 
 	for _, vector := range PrefixesOfVectors {
 		actual := utils.PrefixesOf(vector.Path)
+		fmt.Println("------", vector.Path, actual, "------")
 		expected := vector.Prefixes
 		if !reflect.DeepEqual(actual, expected) {
 			t.Errorf("For path %v, expected prefixes %v, but got %v", vector.Path, expected, actual)

@@ -2,6 +2,7 @@ package utils
 
 import (
 	"github.com/PES-Innovation-Lab/willow-go/types"
+	"golang.org/x/exp/constraints"
 )
 
 // OrderBytes compares two byte slices.
@@ -56,6 +57,15 @@ func OrderPath(a, b types.Path) types.Rel {
 	if len(a) < len(b) {
 		return types.Less
 	} else if len(a) > len(b) {
+		return types.Greater
+	}
+	return types.Equal
+}
+
+func OrderSubspace[T constraints.Ordered](a, b T) types.Rel {
+	if a < b {
+		return types.Less
+	} else if a > b {
 		return types.Greater
 	}
 	return types.Equal

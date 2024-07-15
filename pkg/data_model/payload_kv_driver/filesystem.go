@@ -236,3 +236,10 @@ func (pd *PayloadDriver[PayloadDigest, T]) Receive(payload []byte, offset int64,
 
 	return digest, uint64(receivedLen), commit, reject, nil
 }
+
+func MakePayloadDriver[PayloadDigest constraints.Ordered, T constraints.Unsigned](pathParam string, payloadSchemeParam datamodeltypes.PayloadScheme[PayloadDigest, T]) PayloadDriver[PayloadDigest, T] {
+	return PayloadDriver[PayloadDigest, T]{
+		path:          pathParam,
+		PayloadScheme: payloadSchemeParam,
+	}
+}
