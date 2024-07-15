@@ -41,10 +41,10 @@ type KDTreeStorage[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, Finge
 	}
 
 	/** Retrieve an entry at a subspace and path. */
-	Get func(subspace SubspaceId, path types.Path) struct {
+	Get func(subspace SubspaceId, path types.Path) (struct {
 		Entry         types.Entry[NamespaceId, SubspaceId, PayloadDigest]
 		AuthTokenHash PayloadDigest
-	}
+	}, error)
 	/** Insert a new entry. */
 	Insert func(opts struct {
 		Subspace      SubspaceId

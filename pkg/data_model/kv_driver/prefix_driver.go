@@ -9,7 +9,7 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-func DriverPrefixesOf[T constraints.Ordered](Path types.Path, pathParams types.PathParams[uint64], kdt *Kdtree.KDTree[Kdtree.KDNodeKey[T]]) []Kdtree.KDNodeKey[T] {
+func DriverPrefixesOf[T constraints.Ordered, K constraints.Unsigned](Path types.Path, pathParams types.PathParams[K], kdt *Kdtree.KDTree[Kdtree.KDNodeKey[T]]) []Kdtree.KDNodeKey[T] {
 	prefixes := utils.PrefixesOf(Path)
 	prefixes = prefixes[1:(len(prefixes) - 1)]
 
@@ -25,7 +25,7 @@ func DriverPrefixesOf[T constraints.Ordered](Path types.Path, pathParams types.P
 
 		pathRange := types.Range[types.Path]{
 			Start:   prefix,
-			End:     utils.SuccessorPath[uint64](prefix, pathParams),
+			End:     utils.SuccessorPath(prefix, pathParams),
 			OpenEnd: false,
 		}
 
@@ -49,7 +49,7 @@ func DriverPrefixesOf[T constraints.Ordered](Path types.Path, pathParams types.P
 	return results
 }
 
-func PrefixedBy[T constraints.Ordered](Path types.Path, PathParams types.PathParams[uint64], kdt *(Kdtree.KDTree[Kdtree.KDNodeKey[T]])) []Kdtree.KDNodeKey[T] {
+func PrefixedBy[T constraints.Ordered, K constraints.Unsigned](Path types.Path, PathParams types.PathParams[K], kdt *(Kdtree.KDTree[Kdtree.KDNodeKey[T]])) []Kdtree.KDNodeKey[T] {
 	var nothing T
 
 	subspaceRange := types.Range[T]{
@@ -60,7 +60,7 @@ func PrefixedBy[T constraints.Ordered](Path types.Path, PathParams types.PathPar
 
 	pathRange := types.Range[types.Path]{
 		Start:   Path,
-		End:     utils.SuccessorPrefix[uint64](Path, PathParams),
+		End:     utils.SuccessorPrefix(Path, PathParams),
 		OpenEnd: false,
 	}
 
