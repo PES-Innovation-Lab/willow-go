@@ -1,8 +1,0 @@
-package store
-
-import (
-	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
-	"golang.org/x/exp/constraints"
-)
-
-func set[T constraints.Ordered, K constraints.Unsigned, P datamodeltypes.KvPart](driver datamodeltypes.EntryDriver)

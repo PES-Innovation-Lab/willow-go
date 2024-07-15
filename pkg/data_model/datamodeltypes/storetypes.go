@@ -27,7 +27,7 @@ type PayloadScheme[PayloadDigest constraints.Ordered, K constraints.Unsigned] st
 	DefaultPayloadDigest PayloadDigest
 }
 
-type AuthorisationScheme[NamespaceId, SubspaceId, PayloadDigest constraints.Ordered, AuthorisationOpts interface{}, AuthorisationToken string, K constraints.Unsigned] struct {
+type AuthorisationScheme[NamespaceId, SubspaceId, PayloadDigest constraints.Ordered, AuthorisationOpts any, AuthorisationToken string, K constraints.Unsigned] struct {
 	Authorise        func(entry types.Entry[NamespaceId, SubspaceId, PayloadDigest], opts AuthorisationOpts) chan AuthorisationToken
 	IsAuthoriseWrite func(entry types.Entry[NamespaceId, SubspaceId, PayloadDigest], token AuthorisationToken) chan bool
 	TokenEncoding    utils.EncodingScheme[AuthorisationToken, K]

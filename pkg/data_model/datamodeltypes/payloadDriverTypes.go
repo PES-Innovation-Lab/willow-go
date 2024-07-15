@@ -8,9 +8,9 @@ type CommitType func(isCompletePayload bool)
 type RejectType func()
 
 type PayloadDriver[PayloadDigest, T constraints.Ordered] interface {
-	get(PayloadHash PayloadDigest) Payload
-	set(Payload Payload) (PayloadDigest, uint64, Payload)
-	receive(Payload Payload, offset T, expectedLength uint64, expectedDigest PayloadDigest) (PayloadDigest, uint64, CommitType, RejectType)
-	length(payloadHash PayloadDigest) uint64
-	erase(digst PayloadDigest) (bool, error)
+	Get(PayloadHash PayloadDigest) Payload
+	Set(Payload []byte) (PayloadDigest, Payload, uint64)
+	Receive(Payload Payload, offset T, expectedLength uint64, expectedDigest PayloadDigest) (PayloadDigest, uint64, CommitType, RejectType)
+	Length(payloadHash PayloadDigest) uint64
+	Erase(digst PayloadDigest) (bool, error)
 }
