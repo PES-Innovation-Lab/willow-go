@@ -1,6 +1,7 @@
 package kv_driver
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 
@@ -49,4 +50,51 @@ func DecodeKey(encodedKey []byte, pathParams types.PathParams[uint64]) (uint64, 
 	subspaceId := encodedKey[8+pathEndIndex:]
 
 	return timestamp, subspaceId, decodedPath, nil
+}
+
+// payloaddigest payloadlength and authdigest
+func EncodeValues(PayloadLength uint64, PayloadDigest string, AuthDigest string) []byte {
+	var buffer bytes.Buffer
+
+	// Encode PayloadLength
+	encodedLength := utils.BigIntToBytes(PayloadLength)
+	buffer.Write(encodedLength)
+
+	// Encode PayloadDigest
+	encodedPayloadDigest := stringToBytes(PayloadDigest)
+	buffer.Write(encodedPayloadDigest)
+
+	// Encode AuthDigest
+	encodedAuthDigest := stringToBytes(AuthDigest)
+	buffer.Write(encodedAuthDigest)
+
+	return buffer.Bytes()
+}
+
+func DecodeValues(encoded []byte) (uint64, string, string) {
+	// Decode PayloadLength
+	payloadLength := binary.BigEndian.Uint64(encoded[:8])
+	remaining := encoded[8:]
+
+	// Decode PayloadDigest
+	payloadDigest, remaining := bytesToString(remaining)
+
+	// Decode AuthDigest
+	authDigest, _ := bytesToString(remaining)
+
+	return payloadLength, payloadDigest, authDigest
+}
+
+// stringToBytes converts a string to a byte slice with a length prefix.
+func stringToBytes(str string) []byte {
+	length := uint64(len(str))
+	lengthBytes := utils.BigIntToBytes(length)
+	return append(lengthBytes, []byte(str)...)
+}
+
+// BytesToString converts a byte slice with a length prefix to a string.
+func bytesToString(b []byte) (string, []byte) {
+	length := binary.BigEndian.Uint64(b[:8])
+	strBytes := b[8 : 8+length]
+	return string(strBytes), b[8+length:]
 }
