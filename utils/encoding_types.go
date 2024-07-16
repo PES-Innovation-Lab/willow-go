@@ -9,10 +9,10 @@ import (
 // Define Growing Bytes here
 // figure out the promise type thing
 
-type EncodingScheme[ValueType types.OrderableGeneric, K constraints.Unsigned] struct {
+type EncodingScheme[ValueType types.OrderableGeneric] struct {
 	Encode        func(value ValueType) []byte
 	Decode        func(encoded []byte) (ValueType, error)
-	EncodedLength func(value ValueType) K
+	EncodedLength func(value ValueType) uint64
 	DecodeStream  func(value *GrowingBytes) (ValueType, error)
 }
 

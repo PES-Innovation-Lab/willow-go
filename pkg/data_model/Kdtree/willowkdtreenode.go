@@ -5,16 +5,15 @@ import (
 
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/PES-Innovation-Lab/willow-go/utils"
-	"golang.org/x/exp/constraints"
 )
 
-type KDNodeKey[SubspaceId constraints.Ordered] struct {
+type KDNodeKey struct {
 	Timestamp uint64
-	Subspace  SubspaceId
+	Subspace  types.SubspaceId
 	Path      types.Path
 }
 
-func (lhs KDNodeKey[SubspaceId]) Order(rhs KDNodeKey[SubspaceId], dim int) Relation {
+func (lhs KDNodeKey) Order(rhs KDNodeKey, dim int) Relation {
 	dimensions := 3
 	for i := 0; i < dimensions; i++ {
 		switch dim {
@@ -29,11 +28,13 @@ func (lhs KDNodeKey[SubspaceId]) Order(rhs KDNodeKey[SubspaceId], dim int) Relat
 
 		case 1:
 			// Compare subspace IDs
-			if lhs.Subspace < rhs.Subspace {
+			switch utils.OrderSubspace(lhs.Subspace, rhs.Subspace) {
+			case -1:
 				return Lesser
-			} else if lhs.Subspace > rhs.Subspace {
+			case 1:
 				return Greater
 			}
+
 		case 2:
 			switch utils.OrderPath(lhs.Path, rhs.Path) {
 			case -1:
@@ -48,7 +49,7 @@ func (lhs KDNodeKey[SubspaceId]) Order(rhs KDNodeKey[SubspaceId], dim int) Relat
 	return Equal
 }
 
-func (lhs KDNodeKey[SubspaceId]) DistDim(rhs KDNodeKey[SubspaceId], dim int) int {
+func (lhs KDNodeKey) DistDim(rhs KDNodeKey, dim int) int {
 	switch dim {
 	case 0:
 		return int((lhs.Timestamp - rhs.Timestamp) * (lhs.Timestamp - rhs.Timestamp))
@@ -67,70 +68,70 @@ func (lhs KDNodeKey[SubspaceId]) DistDim(rhs KDNodeKey[SubspaceId], dim int) int
 
 }
 
-func (lhs KDNodeKey[SubspaceId]) Dist(rhs KDNodeKey[SubspaceId]) int {
+func (lhs KDNodeKey) Dist(rhs KDNodeKey) int {
 	// TODO for distances between keys (Size of Range Query)
 	return int(1)
 }
 
-func (lhs KDNodeKey[SubspaceId]) Encode() []byte {
+func (lhs KDNodeKey) Encode() []byte {
 	// TODO for encoding keys to bytes. Need to encode path with pat param opts and new subspace encoding
 	return []byte{}
 }
 
-func (lhs KDNodeKey[SubspaceId]) String() string {
+func (lhs KDNodeKey) String() string {
 	return fmt.Sprintf("[%v,%v,%v]", lhs.Timestamp, lhs.Subspace, lhs.Path)
 }
 
-func Query[T constraints.Ordered](kdt *(KDTree[KDNodeKey[T]]), QueryRange types.Range3d[T]) []KDNodeKey[T] {
+func Query(kdt *(KDTree[KDNodeKey]), QueryRange types.Range3d) []KDNodeKey {
 	dim := 0
-	var res []KDNodeKey[T]
+	var res []KDNodeKey
 	QueryHelper(kdt.Root, QueryRange, dim, &res)
 	return res
 }
 
-func QueryHelper[T constraints.Ordered](Node *KdNode[KDNodeKey[T]], QueryRange types.Range3d[T], dim int, res *[]KDNodeKey[T]) {
+func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res *[]KDNodeKey) {
 	if Node == nil {
 		return
 	}
 	Timestamp, Subspace, Path := Node.Value.Timestamp, Node.Value.Subspace, Node.Value.Path
-	Position := types.Position3d[T]{
+	Position := types.Position3d{
 		Subspace: Subspace,
 		Path:     Path,
 		Time:     Timestamp,
 	}
 
-	inRange := utils.IsIncluded3d[T](utils.OrderSubspace, QueryRange, Position)
+	inRange := utils.IsIncluded3d(utils.OrderSubspace, QueryRange, Position)
 
 	switch dim % 3 {
 	case 0:
 		if utils.OrderTimestamp(Timestamp, QueryRange.TimeRange.Start) >= 0 {
-			QueryHelper[T](Node.Left, QueryRange, dim+1, res)
+			QueryHelper(Node.Left, QueryRange, dim+1, res)
 		}
 		if QueryRange.TimeRange.OpenEnd || utils.OrderTimestamp(Timestamp, QueryRange.TimeRange.End) <= 0 {
 			if inRange {
 				*res = append(*res, Node.Value)
 			}
-			QueryHelper[T](Node.Right, QueryRange, dim+1, res)
+			QueryHelper(Node.Right, QueryRange, dim+1, res)
 		}
 	case 1:
 		if utils.OrderSubspace(Subspace, QueryRange.SubspaceRange.Start) >= 0 {
-			QueryHelper[T](Node.Left, QueryRange, dim+1, res)
+			QueryHelper(Node.Left, QueryRange, dim+1, res)
 		}
 		if QueryRange.SubspaceRange.OpenEnd || utils.OrderSubspace(Subspace, QueryRange.SubspaceRange.End) <= 0 {
 			if inRange {
 				*res = append(*res, Node.Value)
 			}
-			QueryHelper[T](Node.Right, QueryRange, dim+1, res)
+			QueryHelper(Node.Right, QueryRange, dim+1, res)
 		}
 	case 2:
 		if utils.OrderPath(Path, QueryRange.PathRange.Start) >= 0 {
-			QueryHelper[T](Node.Left, QueryRange, dim+1, res)
+			QueryHelper(Node.Left, QueryRange, dim+1, res)
 		}
 		if QueryRange.PathRange.OpenEnd || utils.OrderPath(Path, QueryRange.PathRange.End) <= 0 {
 			if inRange {
 				*res = append(*res, Node.Value)
 			}
-			QueryHelper[T](Node.Right, QueryRange, dim+1, res)
+			QueryHelper(Node.Right, QueryRange, dim+1, res)
 		}
 	}
 }

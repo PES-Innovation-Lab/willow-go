@@ -16,7 +16,7 @@ import (
 
 // Mock PayloadScheme for testing
 var mockPayloadScheme datamodeltypes.PayloadScheme[string, uint64] = datamodeltypes.PayloadScheme[string, uint64]{
-	EncodingScheme: utils.EncodingScheme[string, uint64]{
+	EncodingScheme: utils.EncodingScheme[string]{
 		Encode: func(value string) []byte {
 			decoded, err := hex.DecodeString(value)
 			if err != nil {

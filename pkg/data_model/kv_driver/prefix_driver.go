@@ -9,15 +9,15 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-func DriverPrefixesOf[T constraints.Ordered, K constraints.Unsigned](Path types.Path, pathParams types.PathParams[K], kdt *Kdtree.KDTree[Kdtree.KDNodeKey[T]]) []Kdtree.KDNodeKey[T] {
+func DriverPrefixesOf[K constraints.Unsigned](Path types.Path, pathParams types.PathParams[K], kdt *Kdtree.KDTree[Kdtree.KDNodeKey]) []Kdtree.KDNodeKey {
 	prefixes := utils.PrefixesOf(Path)
 	prefixes = prefixes[1:(len(prefixes) - 1)]
 
-	var results []Kdtree.KDNodeKey[T]
-	var nothing T
+	var results []Kdtree.KDNodeKey
+	var nothing types.SubspaceId
 
 	for _, prefix := range prefixes {
-		subspaceRange := types.Range[T]{
+		subspaceRange := types.Range[types.SubspaceId]{
 			Start:   nothing,
 			End:     nothing,
 			OpenEnd: true,
@@ -35,7 +35,7 @@ func DriverPrefixesOf[T constraints.Ordered, K constraints.Unsigned](Path types.
 			OpenEnd: true,
 		}
 
-		range3d := types.Range3d[T]{
+		range3d := types.Range3d{
 			SubspaceRange: subspaceRange,
 			PathRange:     pathRange,
 			TimeRange:     timeRange,
@@ -49,10 +49,10 @@ func DriverPrefixesOf[T constraints.Ordered, K constraints.Unsigned](Path types.
 	return results
 }
 
-func PrefixedBy[T constraints.Ordered, K constraints.Unsigned](Subspace T, Path types.Path, PathParams types.PathParams[K], kdt *(Kdtree.KDTree[Kdtree.KDNodeKey[T]])) []Kdtree.KDNodeKey[T] {
+func PrefixedBy[K constraints.Unsigned](Subspace types.SubspaceId, Path types.Path, PathParams types.PathParams[K], kdt *(Kdtree.KDTree[Kdtree.KDNodeKey])) []Kdtree.KDNodeKey {
 	// var nothing T
 
-	subspaceRange := types.Range[T]{
+	subspaceRange := types.Range[types.SubspaceId]{
 		Start:   Subspace,
 		End:     Subspace,
 		OpenEnd: false,
@@ -70,7 +70,7 @@ func PrefixedBy[T constraints.Ordered, K constraints.Unsigned](Subspace T, Path 
 		OpenEnd: true,
 	}
 
-	range3d := types.Range3d[T]{
+	range3d := types.Range3d{
 		SubspaceRange: subspaceRange,
 		PathRange:     pathRange,
 		TimeRange:     timeRange,

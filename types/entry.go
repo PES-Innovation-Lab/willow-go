@@ -3,7 +3,7 @@ package types
 
 import "golang.org/x/exp/constraints"
 
-type Entry[NamespaceId, SubspaceId, PayloadDigest constraints.Ordered] struct {
+type Entry[PayloadDigest constraints.Ordered] struct {
 	// ID of the namespace the Entry is a part of
 	Namespace_id NamespaceId
 	// ID of the subspace to which the Entry belongs to
