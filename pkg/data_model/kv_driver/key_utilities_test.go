@@ -65,8 +65,8 @@ func Test_encodeSubspaceId(t *testing.T) {
 		},
 		{
 			name:    "big.Int case",
-			args:    args{subspace: []byte{123456789},
-			want:    utils.BigIntToBytes([]byte{123456789}),
+			args:    args{subspace: []byte{123}},
+			want:    []byte{123},
 			wantErr: false,
 		},
 	}

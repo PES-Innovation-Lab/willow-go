@@ -6,6 +6,7 @@ import (
 
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/PES-Innovation-Lab/willow-go/utils"
+	"golang.org/x/exp/constraints"
 )
 
 /*
@@ -16,7 +17,7 @@ import (
 */
 
 /* Encodes the time, subspace and path from the kd tree into a key usable by the entries kv store */
-func EncodeKey(timestamp uint64, subspaceId []byte, pathParams types.PathParams[uint64], path types.Path) ([]byte, error) {
+func EncodeKey[Params constraints.Unsigned](timestamp uint64, subspaceId []byte, pathParams types.PathParams[Params], path types.Path) ([]byte, error) {
 	// Convert timestamp to byte slice
 	timestampBytes := utils.BigIntToBytes(timestamp)
 
