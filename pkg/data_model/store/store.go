@@ -242,7 +242,7 @@ func (s *Store[PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts,
 }, error,
 ) {
 	// converting the 3D position to a 3D RANGE OMG SO COOL. this is done inside prefixedby func
-	// prefizedby func basically does all the work, this is just a wrapper
+	// prefixedby func basically does all the work, this is just a wrapper
 
 	prunableEntries := kv_driver.PrefixedBy(entry.Subspace, entry.Path, pathParams, kdt)
 	final_prunables := make([]struct{

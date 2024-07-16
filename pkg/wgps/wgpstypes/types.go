@@ -27,10 +27,10 @@ func IsBetty(role SyncRole) bool {
 }
 
 type ReadAuthorisation[ReadCapability, SubspaceReadCapability constraints.Ordered] struct {
-	capability ReadCapability
+	Capability ReadCapability
 	// SubspaceCapability is optional here
-	subspaceCapability    SubspaceReadCapability
-	hasSubspaceCapability bool
+	SubspaceCapability    SubspaceReadCapability
+	HasSubspaceCapability bool
 }
 
 //will need to check if the type is any or something else
@@ -479,7 +479,7 @@ type ReconciliationPrivy[NamespaceId, SubspaceId, PayloadDigest constraints.Orde
 type SyncSchemes[ReadCapability, Receiver, SyncSignature, PsiGroup, PsiScalar, SubspaceCapability, SubspaceReceiver, AuthorisationOpts, NamespaceId, SubspaceId, PayloadDigest, ReceiverSecretKey, Prefingerprint, Fingerprint constraints.Ordered, K constraints.Unsigned, AuthorisationToken, StaticToken, DynamicToken, SyncSubspaceSignature, SubspaceSecretKey types.OrderableGeneric] struct {
 	AccessControl      AccessControlScheme[SyncSignature, ReadCapability, Receiver, ReceiverSecretKey, NamespaceId, SubspaceId, K]
 	SubspaceCap        SubspaceCapScheme[SubspaceCapability, SubspaceReceiver, NamespaceId, SyncSubspaceSignature, SubspaceSecretKey, K]
-	Pai                PaiScheme[ReadCapability, PsiScalar, NamespaceId, SubspaceId, K, PsiGroup]
+	Pai                PaiScheme[ReadCapability, PsiGroup, PsiScalar, NamespaceId, SubspaceId, K]
 	Namespace          datamodeltypes.NamespaceScheme[NamespaceId, K]
 	Subspace           datamodeltypes.SubspaceScheme[NamespaceId, K]
 	Path               types.PathParams[K]
