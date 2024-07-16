@@ -8,11 +8,6 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-// type WillowKDTree[T KDNodeKey[P], P constraints.Ordered] struct {
-// 	Dimensions int
-// 	Root       *KdNode[T]
-// }
-
 type KDNodeKey[SubspaceId constraints.Ordered] struct {
 	Timestamp uint64
 	Subspace  SubspaceId

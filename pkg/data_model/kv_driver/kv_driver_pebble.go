@@ -12,19 +12,7 @@ import (
 	"github.com/cockroachdb/pebble"
 )
 
-// import (
-// 	"errors"
-// 	"log"
-// 	"reflect"
-// 	"strings"
-
-// 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
-// 	"github.com/PES-Innovation-Lab/willow-go/types"
-// 	"github.com/PES-Innovation-Lab/willow-go/utils"
-// 	"github.com/cockroachdb/pebble"
-// )
-
-func isFirstPrefixOfSecond[T datamodeltypes.KvPart](a, b datamodeltypes.KvKey[T]) (bool, error) {
+func IsFirstPrefixOfSecond[T datamodeltypes.KvPart](a, b datamodeltypes.KvKey[T]) (bool, error) {
 	if len(a.Key) > len(b.Key) {
 		return false, nil
 	}

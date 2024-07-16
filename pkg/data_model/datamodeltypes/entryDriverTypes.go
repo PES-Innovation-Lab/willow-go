@@ -21,9 +21,9 @@ type EntryDriver[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerP
 }
 
 type PayloadReferenceCounter[PayloadDigest constraints.Ordered] interface {
-	Increment(payloadDigest PayloadDigest) chan uint
-	Decrement(payloadDigest PayloadDigest) chan uint
-	Count(payloadDigest PayloadDigest) chan uint
+	Increment(payloadDigest PayloadDigest) uint
+	Decrement(payloadDigest PayloadDigest) uint
+	Count(payloadDigest PayloadDigest) uint
 }
 
 type KDTreeStorage[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint constraints.Ordered, T KvPart, K constraints.Unsigned] struct {
@@ -41,10 +41,10 @@ type KDTreeStorage[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, Finge
 	}
 
 	/** Retrieve an entry at a subspace and path. */
-	Get func(subspace SubspaceId, path types.Path) chan struct {
+	Get func(subspace SubspaceId, path types.Path) (struct {
 		Entry         types.Entry[NamespaceId, SubspaceId, PayloadDigest]
 		AuthTokenHash PayloadDigest
-	}
+	}, error)
 	/** Insert a new entry. */
 	Insert func(opts struct {
 		Subspace      SubspaceId
@@ -53,13 +53,13 @@ type KDTreeStorage[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, Finge
 		Timestamp     uint64
 		PayloadLength uint64
 		AuthTokenHash PayloadDigest
-	}) chan error
+	}) error
 
 	/** Update the available payload bytes for a given entry. */
 
-	UpdateAvailablePayload func(subspace SubspaceId, path types.Path) chan bool
+	UpdateAvailablePayload func(subspace SubspaceId, path types.Path) bool
 	/** Remove an entry. */
-	Remove func(entry types.Entry[NamespaceId, SubspaceId, PayloadDigest]) chan error
+	Remove func(entry types.Entry[NamespaceId, SubspaceId, PayloadDigest]) error
 	// Used during sync.
 
 	/** Summarise a given `Range3d` by mapping the included set of `Entry` to ` PreFingerprint`.  */
@@ -68,7 +68,7 @@ type KDTreeStorage[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, Finge
 		Size        uint64
 	}
 	/** Split a range into two smaller ranges. */
-	SplitRange func(range3d types.Range3d[SubspaceId], knownSize uint) chan []types.Range3d[SubspaceId]
+	SplitRange func(range3d types.Range3d[SubspaceId], knownSize uint) []types.Range3d[SubspaceId]
 	/** 3D Range Query **/
 	Query func(range3d types.Range3d[SubspaceId], reverse bool) []struct {
 		Entry         types.Entry[NamespaceId, SubspaceId, PayloadDigest]
