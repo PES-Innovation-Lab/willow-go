@@ -10,18 +10,18 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-type Options[ReadCapability, Receiver, SyncSignature, NamespaceId, SubspaceId, ReceiverSecretKey constraints.Ordered, K constraints.Unsigned] struct {
+type Options[ReadCapability, SyncSignature, NamespaceId, SubspaceId, Receiver, ReceiverSecretKey constraints.Ordered, K constraints.Unsigned] struct {
 	HandleStoreOurs HandleStore[ReadCapability]
 	Schemes         struct {
 		Namespace     datamodeltypes.NamespaceScheme[NamespaceId, K]
 		Subspace      datamodeltypes.SubspaceScheme[SubspaceId, K]
-		AccessControl wgpstypes.AccessControlScheme[ReadCapability, Receiver, SyncSignature, ReceiverSecretKey, NamespaceId, SubspaceId, K]
+		AccessControl wgpstypes.AccessControlScheme[SyncSignature, ReadCapability, Receiver, ReceiverSecretKey, NamespaceId, SubspaceId, K]
 	}
 }
 
 type CapFinder[ReadCapability, SyncSignature, NamespaceId, SubspaceId, PayloadDigest, Receiver, ReceiverSecretKey constraints.Ordered, K constraints.Unsigned] struct {
 	NamespaceMap map[string]map[uint64]struct{}
-	Opts         Options[ReadCapability, SyncSignature, NamespaceId, SubspaceId, PayloadDigest, Receiver, K]
+	Opts         Options[ReadCapability, SyncSignature, NamespaceId, SubspaceId, Receiver, ReceiverSecretKey, K]
 }
 
 func isEmpty[T constraints.Ordered](value T) bool {
@@ -41,8 +41,8 @@ func isEmpty[T constraints.Ordered](value T) bool {
 }
 
 // NewCapFinder creates a new instance of CapFinder with initialized NamespaceMap.
-func NewCapFinder[ReadCapability, SyncSignature, NamespaceId, SubspaceId, PayloadDigest, Receiver, ReceiverSecretKey constraints.Ordered, K constraints.Unsigned](opts Options[ReadCapability, Receiver, ReceiverSecretKey, SyncSignature, NamespaceId, SubspaceId, K]) *CapFinder[ReadCapability, Receiver, ReceiverSecretKey, SyncSignature, NamespaceId, SubspaceId, PayloadDigest, K] {
-	return &CapFinder[ReadCapability, Receiver, ReceiverSecretKey, SyncSignature, NamespaceId, SubspaceId, PayloadDigest, K]{
+func NewCapFinder[ReadCapability, SyncSignature, NamespaceId, SubspaceId, PayloadDigest, Receiver, ReceiverSecretKey constraints.Ordered, K constraints.Unsigned](opts Options[ReadCapability, SyncSignature, NamespaceId, SubspaceId, Receiver, ReceiverSecretKey, K]) *CapFinder[ReadCapability, SyncSignature, NamespaceId, SubspaceId, PayloadDigest, Receiver, ReceiverSecretKey, K] {
+	return &CapFinder[ReadCapability, SyncSignature, NamespaceId, SubspaceId, PayloadDigest, Receiver, ReceiverSecretKey, K]{
 		NamespaceMap: make(map[string]map[uint64]struct{}),
 		Opts:         opts,
 	}

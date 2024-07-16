@@ -17,8 +17,8 @@ type FragmentPair[NamespaceId constraints.Ordered] struct {
 	Path        types.Path
 }
 
-type Fragemt interface {
-	isFragment()
+type Fragment interface {
+	IsFragment()
 }
 
 func (FragmentTriple[NamespaceId, SubspaceId]) isFragment() {}
@@ -28,41 +28,41 @@ type FragmentsComplete[NamespaceId constraints.Ordered] []FragmentPair[Namespace
 type FragmentsSelective[NamespaceId, SubspaceId constraints.Ordered] []FragmentTriple[NamespaceId, SubspaceId]
 
 type FragmentSet interface {
-	isFragmentSet()
+	IsFragmentSet()
 }
 
-func (FragmentsComplete[NamespaceId]) isFragmentSet()               {}
-func (FragmentsSelective[NamespeaceId, SubspaceId]) isFragmentSet() {}
+func (FragmentsComplete[NamespaceId]) IsFragmentSet()               {}
+func (FragmentsSelective[NamespeaceId, SubspaceId]) IsFragmentSet() {}
 
 type FragmentKitComplete[NamespaceId constraints.Ordered] struct {
-	grantedNamespace NamespaceId
-	grantedPath      types.Path
+	GrantedNamespace NamespaceId
+	GrantedPath      types.Path
 }
 
 type FragmentKitSelective[NamespaceId, SubspaceId constraints.Ordered] struct {
-	grantedNamespace NamespaceId
-	grantedSubspace  SubspaceId
-	grantedPath      types.Path
+	GrantedNamespace NamespaceId
+	GrantedSubspace  SubspaceId
+	GrantedPath      types.Path
 }
 
 type FragmentKit interface {
-	isFragmentKit()
+	IsFragmentKit()
 }
 
-func (FragmentKitComplete[NamespaceId]) isFragmentKit()              {}
-func (FragmentKitSelective[NamespaceId, SubspaceId]) isFragmentKit() {}
+func (FragmentKitComplete[NamespaceId]) IsFragmentKit()              {}
+func (FragmentKitSelective[NamespaceId, SubspaceId]) IsFragmentKit() {}
 
-type PaiScheme[ReadCapability, PsiScalar, NamespaceId, SubspaceId constraints.Ordered, K constraints.Unsigned, PsiGroup types.OrderableGeneric] struct {
-	fragmentToGroup     func(NamespaceId, SubspaceId) PsiGroup
-	getScalar           func() PsiScalar
-	scalarMult          func(group PsiGroup, scalar PsiScalar) PsiGroup
-	isGroupEqual        func(a PsiGroup, b PsiGroup) bool
-	getFragmentKit      func(cap ReadCapability) FragmentKit
-	groupMemberEncoding utils.EncodingScheme[PsiGroup, K]
+type PaiScheme[ReadCapability, PsiGroup, PsiScalar, NamespaceId, SubspaceId constraints.Ordered, K constraints.Unsigned] struct {
+	FragmentToGroup     func(Fragment) PsiGroup
+	GetScalar           func() PsiScalar
+	ScalarMult          func(group PsiGroup, scalar PsiScalar) PsiGroup
+	IsGroupEqual        func(a PsiGroup, b PsiGroup) bool
+	GetFragmentKit      func(cap ReadCapability) FragmentKit
+	GroupMemberEncoding utils.EncodingScheme[PsiGroup, K]
 }
 
-type Intersection[PsiGroup any] struct {
-	group       PsiGroup
-	isComplete  bool
-	isSecondary bool
+type Intersection[PsiGroup constraints.Ordered] struct {
+	Group       PsiGroup
+	IsComplete  bool
+	IsSecondary bool
 }
