@@ -19,9 +19,9 @@ func compareKDNodeKey(a, b Kdtree.KDNodeKey) bool {
 func TestPrefixesOf(t *testing.T) {
 	// Set up the KDTree with sample values
 	kdtree := Kdtree.NewKDTreeWithValues[Kdtree.KDNodeKey](3, []Kdtree.KDNodeKey{
-		{Timestamp: 500, Subspace: 0, Path: types.Path{{0}}},
-		{Timestamp: 600, Subspace: 1, Path: types.Path{{0}, {1}}},
-		{Timestamp: 700, Subspace: 0, Path: types.Path{{1}}},
+		{Timestamp: 500, Subspace: []byte{0}, Path: types.Path{{0}}},
+		{Timestamp: 600, Subspace: []byte{1}, Path: types.Path{{0}, {1}}},
+		{Timestamp: 700, Subspace: []byte{0}, Path: types.Path{{1}}},
 	})
 
 	pathParams := types.PathParams[uint64]{

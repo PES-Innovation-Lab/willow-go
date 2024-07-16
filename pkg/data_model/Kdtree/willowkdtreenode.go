@@ -28,11 +28,13 @@ func (lhs KDNodeKey) Order(rhs KDNodeKey, dim int) Relation {
 
 		case 1:
 			// Compare subspace IDs
-			if utils.OrderBytes(lhs.Subspace, rhs.Subspace) == -1 {
+			switch utils.OrderSubspace(lhs.Subspace, rhs.Subspace) {
+			case -1:
 				return Lesser
-			} else if utils.OrderBytes(lhs.Subspace, rhs.Subspace) == 1 {
+			case 1:
 				return Greater
 			}
+
 		case 2:
 			switch utils.OrderPath(lhs.Path, rhs.Path) {
 			case -1:

@@ -1,7 +1,9 @@
 package store
 
 import (
+	"fmt"
 	"log"
+	"reflect"
 	"sync"
 	"time"
 
@@ -211,8 +213,8 @@ func (s *Store[PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts,
 		// Remove from storage
 		err := s.Storage.Remove(types.Position3d{
 			Subspace: entry.entry.Subspace_id,
-			Path:    entry.entry.Path,
-			Time:   entry.entry.Timestamp,
+			Path:     entry.entry.Path,
+			Time:     entry.entry.Timestamp,
 		})
 		if err != nil {
 			log.Fatal(err)
@@ -233,7 +235,7 @@ func (s *Store[PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts,
 }
 
 func (s *Store[PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken, T]) PrunableEntries(
-	kdt *(Kdtree.KDTree[Kdtree.KDNodeKey]),
+	kdt *Kdtree.KDTree[Kdtree.KDNodeKey],
 	entry types.Position3d,
 	pathParams types.PathParams[K],
 ) ([]struct {
@@ -245,10 +247,10 @@ func (s *Store[PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts,
 	// prefixedby func basically does all the work, this is just a wrapper
 
 	prunableEntries := kv_driver.PrefixedBy(entry.Subspace, entry.Path, pathParams, kdt)
-	final_prunables := make([]struct{
-		entry types.Entry[PayloadDigest]
+	final_prunables := make([]struct {
+		entry         types.Entry[PayloadDigest]
 		authTokenHash PayloadDigest
-		}, 0, len(prunableEntries))
+	}, 0, len(prunableEntries))
 	for _, prune_candidate := range prunableEntries {
 		if prune_candidate.Timestamp < entry.Time {
 			encodedEntry, err := kv_driver.EncodeKey(prune_candidate.Timestamp, prune_candidate.Subspace, pathParams, prune_candidate.Path)
@@ -257,8 +259,8 @@ func (s *Store[PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts,
 				return nil, err
 			}
 			//get decoded value
-			// decodedValue := 
-			var decodedValue struct{
+			// decodedValue :=
+			var decodedValue struct {
 				PayloadDigest PayloadDigest
 				AuthTokenHash PayloadDigest
 				PayloadLentgh uint64
@@ -267,21 +269,64 @@ func (s *Store[PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts,
 				return nil, err
 			}
 			// Get the authorisation token hash of the entry
-			final_prunables = append(final_prunables, struct{
-				entry types.Entry[PayloadDigest]
-				authTokenHash PayloadDigest}{
-					entry: types.Entry[PayloadDigest]{
-						Subspace_id:    prune_candidate.Subspace,
-						Payload_digest: decodedValue.PayloadDigest,
-						Timestamp: 	prune_candidate.Timestamp,
-						Path: 			prune_candidate.Path,
-						Payload_length: decodedValue.PayloadLentgh,
-						Namespace_id: 	s.NameSpaceId,
-					},
-					authTokenHash: decodedValue.AuthTokenHash,
-				})
+			final_prunables = append(final_prunables, struct {
+				entry         types.Entry[PayloadDigest]
+				authTokenHash PayloadDigest
+			}{
+				entry: types.Entry[PayloadDigest]{
+					Subspace_id:    prune_candidate.Subspace,
+					Payload_digest: decodedValue.PayloadDigest,
+					Timestamp:      prune_candidate.Timestamp,
+					Path:           prune_candidate.Path,
+					Payload_length: decodedValue.PayloadLentgh,
+					Namespace_id:   s.NameSpaceId,
+				},
+				authTokenHash: decodedValue.AuthTokenHash,
+			})
 		}
 	}
 
 	return final_prunables, nil
+}
+
+type Status int
+
+const (
+	Failure Status = -1
+	No_Op   Status = 0
+	Success Status = 1
+)
+
+func (s *Store[PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken, T]) IngestPayload(
+	entryDetails types.Position3d,
+	payload []byte,
+	allowPartial bool,
+	offset int64,
+) (Status, error) {
+	encodedKey, err := kv_driver.EncodeKey(entryDetails.Time, entryDetails.Subspace, s.Schemes.PathParams, entryDetails.Path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	getEntry, err := s.EntryDriver.Opts.KVDriver.Get(encodedKey)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if getEntry != nil {
+		return Failure, fmt.Errorf("Entry does not exist")
+	}
+
+	// Samar needs to make a DecodeValue Function that returns payloadDigest
+
+	var entry types.Entry[PayloadDigest]
+
+	existingPayload := s.PayloadDriver.Get(entry.Payload_digest)
+
+	if !reflect.DeepEqual(existingPayload, datamodeltypes.Payload{}) {
+		return No_Op, fmt.Errorf("File already exists")
+	}
+
+	result, len, commit, reject, err := s.PayloadDriver.Receive(payload, offset, entry.Payload_length, entry.Payload_digest)
+	if err != nil {
+		log.Fatal("Unable to receive")
+	}
 }

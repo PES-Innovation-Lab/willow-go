@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"encoding/hex"
+
 	"github.com/PES-Innovation-Lab/willow-go/types"
 )
 
@@ -61,11 +63,11 @@ func OrderPath(a, b types.Path) types.Rel {
 	return types.Equal
 }
 
-// func OrderSubspace(a, b types.SubspaceId) types.Rel {
-// 	if a < b {
-// 		return types.Less
-// 	} else if a > b {
-// 		return types.Greater
-// 	}
-// 	return types.Equal
-// }
+func OrderSubspace(a, b types.SubspaceId) types.Rel {
+	if hex.EncodeToString(a[:]) < hex.EncodeToString(b[:]) {
+		return types.Less
+	} else if hex.EncodeToString(a[:]) > hex.EncodeToString(b[:]) {
+		return types.Greater
+	}
+	return types.Equal
+}
