@@ -226,7 +226,7 @@ func (s *Store[NameSpaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPri
 
 func PrunableEntries[T constraints.Ordered, K constraints.Unsigned](kdt *(Kdtree.KDTree[Kdtree.KDNodeKey[T]]), entry types.Position3d[T], params types.PathParams[K]) []Kdtree.KDNodeKey[T] {
 	// converting the 3D position to a 3D RANGE OMG SO COOL. this is done inside prefixedby func
-	// prefizedby func basically does all the work, this is just a wrapper
+	// prefixedby func basically does all the work, this is just a wrapper
 
 	prunableEntries := kv_driver.PrefixedBy(entry.Subspace, entry.Path, params, kdt)
 	final_prunables := make([]Kdtree.KDNodeKey[T], 0, len(prunableEntries))

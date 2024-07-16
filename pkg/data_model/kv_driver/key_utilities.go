@@ -3,6 +3,7 @@ package kv_driver
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/gob"
 	"fmt"
 
 	"github.com/PES-Innovation-Lab/willow-go/types"
@@ -18,7 +19,7 @@ import (
 */
 
 /* Encodes the time, subspace and path from the kd tree into a key usable by the entries kv store */
-func EncodeKey[T constraints.Unsigned](timestamp uint64, subspaceId T, pathParams types.PathParams[T], path types.Path) ([]byte, error) {
+func EncodeKey[T constraints.Ordered, K constraints.Unsigned](timestamp uint64, subspaceId T, pathParams types.PathParams[K], path types.Path) ([]byte, error) {
 	// Convert timestamp to byte slice
 	timestampBytes := utils.BigIntToBytes(timestamp)
 
@@ -39,27 +40,38 @@ func EncodeKey[T constraints.Unsigned](timestamp uint64, subspaceId T, pathParam
 }
 
 /* EncodeSubspaceId encodes the subspaceId into []byte */
-func encodeSubspaceId[T constraints.Unsigned](subspace T) ([]byte, error) {
-	var subspaceBytes []byte
-
-	switch any(subspace).(type) {
-	case uint8:
-		subspaceBytes = []byte{byte(subspace)}
-	case uint16:
-		subspaceBytes = make([]byte, 2)
-		binary.BigEndian.PutUint16(subspaceBytes, uint16(subspace))
-	case uint32:
-		subspaceBytes = make([]byte, 4)
-		binary.BigEndian.PutUint32(subspaceBytes, uint32(subspace))
-	case uint64:
-		subspaceBytes = make([]byte, 8)
-		binary.BigEndian.PutUint64(subspaceBytes, uint64(subspace))
-	default:
-		return nil, fmt.Errorf("unsupported subspace type: %T", subspace)
+func encodeSubspaceId[T constraints.Ordered](subspace T) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	err := enc.Encode(subspace)
+	if err != nil {
+		fmt.Println("Error encoding:", err)
+		return []byte{}, err
 	}
-	fmt.Println(subspaceBytes)
-	return subspaceBytes, nil
+	return buf.Bytes(), err
 }
+
+// func encodeSubspaceId[T constraints.Unsigned](subspace T) ([]byte, error) {
+// 	var subspaceBytes []byte
+
+// 	switch any(subspace).(type) {
+// 	case uint8:
+// 		subspaceBytes = []byte{byte(subspace)}
+// 	case uint16:
+// 		subspaceBytes = make([]byte, 2)
+// 		binary.BigEndian.PutUint16(subspaceBytes, uint16(subspace))
+// 	case uint32:
+// 		subspaceBytes = make([]byte, 4)
+// 		binary.BigEndian.PutUint32(subspaceBytes, uint32(subspace))
+// 	case uint64:
+// 		subspaceBytes = make([]byte, 8)
+// 		binary.BigEndian.PutUint64(subspaceBytes, uint64(subspace))
+// 	default:
+// 		return nil, fmt.Errorf("unsupported subspace type: %T", subspace)
+// 	}
+// 	fmt.Println(subspaceBytes)
+// 	return subspaceBytes, nil
+// }
 
 /* Decodes the key from the kv store into the timestamp, subspaceId, and path */
 func DecodeKey(encodedKey []byte, pathParams types.PathParams[uint64]) (uint64, uint64, types.Path, error) {
@@ -87,26 +99,32 @@ func DecodeKey(encodedKey []byte, pathParams types.PathParams[uint64]) (uint64, 
 }
 
 /* decodeSubspaceId decodes the subspaceId from []byte */
-func decodeSubspaceId(subspaceBytes []byte) (uint64, error) {
-	var subspaceId uint64
-	length := len(subspaceBytes)
-
-	if length > 8 {
-		return 0, fmt.Errorf("subspaceId byte array too long: %d bytes", length)
-	}
-
-	// Create an 8-byte array and copy subspaceBytes into the rightmost part
-	paddedSubspaceBytes := make([]byte, 8)
-	copy(paddedSubspaceBytes[8-length:], subspaceBytes)
-
-	buf := bytes.NewReader(paddedSubspaceBytes)
-	err := binary.Read(buf, binary.BigEndian, &subspaceId)
-	if err != nil {
-		return 0, fmt.Errorf("failed to decode uint64: %v", err)
-	}
-
-	return subspaceId, nil
+func decodeSubspaceId(subspaceBytes []byte, decodedValue interface{}) error {
+	buf := bytes.NewBuffer(subspaceBytes)
+	decoder := gob.NewDecoder(buf)
+	return decoder.Decode(decodedValue)
 }
+
+// func decodeSubspaceId(subspaceBytes []byte) (uint64, error) {
+// 	var subspaceId uint64
+// 	length := len(subspaceBytes)
+
+// 	if length > 8 {
+// 		return 0, fmt.Errorf("subspaceId byte array too long: %d bytes", length)
+// 	}
+
+// 	// Create an 8-byte array and copy subspaceBytes into the rightmost part
+// 	paddedSubspaceBytes := make([]byte, 8)
+// 	copy(paddedSubspaceBytes[8-length:], subspaceBytes)
+
+// 	buf := bytes.NewReader(paddedSubspaceBytes)
+// 	err := binary.Read(buf, binary.BigEndian, &subspaceId)
+// 	if err != nil {
+// 		return 0, fmt.Errorf("failed to decode uint64: %v", err)
+// 	}
+
+// 	return subspaceId, nil
+// }
 
 // /* Decodes the key from the kv store into the timestamp, subspaceId, and path */
 // func DecodeKey[T constraints.Unsigned](encodedKey []byte, pathParams types.PathParams[T]) (uint64, T, types.Path, error) {
