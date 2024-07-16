@@ -122,7 +122,7 @@ func RangeIsIncluded[T types.OrderableGeneric](order types.TotalOrder[T], parent
 	}
 }
 
-func IsValidRange3d[SubspaceId types.OrderableGeneric](OrderSubspace types.TotalOrder[SubspaceId], r types.Range3d[SubspaceId]) bool {
+func IsValidRange3d(OrderSubspace types.TotalOrder[types.SubspaceId], r types.Range3d) bool {
 	if !IsValidRange(OrderTimestamp, r.TimeRange) {
 		return false
 	}
@@ -135,7 +135,7 @@ func IsValidRange3d[SubspaceId types.OrderableGeneric](OrderSubspace types.Total
 	return true
 }
 
-func IsIncluded3d[SubspaceId types.OrderableGeneric](orderSubspace types.TotalOrder[SubspaceId], r types.Range3d[SubspaceId], position types.Position3d[SubspaceId]) bool {
+func IsIncluded3d(orderSubspace types.TotalOrder[types.SubspaceId], r types.Range3d, position types.Position3d) bool {
 	if !IsIncludedRange(OrderTimestamp, r.TimeRange, position.Time) {
 		return false
 	}
@@ -148,21 +148,21 @@ func IsIncluded3d[SubspaceId types.OrderableGeneric](orderSubspace types.TotalOr
 	return true
 }
 
-func IntersectRange3d[SubspaceId types.OrderableGeneric](OrderSubspace types.TotalOrder[SubspaceId], a types.Range3d[SubspaceId], b types.Range3d[SubspaceId]) (bool, types.Range3d[SubspaceId]) {
+func IntersectRange3d(OrderSubspace types.TotalOrder[types.SubspaceId], a types.Range3d, b types.Range3d) (bool, types.Range3d) {
 	ok, intersectionTimestamp := IntersectRange(OrderTimestamp, a.TimeRange, b.TimeRange)
 	if !ok {
-		return false, types.Range3d[SubspaceId]{}
+		return false, types.Range3d{}
 	}
 	ok, intersectionSubspace := IntersectRange(OrderSubspace, a.SubspaceRange, b.SubspaceRange)
 	if !ok {
-		return false, types.Range3d[SubspaceId]{}
+		return false, types.Range3d{}
 	}
 	ok, intersectionPath := IntersectRange(OrderPath, a.PathRange, b.PathRange)
 	if !ok {
-		return false, types.Range3d[SubspaceId]{}
+		return false, types.Range3d{}
 	}
 
-	return true, types.Range3d[SubspaceId]{
+	return true, types.Range3d{
 		TimeRange:     intersectionTimestamp,
 		PathRange:     intersectionPath,
 		SubspaceRange: intersectionSubspace,
@@ -205,12 +205,12 @@ func AbsDiffuint64(a uint64, b uint64) uint64 {
 	}
 }
 
-func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsigned](
-	orderSubspace types.TotalOrder[SubspaceId],
-	encodeSubspaceId func(subspace SubspaceId) []byte,
+func EncodeRange3dRelative[T constraints.Unsigned](
+	orderSubspace types.TotalOrder[types.SubspaceId],
+	encodeSubspaceId func(subspace types.SubspaceId) []byte,
 	pathScheme types.PathParams[T],
-	r types.Range3d[SubspaceId],
-	ref types.Range3d[SubspaceId],
+	r types.Range3d,
+	ref types.Range3d,
 ) []byte {
 	start_to_start := AbsDiffuint64(r.TimeRange.Start, ref.TimeRange.Start)
 
@@ -370,12 +370,12 @@ func EncodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 	return EncodedArray
 }
 
-func DecodeStreamRange3dRelative[SubspaceId constraints.Ordered, K constraints.Unsigned](
-	DecodeStreamSubspaceId func(bytes *GrowingBytes) SubspaceId,
+func DecodeStreamRange3dRelative[K constraints.Unsigned](
+	DecodeStreamSubspaceId func(bytes *GrowingBytes) types.SubspaceId,
 	pathScheme types.PathParams[K],
 	bytes *GrowingBytes,
-	ref types.Range3d[SubspaceId],
-) (types.Range3d[SubspaceId], error) {
+	ref types.Range3d,
+) (types.Range3d, error) {
 	accumulatedBytes := bytes.NextAbsolute(2)
 	firstByte, secondByte := accumulatedBytes[0], accumulatedBytes[1]
 
@@ -392,7 +392,7 @@ func DecodeStreamRange3dRelative[SubspaceId constraints.Ordered, K constraints.U
 		isSubspaceStartEncoded = "invalid"
 	}
 	if isSubspaceStartEncoded == "invalid" {
-		return types.Range3d[SubspaceId]{}, fmt.Errorf("invalid subspace")
+		return types.Range3d{}, fmt.Errorf("invalid subspace")
 	}
 
 	var isSubspaceEndEncoded string
@@ -430,7 +430,7 @@ func DecodeStreamRange3dRelative[SubspaceId constraints.Ordered, K constraints.U
 
 	bytes.Prune(2)
 
-	var subspaceStart SubspaceId
+	var subspaceStart types.SubspaceId
 
 	switch isSubspaceStartEncoded {
 	case "ref_start":
@@ -439,13 +439,13 @@ func DecodeStreamRange3dRelative[SubspaceId constraints.Ordered, K constraints.U
 		if !ref.SubspaceRange.OpenEnd {
 			subspaceStart = ref.SubspaceRange.End
 		} else {
-			return types.Range3d[SubspaceId]{}, fmt.Errorf("start value cannot be open ended")
+			return types.Range3d{}, fmt.Errorf("start value cannot be open ended")
 		}
 	case "yes":
 		subspaceStart = DecodeStreamSubspaceId(bytes)
 	}
 
-	var subspaceEnd SubspaceId
+	var subspaceEnd types.SubspaceId
 	var subspaceOpenEnd bool
 
 	switch isSubspaceEndEncoded {
@@ -469,7 +469,7 @@ func DecodeStreamRange3dRelative[SubspaceId constraints.Ordered, K constraints.U
 		pathStart = DecodeRelPathStream(pathScheme, bytes, ref.PathRange.Start)
 	} else {
 		if ref.PathRange.OpenEnd {
-			return types.Range3d[SubspaceId]{}, fmt.Errorf("the start of a path range cannot be encoded relative to an open end")
+			return types.Range3d{}, fmt.Errorf("the start of a path range cannot be encoded relative to an open end")
 		}
 		pathStart = DecodeRelPathStream(pathScheme, bytes, ref.PathRange.End)
 	}
@@ -484,7 +484,7 @@ func DecodeStreamRange3dRelative[SubspaceId constraints.Ordered, K constraints.U
 		pathEnd = DecodeRelPathStream(pathScheme, bytes, ref.PathRange.Start)
 	} else {
 		if ref.PathRange.OpenEnd {
-			return types.Range3d[SubspaceId]{}, fmt.Errorf("the end of a path range cannot be encoded relative to an open end")
+			return types.Range3d{}, fmt.Errorf("the end of a path range cannot be encoded relative to an open end")
 		}
 		pathEnd = DecodeRelPathStream(pathScheme, bytes, ref.PathRange.End)
 	}
@@ -492,7 +492,7 @@ func DecodeStreamRange3dRelative[SubspaceId constraints.Ordered, K constraints.U
 
 	startTimeDiff, err := DecodeIntMax64(accumulatedBytes[0:int(compactWidthStartTimeDiff)])
 	if err != nil {
-		return types.Range3d[SubspaceId]{}, fmt.Errorf("could not decode startTime")
+		return types.Range3d{}, fmt.Errorf("could not decode startTime")
 	}
 
 	bytes.Prune(int(compactWidthStartTimeDiff))
@@ -507,7 +507,7 @@ func DecodeStreamRange3dRelative[SubspaceId constraints.Ordered, K constraints.U
 		}
 	} else {
 		if ref.TimeRange.OpenEnd {
-			return types.Range3d[SubspaceId]{}, fmt.Errorf("the start of a time cannot be open ended")
+			return types.Range3d{}, fmt.Errorf("the start of a time cannot be open ended")
 		}
 		if addStartTimeDiff {
 			timeStart = ref.TimeRange.End + uint64(startTimeDiff)
@@ -526,7 +526,7 @@ func DecodeStreamRange3dRelative[SubspaceId constraints.Ordered, K constraints.U
 
 		endTimeDiff, err := DecodeIntMax64(accumulatedBytes[0:int(compactWidthEndTimeDiff)])
 		if err != nil {
-			return types.Range3d[SubspaceId]{}, fmt.Errorf("could not decode end time difference")
+			return types.Range3d{}, fmt.Errorf("could not decode end time difference")
 		}
 
 		if encodeTimeEndRelToRefStart {
@@ -537,7 +537,7 @@ func DecodeStreamRange3dRelative[SubspaceId constraints.Ordered, K constraints.U
 			}
 		} else {
 			if ref.TimeRange.OpenEnd {
-				return types.Range3d[SubspaceId]{}, fmt.Errorf("end of timerange cannot be encoded relative to open end")
+				return types.Range3d{}, fmt.Errorf("end of timerange cannot be encoded relative to open end")
 			}
 			if addEndTimeDiff {
 				timeEnd = ref.TimeRange.End + uint64(endTimeDiff)
@@ -546,8 +546,8 @@ func DecodeStreamRange3dRelative[SubspaceId constraints.Ordered, K constraints.U
 			}
 		}
 	}
-	return types.Range3d[SubspaceId]{
-		SubspaceRange: types.Range[SubspaceId]{
+	return types.Range3d{
+		SubspaceRange: types.Range[types.SubspaceId]{
 			Start:   subspaceStart,
 			End:     subspaceEnd,
 			OpenEnd: subspaceOpenEnd,
@@ -567,13 +567,13 @@ func DecodeStreamRange3dRelative[SubspaceId constraints.Ordered, K constraints.U
 }
 
 /** Decode an {@linkcode Range3d} relative to another `Range3d` from {@linkcode GrowingBytes}. */
-func DecodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsigned](
-	decodeSubspaceId func(encoded []byte) SubspaceId,
-	encodedSubspacIdLength func(subspace SubspaceId) T,
+func DecodeRange3dRelative[T constraints.Unsigned](
+	decodeSubspaceId func(encoded []byte) types.SubspaceId,
+	encodedSubspacIdLength func(subspace types.SubspaceId) T,
 	pathScheme types.PathParams[T],
 	encoded []byte,
-	ref types.Range3d[SubspaceId],
-) (types.Range3d[SubspaceId], error) {
+	ref types.Range3d,
+) (types.Range3d, error) {
 	firstByte, secondByte := encoded[0], encoded[1]
 
 	//Decoding the first byte
@@ -593,7 +593,7 @@ func DecodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 	}
 
 	if isSubspaceStartEncoded == "invalid" {
-		return types.Range3d[SubspaceId]{}, fmt.Errorf("invalid 3d range relative to relative 3d range encoding")
+		return types.Range3d{}, fmt.Errorf("invalid 3d range relative to relative 3d range encoding")
 	}
 
 	//Bit 2,3
@@ -641,7 +641,7 @@ func DecodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 	var position T = 2
 
 	//Subspace Start
-	var SubspaceStart SubspaceId
+	var SubspaceStart types.SubspaceId
 
 	switch isSubspaceStartEncoded {
 	case "ref_start":
@@ -651,7 +651,7 @@ func DecodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 		if !ref.SubspaceRange.OpenEnd {
 			SubspaceStart = ref.SubspaceRange.End
 		} else {
-			return types.Range3d[SubspaceId]{}, fmt.Errorf("the start value of an encoded range cannot be that of the reference end (open)")
+			return types.Range3d{}, fmt.Errorf("the start value of an encoded range cannot be that of the reference end (open)")
 		}
 
 	case "yes":
@@ -660,7 +660,7 @@ func DecodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 	}
 
 	//Subspace End
-	var SubspaceEnd SubspaceId
+	var SubspaceEnd types.SubspaceId
 	var isSubspaceOpenEnd bool = false
 	switch isSubspaceEndEncoded {
 	case "open":
@@ -694,7 +694,7 @@ func DecodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 		))
 	} else {
 		if ref.PathRange.OpenEnd {
-			return types.Range3d[SubspaceId]{}, fmt.Errorf("the start of a path range cannot be encoded relative to an open end")
+			return types.Range3d{}, fmt.Errorf("the start of a path range cannot be encoded relative to an open end")
 		}
 
 		PathStart = DecodeRelativePath(
@@ -728,7 +728,7 @@ func DecodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 		))
 	} else {
 		if ref.PathRange.OpenEnd {
-			return types.Range3d[SubspaceId]{}, fmt.Errorf("the end of a path range cannot be encoded relative to an open end")
+			return types.Range3d{}, fmt.Errorf("the end of a path range cannot be encoded relative to an open end")
 		}
 
 		PathEnd = DecodeRelativePath(
@@ -748,7 +748,7 @@ func DecodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 
 	StartTimeDiff, err := DecodeIntMax64(encoded[position : position+compactWidthStartTimeDiff])
 	if err != nil {
-		return types.Range3d[SubspaceId]{}, fmt.Errorf("could not decode starttimediff")
+		return types.Range3d{}, fmt.Errorf("could not decode starttimediff")
 	}
 	position += compactWidthStartTimeDiff
 
@@ -762,7 +762,7 @@ func DecodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 		}
 	} else {
 		if ref.TimeRange.OpenEnd {
-			return types.Range3d[SubspaceId]{}, fmt.Errorf("the start of a time range cannot be encoded relative to an open end")
+			return types.Range3d{}, fmt.Errorf("the start of a time range cannot be encoded relative to an open end")
 		}
 		if addStartTimeDiff {
 			timeStart = ref.TimeRange.End + StartTimeDiff
@@ -780,7 +780,7 @@ func DecodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 	} else {
 		EndTimeDiff, err := DecodeIntMax64(encoded[position : position+compactWidthEndTimeDiff])
 		if err != nil {
-			return types.Range3d[SubspaceId]{}, fmt.Errorf("could not decode endtimediff")
+			return types.Range3d{}, fmt.Errorf("could not decode endtimediff")
 		}
 
 		if encodeTimeEndRelToRefStart {
@@ -791,7 +791,7 @@ func DecodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 			}
 		} else {
 			if ref.TimeRange.OpenEnd {
-				return types.Range3d[SubspaceId]{}, fmt.Errorf("the start of a time range cannot be encoded relative to an open end")
+				return types.Range3d{}, fmt.Errorf("the start of a time range cannot be encoded relative to an open end")
 			}
 			if addEndTimeDiff {
 				timeStart = ref.TimeRange.End + EndTimeDiff
@@ -801,8 +801,8 @@ func DecodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 		}
 	}
 
-	return types.Range3d[SubspaceId]{
-		SubspaceRange: types.Range[SubspaceId]{
+	return types.Range3d{
+		SubspaceRange: types.Range[types.SubspaceId]{
 			Start:   SubspaceStart,
 			End:     SubspaceEnd,
 			OpenEnd: isSubspaceOpenEnd,
@@ -820,9 +820,9 @@ func DecodeRange3dRelative[SubspaceId types.OrderableGeneric, T constraints.Unsi
 	}, nil
 }
 
-func DefaultRange3d[SubspaceId constraints.Ordered](defaultSubspaceId SubspaceId) types.Range3d[SubspaceId] {
-	return types.Range3d[SubspaceId]{
-		SubspaceRange: types.Range[SubspaceId]{
+func DefaultRange3d(defaultSubspaceId types.SubspaceId) types.Range3d {
+	return types.Range3d{
+		SubspaceRange: types.Range[types.SubspaceId]{
 			Start:   defaultSubspaceId,
 			OpenEnd: true,
 		},

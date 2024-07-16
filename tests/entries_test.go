@@ -4,19 +4,17 @@ import (
 	"encoding/binary"
 	"reflect"
 	"testing"
-    
+
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/PES-Innovation-Lab/willow-go/utils"
 )
 
 func TestEncodeDecodeEntry(t *testing.T) {
-	type NamespaceKey uint
-	type SubspaceKey uint
 	type PayloadDigest uint64
 	type ValueType uint64
 
 	// Sample encode and decode functions
-	encodeNamespace := func(namespace NamespaceKey) []byte {
+	encodeNamespace := func(namespace types.NamespaceId) []byte {
 		return utils.BigIntToBytes(uint64(namespace))
 	}
 	encodeSubspace := func(subspace SubspaceKey) []byte {
@@ -65,8 +63,8 @@ func TestEncodeDecodeEntry(t *testing.T) {
 
 	encodedEntry := utils.EncodeEntry(
 		struct {
-			EncodeNamespace     func(namespace NamespaceKey) []byte
-			EncodeSubspace      func(subspace SubspaceKey) []byte
+			EncodeNamespace     func(namespace types.NamespaceId) []byte
+			EncodeSubspace      func(subspace types.SubspaceId) []byte
 			EncodePayloadDigest func(digest PayloadDigest) []byte
 			PathParams          types.PathParams[ValueType]
 		}{

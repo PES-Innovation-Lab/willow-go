@@ -28,14 +28,18 @@ func TestSetGet(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	k := KvDriver[[]byte]{Db: db}
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer db.Close()
 
 	for _, cases := range tc {
-		err := Set(db, []byte(cases.key), []byte(cases.value))
+		err := k.Set([]byte(cases.key), []byte(cases.value))
 		if err != nil {
 			log.Fatal(err)
 		}
-		value, err := Get(db, []byte(cases.key))
+		value, err := k.Get([]byte(cases.key))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -106,6 +110,7 @@ func TestListAllClear(t *testing.T) {
 		},
 	}
 	db, err := pebble.Open("demo", &pebble.Options{})
+	k := &KvDriver[[]byte]{Db: db}
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -119,7 +124,7 @@ func TestListAllClear(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		values, err := ListAllValues(db)
+		values, err := k.ListAllValues()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -128,8 +133,8 @@ func TestListAllClear(t *testing.T) {
 				t.Fatalf("index: %d\nexpected: (%s, %s)\n got: (%s, %s)\n%v", index, ele.key, ele.value, string(values[index].Key), string(values[index].Value), values)
 			}
 		}
-		Clear(db)
-		values1, _ := ListAllValues(db)
+		k.Clear()
+		values1, _ := k.ListAllValues()
 
 		if len(values1) > 0 {
 			t.Fatalf("%v", values1)

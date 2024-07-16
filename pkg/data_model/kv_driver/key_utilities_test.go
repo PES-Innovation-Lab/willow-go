@@ -11,7 +11,7 @@ import (
 func TestEncodeKey(t *testing.T) {
 	type args struct {
 		timestamp  uint64
-		subspaceId uint64
+		subspaceId types.SubspaceId
 		pathParams types.PathParams[uint64]
 		path       types.Path
 	}
@@ -25,7 +25,7 @@ func TestEncodeKey(t *testing.T) {
 			name: "simple case",
 			args: args{
 				timestamp:  123456789,
-				subspaceId: 1,
+				subspaceId: []byte{1},
 				pathParams: types.PathParams[uint64]{MaxComponentCount: 10, MaxComponentLength: 10, MaxPathLength: 100},
 				path:       types.Path{{0x01, 0x02}, {0x03, 0x04}},
 			},
@@ -49,7 +49,7 @@ func TestEncodeKey(t *testing.T) {
 
 func Test_encodeSubspaceId(t *testing.T) {
 	type args struct {
-		subspace uint64
+		subspace types.SubspaceId
 	}
 	tests := []struct {
 		name    string
@@ -59,14 +59,14 @@ func Test_encodeSubspaceId(t *testing.T) {
 	}{
 		{
 			name:    "was a uint8 case",
-			args:    args{subspace: uint64(1)},
+			args:    args{subspace: []byte(1)},
 			want:    []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01},
 			wantErr: false,
 		},
 		{
 			name:    "big.Int case",
-			args:    args{subspace: 123456789},
-			want:    utils.BigIntToBytes(123456789),
+			args:    args{subspace: []byte{123456789},
+			want:    utils.BigIntToBytes([]byte{123456789}),
 			wantErr: false,
 		},
 	}

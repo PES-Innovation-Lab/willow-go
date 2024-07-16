@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"reflect"
 
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/PES-Innovation-Lab/willow-go/utils"
@@ -18,7 +19,7 @@ import (
 */
 
 /* Encodes the time, subspace and path from the kd tree into a key usable by the entries kv store */
-func EncodeKey[T constraints.Unsigned](timestamp uint64, subspaceId T, pathParams types.PathParams[T], path types.Path) ([]byte, error) {
+func EncodeKey[K constraints.Unsigned](timestamp uint64, subspaceId types.SubspaceId, pathParams types.PathParams[K], path types.Path) ([]byte, error) {
 	// Convert timestamp to byte slice
 	timestampBytes := utils.BigIntToBytes(timestamp)
 
@@ -39,21 +40,34 @@ func EncodeKey[T constraints.Unsigned](timestamp uint64, subspaceId T, pathParam
 }
 
 /* EncodeSubspaceId encodes the subspaceId into []byte */
-func encodeSubspaceId[T constraints.Unsigned](subspace T) ([]byte, error) {
+func encodeSubspaceId(subspace types.SubspaceId) ([]byte, error) {
 	var subspaceBytes []byte
 
 	switch any(subspace).(type) {
 	case uint8:
-		subspaceBytes = []byte{byte(subspace)}
+		subspaceBytes = []byte{byte(reflect.ValueOf(subspace).Uint())}
 	case uint16:
 		subspaceBytes = make([]byte, 2)
-		binary.BigEndian.PutUint16(subspaceBytes, uint16(subspace))
+		binary.BigEndian.PutUint16(subspaceBytes, uint16(reflect.ValueOf(subspace).Uint()))
 	case uint32:
 		subspaceBytes = make([]byte, 4)
-		binary.BigEndian.PutUint32(subspaceBytes, uint32(subspace))
+		binary.BigEndian.PutUint32(subspaceBytes, uint32(reflect.ValueOf(subspace).Uint()))
 	case uint64:
 		subspaceBytes = make([]byte, 8)
-		binary.BigEndian.PutUint64(subspaceBytes, uint64(subspace))
+		binary.BigEndian.PutUint64(subspaceBytes, uint64(reflect.ValueOf(subspace).Uint()))
+	case int8:
+		subspaceBytes = []byte{byte(reflect.ValueOf(subspace).Uint())}
+	case int16:
+		subspaceBytes = make([]byte, 2)
+		binary.BigEndian.PutUint16(subspaceBytes, uint16(reflect.ValueOf(subspace).Int()))
+	case int32:
+		subspaceBytes = make([]byte, 4)
+		binary.BigEndian.PutUint32(subspaceBytes, uint32(reflect.ValueOf(subspace).Int()))
+	case int64:
+		subspaceBytes = make([]byte, 8)
+		binary.BigEndian.PutUint64(subspaceBytes, uint64(reflect.ValueOf(subspace).Int()))
+	case string:
+		subspaceBytes = []byte(reflect.ValueOf(subspace).String())
 	default:
 		return nil, fmt.Errorf("unsupported subspace type: %T", subspace)
 	}
@@ -62,7 +76,7 @@ func encodeSubspaceId[T constraints.Unsigned](subspace T) ([]byte, error) {
 }
 
 /* Decodes the key from the kv store into the timestamp, subspaceId, and path */
-func DecodeKey(encodedKey []byte, pathParams types.PathParams[uint64]) (uint64, uint64, types.Path, error) {
+func DecodeKey[K constraints.Unsigned](encodedKey []byte, pathParams types.PathParams[K]) (uint64, uint64, types.Path, error) {
 	var timestamp uint64
 	var subspaceId uint64
 
