@@ -1,14 +1,11 @@
 package kv_driver
 
 import (
-	"bytes"
 	"encoding/binary"
-	"encoding/gob"
 	"fmt"
 
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/PES-Innovation-Lab/willow-go/utils"
-	"golang.org/x/exp/constraints"
 )
 
 /*
@@ -19,39 +16,73 @@ import (
 */
 
 /* Encodes the time, subspace and path from the kd tree into a key usable by the entries kv store */
-func EncodeKey[T constraints.Ordered, K constraints.Unsigned](timestamp uint64, subspaceId T, pathParams types.PathParams[K], path types.Path) ([]byte, error) {
+func EncodeKey(timestamp uint64, subspaceId []byte, pathParams types.PathParams[uint64], path types.Path) ([]byte, error) {
 	// Convert timestamp to byte slice
 	timestampBytes := utils.BigIntToBytes(timestamp)
 
 	// Convert path to byte slice
 	pathBytes := utils.EncodePath(pathParams, path)
 
-	// Convert subspaceId to byte slice
-	subspaceBytes, err := encodeSubspaceId(subspaceId)
-	if err != nil {
-		return nil, fmt.Errorf("here is the error you L bozo : %w", err)
-	}
-
 	// Combine all byte slices
 	encodedKey := append(timestampBytes, pathBytes...)
-	encodedKey = append(encodedKey, subspaceBytes...)
+	encodedKey = append(encodedKey, subspaceId...)
 
 	return encodedKey, nil
 }
 
-/* EncodeSubspaceId encodes the subspaceId into []byte */
-func encodeSubspaceId[T constraints.Ordered](subspace T) ([]byte, error) {
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-	err := enc.Encode(subspace)
+/* Decodes the key from the kv store into the timestamp, subspaceId, and path */
+func DecodeKey(encodedKey []byte, pathParams types.PathParams[uint64]) (uint64, []byte, types.Path, error) {
+	var timestamp uint64
+
+	// Read timestamp from the encoded key
+	timestampBytes := encodedKey[:8]
+	timestamp = binary.BigEndian.Uint64(timestampBytes)
+
+	// Decode path
+	pathEndIndex, decodedPath, err := utils.DecodePath(pathParams, encodedKey[8:])
 	if err != nil {
-		fmt.Println("Error encoding:", err)
-		return []byte{}, err
+		return 0, nil, nil, fmt.Errorf("failed to decode path: %w", err)
 	}
-	return buf.Bytes(), err
+
+	// Extract subspaceId
+	subspaceId := encodedKey[8+pathEndIndex:]
+
+	return timestamp, subspaceId, decodedPath, nil
 }
 
-// func encodeSubspaceId[T constraints.Unsigned](subspace T) ([]byte, error) {
+// func EncodeKey[T constraints.Ordered, K constraints.Unsigned](timestamp uint64, subspaceId T, pathParams types.PathParams[K], path types.Path) ([]byte, error) {
+// 	// Convert timestamp to byte slice
+// 	timestampBytes := utils.BigIntToBytes(timestamp)
+
+// 	// Convert path to byte slice
+// 	pathBytes := utils.EncodePath(pathParams, path)
+
+// 	// Convert subspaceId to byte slice
+// 	subspaceBytes, err := encodeSubspaceId(subspaceId)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("here is the error you L bozo : %w", err)
+// 	}
+
+// 	// Combine all byte slices
+// 	encodedKey := append(timestampBytes, pathBytes...)
+// 	encodedKey = append(encodedKey, subspaceBytes...)
+
+// 	return encodedKey, nil
+// }
+
+/* EncodeSubspaceId encodes the subspaceId into []byte */
+// func encodeSubspaceId[T constraints.Ordered](subspace T) ([]byte, error) {
+// 	var buf bytes.Buffer
+// 	enc := gob.NewEncoder(&buf)
+// 	err := enc.Encode(subspace)
+// 	if err != nil {
+// 		fmt.Println("Error encoding:", err)
+// 		return []byte{}, err
+// 	}
+// 	return buf.Bytes(), err
+// }
+
+// func encodeSubspaceId[T constraints.Ordered](subspace T) ([]byte, error) {
 // 	var subspaceBytes []byte
 
 // 	switch any(subspace).(type) {
@@ -73,37 +104,37 @@ func encodeSubspaceId[T constraints.Ordered](subspace T) ([]byte, error) {
 // 	return subspaceBytes, nil
 // }
 
-/* Decodes the key from the kv store into the timestamp, subspaceId, and path */
-func DecodeKey(encodedKey []byte, pathParams types.PathParams[uint64]) (uint64, uint64, types.Path, error) {
-	var timestamp uint64
-	var subspaceId uint64
+// /* Decodes the key from the kv store into the timestamp, subspaceId, and path */
+// func DecodeKey(encodedKey []byte, pathParams types.PathParams[uint64]) (uint64, uint64, types.Path, error) {
+// 	var timestamp uint64
+// 	var subspaceId uint64
 
-	// Read timestamp from the encoded key
-	timestampBytes := encodedKey[:8]
-	timestamp = binary.BigEndian.Uint64(timestampBytes)
+// 	// Read timestamp from the encoded key
+// 	timestampBytes := encodedKey[:8]
+// 	timestamp = binary.BigEndian.Uint64(timestampBytes)
 
-	// Decode path
-	pathEndIndex, decodedPath, err := utils.DecodePath(pathParams, encodedKey[8:])
-	if err != nil {
-		return 0, 0, nil, fmt.Errorf("failed to decode path: %w", err)
-	}
+// 	// Decode path
+// 	pathEndIndex, decodedPath, err := utils.DecodePath(pathParams, encodedKey[8:])
+// 	if err != nil {
+// 		return 0, 0, nil, fmt.Errorf("failed to decode path: %w", err)
+// 	}
 
-	// Decode subspaceId
-	subspaceBytes := encodedKey[8+pathEndIndex:]
-	subspaceId, err = decodeSubspaceId(subspaceBytes)
-	if err != nil {
-		return 0, 0, nil, fmt.Errorf("failed to decode subspaceId: %w", err)
-	}
+// 	// Decode subspaceId
+// 	subspaceBytes := encodedKey[8+pathEndIndex:]
+// 	subspaceId, err = decodeSubspaceId(subspaceBytes)
+// 	if err != nil {
+// 		return 0, 0, nil, fmt.Errorf("failed to decode subspaceId: %w", err)
+// 	}
 
-	return timestamp, subspaceId, decodedPath, nil
-}
+// 	return timestamp, subspaceId, decodedPath, nil
+// }
 
 /* decodeSubspaceId decodes the subspaceId from []byte */
-func decodeSubspaceId(subspaceBytes []byte, decodedValue interface{}) error {
-	buf := bytes.NewBuffer(subspaceBytes)
-	decoder := gob.NewDecoder(buf)
-	return decoder.Decode(decodedValue)
-}
+// func decodeSubspaceId(subspaceBytes []byte, decodedValue interface{}) {
+// 	buf := bytes.NewBuffer(subspaceBytes)
+// 	decoder := gob.NewDecoder(buf)
+// 	return decoder.Decode(decodedValue)
+// }
 
 // func decodeSubspaceId(subspaceBytes []byte) (uint64, error) {
 // 	var subspaceId uint64
