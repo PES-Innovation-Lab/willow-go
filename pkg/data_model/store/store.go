@@ -23,6 +23,7 @@ type Store[PreFingerPrint, FingerPrint constraints.Ordered, K constraints.Unsign
 	Storage            datamodeltypes.KDTreeStorage[PreFingerPrint, FingerPrint, T, K]
 	NameSpaceId        types.NamespaceId
 	IngestionMutexLock sync.Mutex
+	PrefixDriver       kv_driver.PrefixDriver[K]
 }
 
 func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken, T]) Set(
@@ -77,7 +78,7 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	// Get all the prefixes of the entry path to be inserted, iterate through them
 	// and check if a newer prefix exists, if it does, then this entry is not allowed to be inserted!
 	// this is wrt to prefix pruning and this case is not allowed.
-	for _, prefix := range kv_driver.DriverPrefixesOf(entry.Path, s.Schemes.PathParams, s.Storage.KDTree) {
+	for _, prefix := range s.PrefixDriver.DriverPrefixesOf(entry.Subspace_id, entry.Path, s.Schemes.PathParams, s.Storage.KDTree) {
 		if prefix.Timestamp >= entry.Timestamp {
 			s.IngestionMutexLock.Unlock()
 			log.Fatal("failed to ingest entry\nnewer prefix already exists in store")
@@ -246,7 +247,7 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	// converting the 3D position to a 3D RANGE OMG SO COOL. this is done inside prefixedby func
 	// prefixedby func basically does all the work, this is just a wrapper
 
-	prunableEntries := kv_driver.PrefixedBy(entry.Subspace, entry.Path, pathParams, kdt)
+	prunableEntries := s.PrefixDriver.PrefixedBy(entry.Subspace, entry.Path, pathParams, kdt)
 	final_prunables := make([]struct {
 		entry         types.Entry
 		authTokenHash types.PayloadDigest
