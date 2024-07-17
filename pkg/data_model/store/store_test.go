@@ -1,7 +1,45 @@
 package store
 
-import "testing"
+import (
+	"log"
+	"testing"
 
-func TestSet(t *testing.T){
+	entrydriver "github.com/PES-Innovation-Lab/willow-go/pkg/data_model/entry_driver"
+	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/kv_driver"
+	payloadDriver "github.com/PES-Innovation-Lab/willow-go/pkg/data_model/payload_kv_driver"
+	"github.com/cockroachdb/pebble"
+)
+
+func InitStorage() *Store[uint64, uint64, uint8, any, string] {
+
+	db, err := pebble.Open("demo", &pebble.Options{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	Kvstore := kv_driver.KvDriver{Db: db}
+	PayloadReferenceCounter := payloadDriver.PayloadReferenceCounter{
+		Store: Kvstore,
+	}
+
+	entryDriver := entrydriver.EntryDriver[uint64, uint64, uint64]{
+		PayloadReferenceCounter: PayloadReferenceCounter,
+		Opts: {
+		KVDriver          kv_driver.KvDriver
+		NamespaceScheme   datamodeltypes.NamespaceScheme
+		SubspaceScheme    datamodeltypes.SubspaceScheme
+		PayloadScheme     datamodeltypes.PayloadScheme
+		PathParams        types.PathParams[K]
+		FingerprintScheme datamodeltypes.FingerprintScheme[PreFingerPrint, FingerPrint]
+		}{
+			
+		},
+	}
+
+	return &Store[uint64, uint64, uint8, any, string]{
+		Schemes: StoreSchemes,
+	}
+}
+
+func TestSet(t *testing.T) {
 
 }

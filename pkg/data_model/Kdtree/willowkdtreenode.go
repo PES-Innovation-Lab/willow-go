@@ -82,6 +82,7 @@ func (lhs KDNodeKey) String() string {
 	return fmt.Sprintf("[%v,%v,%v]", lhs.Timestamp, lhs.Subspace, lhs.Path)
 }
 
+// Queries the given tree for the given 3-d Range
 func Query(kdt *(KDTree[KDNodeKey]), QueryRange types.Range3d) []KDNodeKey {
 	dim := 0
 	var res []KDNodeKey
@@ -89,6 +90,7 @@ func Query(kdt *(KDTree[KDNodeKey]), QueryRange types.Range3d) []KDNodeKey {
 	return res
 }
 
+// A helper function to recursively query for range
 func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res *[]KDNodeKey) {
 	if Node == nil {
 		return

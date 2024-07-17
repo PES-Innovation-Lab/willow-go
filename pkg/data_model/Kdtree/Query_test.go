@@ -2,19 +2,17 @@ package Kdtree
 
 import (
 	"fmt"
-	"reflect"
 	"testing"
 
 	"github.com/PES-Innovation-Lab/willow-go/types"
-	"github.com/PES-Innovation-Lab/willow-go/utils"
 )
 
 // Custom comparison function for KDNodeKey
-func compareKDNodeKey(a, b KDNodeKey) bool {
-	return a.Timestamp == b.Timestamp &&
-		utils.OrderSubspace(a.Subspace, b.Subspace) == 0 &&
-		reflect.DeepEqual(a.Path, b.Path)
-}
+// func compareKDNodeKey(a, b KDNodeKey) bool {
+// 	return a.Timestamp == b.Timestamp &&
+// 		utils.OrderSubspace(a.Subspace, b.Subspace) == 0 &&
+// 		reflect.DeepEqual(a.Path, b.Path)
+// }
 
 func TestQuery(t *testing.T) {
 	// Set up the KDTree with sample values

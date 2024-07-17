@@ -10,7 +10,7 @@ import (
 	"github.com/PES-Innovation-Lab/willow-go/utils"
 )
 
-
+// Test schemes defined!
 var NameSpaceEncoding utils.EncodingScheme[types.NamespaceId] = utils.EncodingScheme[types.NamespaceId]{
 	Encode: func(id types.NamespaceId) []byte {
 		return []byte(id)
@@ -51,10 +51,10 @@ var SubspaceEncoding utils.EncodingScheme[types.SubspaceId] = utils.EncodingSche
 }
 
 var TestSubspaceScheme datamodeltypes.SubspaceScheme = datamodeltypes.SubspaceScheme{
-	EncodingScheme: SubspaceEncoding,
+	EncodingScheme:      SubspaceEncoding,
 	SuccessorSubspaceFn: utils.SuccessorSubspaceId,
-	Order: utils.OrderSubspace,
-	MinimalSubspaceId: types.SubspaceId(""),
+	Order:               utils.OrderSubspace,
+	MinimalSubspaceId:   types.SubspaceId(""),
 }
 
 var TestAuthorisationScheme datamodeltypes.AuthorisationScheme[interface{}, string] = datamodeltypes.AuthorisationScheme[interface{}, string]{
@@ -82,9 +82,9 @@ var TestAuthorisationScheme datamodeltypes.AuthorisationScheme[interface{}, stri
 }
 
 var TestPathParams types.PathParams[uint8] = types.PathParams[uint8]{
-	MaxComponentCount: 50,
+	MaxComponentCount:  50,
 	MaxComponentLength: 50,
-	MaxPathLength: 50,
+	MaxPathLength:      50,
 }
 
 var TestPayloadScheme datamodeltypes.PayloadScheme = datamodeltypes.PayloadScheme{
@@ -107,11 +107,10 @@ var TestPayloadScheme datamodeltypes.PayloadScheme = datamodeltypes.PayloadSchem
 		return ch
 	},
 }
-
-var StoreSchemes datamodeltypes.StoreSchemes[uint64, uint64, uint8, interface{}, string] = datamodeltypes.StoreSchemes[uint64, uint64, uint8, interface{}, string]{
-	PathParams: TestPathParams,
-	NamespaceScheme: TestNameSpaceScheme,
+var StoreSchemes datamodeltypes.StoreSchemes[uint64, uint64, uint8, any, string] = datamodeltypes.StoreSchemes[uint64, uint64, uint8, interface{}, string]{
+	PathParams:          TestPathParams,
+	NamespaceScheme:     TestNameSpaceScheme,
 	AuthorisationScheme: TestAuthorisationScheme,
-	SubspaceScheme: TestSubspaceScheme,
-	PayloadScheme: TestPayloadScheme,
+	SubspaceScheme:      TestSubspaceScheme,
+	PayloadScheme:       TestPayloadScheme,
 }

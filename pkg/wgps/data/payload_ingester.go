@@ -24,15 +24,15 @@ type FIFO struct {
 type ActiveIngestion[NamespaceId, SubspaceId, PayloadDigest constraints.Ordered] struct {
 	Kind           string
 	Fifo           FIFO
-	ReceivedLength int64                                               // bigint in TypeScript is closest to int64 in Go
-	Entry          types.Entry[NamespaceId, SubspaceId, PayloadDigest] // Assuming Entry is defined elsewhere
+	ReceivedLength int64                      // bigint in TypeScript is closest to int64 in Go
+	Entry          types.Entry[PayloadDigest] // Assuming Entry is defined elsewhere
 }
 
 func (ActiveIngestion[NamespaceId, SubspaceId, PayloadDigest]) isIngestionState() {}
 
 type PendingIngestion[NamespaceId, SubspaceId, PayloadDigest constraints.Ordered] struct {
 	Kind  string
-	Entry types.Entry[NamespaceId, SubspaceId, PayloadDigest]
+	Entry types.Entry[PayloadDigest]
 }
 
 func (PendingIngestion[NamespaceId, SubspaceId, PayloadDigest]) isIngestionState() {}
@@ -49,7 +49,7 @@ type PayloadIngester[Prefingerprint, Fingerprint, AuthorisationToken, NamespaceI
 	Events                 []FIFOItem
 	ProcessReceivedPayload func(bytes []byte, entryLength uint64) []byte
 	// Add a pointer to Entry, which can be nil
-	EntryToRequestPayloadFor *types.Entry[NamespaceId, SubspaceId, PayloadDigest]
+	EntryToRequestPayloadFor *types.Entry[PayloadDigest]
 	getStore                 GetStoreFn[Prefingerprint, Fingerprint, AuthorisationToken, AuthorisationOpts, NamespaceId, SubspaceId, PayloadDigest]
 	processReceivedPayload   func(bytes []byte, entryLength uint64) []byte
 }
@@ -78,7 +78,7 @@ func (p *PayloadIngester[Prefingerprint, Fingerprint, AuthorisationToken, Namesp
 	p.Events = append(p.Events, bytes)
 }
 
-func (p *PayloadIngester[Prefingerprint, Fingerprint, AuthorisationToken, NamespaceId, SubspaceId, PayloadDigest, AuthorisationOpts]) Target(entry types.Entry[NamespaceId, SubspaceId, PayloadDigest], requestIfImmediatelyTerminated bool) {
+func (p *PayloadIngester[Prefingerprint, Fingerprint, AuthorisationToken, NamespaceId, SubspaceId, PayloadDigest, AuthorisationOpts]) Target(entry types.Entry[PayloadDigest], requestIfImmediatelyTerminated bool) {
 	p.Enqueue(entry)
 	if requestIfImmediatelyTerminated {
 		p.EntryToRequestPayloadFor = &entry
@@ -93,7 +93,7 @@ func (p *PayloadIngester[Prefingerprint, Fingerprint, AuthorisationToken, Namesp
 	p.EntryToRequestPayloadFor = nil
 }
 
-func (p *PayloadIngester[Prefingerprint, Fingerprint, AuthorisationToken, NamespaceId, SubspaceId, PayloadDigest, AuthorisationOpts]) Terminate() *types.Entry[NamespaceId, SubspaceId, PayloadDigest] {
+func (p *PayloadIngester[Prefingerprint, Fingerprint, AuthorisationToken, NamespaceId, SubspaceId, PayloadDigest, AuthorisationOpts]) Terminate() *types.Entry[PayloadDigest] {
 	//somehow push CANCELLATION into the queue
 	return p.EntryToRequestPayloadFor
 }
