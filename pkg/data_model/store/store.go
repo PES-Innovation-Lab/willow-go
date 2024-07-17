@@ -17,10 +17,10 @@ import (
 )
 
 type Store[PreFingerPrint, FingerPrint constraints.Ordered, K constraints.Unsigned, AuthorisationOpts any, AuthorisationToken string, T datamodeltypes.KvPart] struct {
-	Schemes            datamodeltypes.StoreSchemes[PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]
-	EntryDriver        entrydriver.EntryDriver[PayloadDigest, PreFingerPrint, FingerPrint, T, K]
-	PayloadDriver      datamodeltypes.PayloadDriver[PayloadDigest, K]
-	Storage            datamodeltypes.KDTreeStorage[PayloadDigest, PreFingerPrint, FingerPrint, T, K]
+	Schemes            datamodeltypes.StoreSchemes[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]
+	EntryDriver        entrydriver.EntryDriver[PreFingerPrint, FingerPrint, T, K]
+	PayloadDriver      datamodeltypes.PayloadDriver[K]
+	Storage            datamodeltypes.KDTreeStorage[PreFingerPrint, FingerPrint, T, K]
 	NameSpaceId        types.NamespaceId
 	IngestionMutexLock sync.Mutex
 }
@@ -56,10 +56,10 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	return prunedEntries
 }
 
-func (s *Store[PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken, T]) IngestEntry(
-	entry types.Entry[PayloadDigest],
+func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken, T]) IngestEntry(
+	entry types.Entry,
 	authorisation AuthorisationToken,
-) ([]types.Entry[PayloadDigest], error) {
+) ([]types.Entry, error) {
 	s.IngestionMutexLock.Lock() // Locked so that no parallel entry insertions can happen
 
 	// Check if the namespace id of the entry and the current namespace match!
@@ -135,7 +135,7 @@ func (s *Store[PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts,
 		Path      types.Path
 		Subspace  types.SubspaceId
 		Timestamp uint64
-		Hash      PayloadDigest
+		Hash      types.PayloadDigest
 		Length    uint64
 		AuthToken AuthorisationToken
 	}{
@@ -158,16 +158,16 @@ func (s *Store[PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts,
 	return prunedEntries, nil
 }
 
-func (s *Store[PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken, T]) InsertEntry(
+func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken, T]) InsertEntry(
 	entry struct {
 		Path      types.Path
 		Subspace  types.SubspaceId
 		Timestamp uint64
-		Hash      PayloadDigest
+		Hash      types.PayloadDigest
 		Length    uint64
 		AuthToken AuthorisationToken
 	},
-) ([]types.Entry[PayloadDigest], error) {
+) ([]types.Entry, error) {
 	// Encode the authorisation token and get the digest of the token
 	encodedToken := s.Schemes.AuthorisationScheme.TokenEncoding.Encode(entry.AuthToken)
 	tokenDigest, _, _ := s.PayloadDriver.Set(encodedToken)
@@ -176,10 +176,10 @@ func (s *Store[PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts,
 	err := s.Storage.Insert(struct {
 		Subspace      types.SubspaceId
 		Path          types.Path
-		PayloadDigest PayloadDigest
+		PayloadDigest types.PayloadDigest
 		Timestamp     uint64
 		PayloadLength uint64
-		AuthTokenHash PayloadDigest
+		AuthTokenHash types.PayloadDigest
 	}{
 		Subspace:      entry.Subspace,
 		Path:          entry.Path,
@@ -196,7 +196,7 @@ func (s *Store[PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts,
 	s.EntryDriver.PayloadReferenceCounter.Increment(entry.Hash)
 
 	// Variable to store pruned entries
-	var prunedEntries []types.Entry[PayloadDigest]
+	var prunedEntries []types.Entry
 
 	// Get a list of all the prunable entries so that they can be pruned
 	prunableEntries, err := s.PrunableEntries(s.Storage.KDTree, types.Position3d{
@@ -234,13 +234,13 @@ func (s *Store[PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts,
 	return prunedEntries, nil
 }
 
-func (s *Store[PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken, T]) PrunableEntries(
+func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken, T]) PrunableEntries(
 	kdt *Kdtree.KDTree[Kdtree.KDNodeKey],
 	entry types.Position3d,
 	pathParams types.PathParams[K],
 ) ([]struct {
-	entry         types.Entry[PayloadDigest]
-	authTokenHash PayloadDigest
+	entry         types.Entry
+	authTokenHash types.PayloadDigest
 }, error,
 ) {
 	// converting the 3D position to a 3D RANGE OMG SO COOL. this is done inside prefixedby func
@@ -248,8 +248,8 @@ func (s *Store[PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts,
 
 	prunableEntries := kv_driver.PrefixedBy(entry.Subspace, entry.Path, pathParams, kdt)
 	final_prunables := make([]struct {
-		entry         types.Entry[PayloadDigest]
-		authTokenHash PayloadDigest
+		entry         types.Entry
+		authTokenHash types.PayloadDigest
 	}, 0, len(prunableEntries))
 	for _, prune_candidate := range prunableEntries {
 		if prune_candidate.Timestamp < entry.Time {
@@ -262,18 +262,18 @@ func (s *Store[PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts,
 
 			// Get the authorisation token hash of the entry
 			final_prunables = append(final_prunables, struct {
-				entry         types.Entry[PayloadDigest]
-				authTokenHash PayloadDigest
+				entry         types.Entry
+				authTokenHash types.PayloadDigest
 			}{
-				entry: types.Entry[PayloadDigest]{
+				entry: types.Entry{
 					Subspace_id:    prune_candidate.Subspace,
 					Payload_digest: payloadDigestDecoded,
 					Timestamp:      prune_candidate.Timestamp,
 					Path:           prune_candidate.Path,
-					Payload_length: decodedValue.PayloadLentgh,
+					Payload_length: payloadLengthDecoded,
 					Namespace_id:   s.NameSpaceId,
 				},
-				authTokenHash: decodedValue.AuthTokenHash,
+				authTokenHash: authDigestDecoded,
 			})
 		}
 	}
@@ -289,7 +289,7 @@ const (
 	Success Status = 1
 )
 
-func (s *Store[PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken, T]) IngestPayload(
+func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken, T]) IngestPayload(
 	entryDetails types.Position3d,
 	payload []byte,
 	allowPartial bool,
@@ -317,7 +317,7 @@ func (s *Store[PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts,
 		return No_Op, fmt.Errorf("File already exists")
 	}
 
-	result, len, commit, reject, err := s.PayloadDriver.Receive(payload, offset, entry.Payload_length, entry.Payload_digest)
+	result, len, commit, reject, err := s.PayloadDriver.Receive(payload, offset, payloadLength, payloadDigest)
 	if err != nil {
 		log.Fatal("Unable to receive")
 	}

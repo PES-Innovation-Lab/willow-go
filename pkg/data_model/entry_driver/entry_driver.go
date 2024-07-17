@@ -8,8 +8,8 @@ import (
 )
 
 type EntryDriver[PreFingerPrint, FingerPrint constraints.Ordered, T datamodeltypes.KvPart, K constraints.Unsigned] struct {
-	MakeStorage             func(namespace types.NamespaceId) datamodeltypes.KDTreeStorage[types.PayloadDigest, PreFingerPrint, FingerPrint, T, K]
-	PayloadReferenceCounter datamodeltypes.PayloadReferenceCounter[types.PayloadDigest]
+	MakeStorage             func(namespace types.NamespaceId) datamodeltypes.KDTreeStorage[PreFingerPrint, FingerPrint, T, K]
+	PayloadReferenceCounter datamodeltypes.PayloadReferenceCounter
 	GetPayloadLength        func(digest types.PayloadDigest) uint64
 	Opts                    struct {
 		KVDriver          kv_driver.KvDriver[T]
