@@ -9,7 +9,7 @@ import (
 	"github.com/PES-Innovation-Lab/willow-go/utils"
 )
 
-var MockPayloadScheme datamodeltypes.PayloadScheme[uint64] = datamodeltypes.PayloadScheme[uint64]{
+var MockPayloadScheme datamodeltypes.PayloadScheme = datamodeltypes.PayloadScheme{
 	EncodingScheme: utils.EncodingScheme[types.PayloadDigest]{
 		Encode: func(value types.PayloadDigest) []byte {
 			decoded, err := hex.DecodeString(string(value))

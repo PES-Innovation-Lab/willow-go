@@ -13,10 +13,10 @@ type EntryDriver[PreFingerPrint, FingerPrint constraints.Ordered, T datamodeltyp
 	GetPayloadLength        func(digest types.PayloadDigest) uint64
 	Opts                    struct {
 		KVDriver          kv_driver.KvDriver[T]
-		NamespaceScheme   datamodeltypes.NamespaceScheme[K]
-		SubspaceScheme    datamodeltypes.SubspaceScheme[K]
-		PayloadScheme     datamodeltypes.PayloadScheme[K]
+		NamespaceScheme   datamodeltypes.NamespaceScheme
+		SubspaceScheme    datamodeltypes.SubspaceScheme
+		PayloadScheme     datamodeltypes.PayloadScheme
 		PathParams        types.PathParams[K]
-		FingerprintScheme datamodeltypes.FingerprintScheme[PreFingerPrint, FingerPrint, K]
+		FingerprintScheme datamodeltypes.FingerprintScheme[PreFingerPrint, FingerPrint]
 	}
 }

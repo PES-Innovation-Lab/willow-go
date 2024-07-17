@@ -17,10 +17,10 @@ type KDTreeStorage[PreFingerPrint, FingerPrint constraints.Ordered, T KvPart, K 
 
 	Opts struct {
 		Namespace         types.NamespaceId
-		SubspaceScheme    SubspaceScheme[K]
-		PayloadScheme     PayloadScheme[K]
+		SubspaceScheme    SubspaceScheme
+		PayloadScheme     PayloadScheme
 		PathParams        types.PathParams[K]
-		FingerprintScheme FingerprintScheme[PreFingerPrint, FingerPrint, K]
+		FingerprintScheme FingerprintScheme[PreFingerPrint, FingerPrint]
 		GetPayloadLength  func(digest types.PayloadDigest) uint64
 	}
 

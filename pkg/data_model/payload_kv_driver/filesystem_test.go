@@ -16,7 +16,7 @@ import (
 )
 
 // Mock PayloadScheme for testing
-var mockPayloadScheme datamodeltypes.PayloadScheme[uint64] = datamodeltypes.PayloadScheme[uint64]{
+var mockPayloadScheme datamodeltypes.PayloadScheme = datamodeltypes.PayloadScheme{
 	EncodingScheme: utils.EncodingScheme[types.PayloadDigest]{
 		Encode: func(value types.PayloadDigest) []byte {
 			decoded, err := hex.DecodeString(string(value))
@@ -74,7 +74,7 @@ func TestGetPayload(t *testing.T) {
 		{"MP4 file", "sample.mp4"},
 	}
 
-	pd := PayloadDriver[uint64]{
+	pd := PayloadDriver{
 		path: testDataPath,
 	}
 
@@ -142,7 +142,7 @@ func TestSetAndGetPayload(t *testing.T) {
 	}()
 
 	// Initialize PayloadDriver
-	pd := PayloadDriver[uint64]{
+	pd := PayloadDriver{
 		path:          tempDir,
 		PayloadScheme: mockPayloadScheme,
 	}
@@ -205,7 +205,7 @@ func TestSetAndGetPayload(t *testing.T) {
 }
 
 func TestGet(t *testing.T) {
-	pd := PayloadDriver[uint64]{
+	pd := PayloadDriver{
 		path:          "C:\\Users\\samar\\AppData\\Local\\Temp\\payload_test415599433",
 		PayloadScheme: mockPayloadScheme,
 	}
@@ -253,7 +253,7 @@ func TestErase(t *testing.T) {
 	tempDir := createTempDir(t)
 	defer os.RemoveAll(tempDir)
 
-	pd := PayloadDriver[uint64]{
+	pd := PayloadDriver{
 		path:          tempDir,
 		PayloadScheme: mockPayloadScheme,
 	}
@@ -280,7 +280,7 @@ func TestSet(t *testing.T) {
 	// tempDir := createTempDir(t)
 	// defer os.RemoveAll(tempDir)
 
-	pd := PayloadDriver[uint64]{
+	pd := PayloadDriver{
 		path:          "C:\\Users\\samar\\AppData\\Local\\Temp\\payload_test415599433",
 		PayloadScheme: mockPayloadScheme,
 	}
@@ -303,7 +303,7 @@ func TestSet(t *testing.T) {
 	}
 }
 func TestSetVido(t *testing.T) {
-	pd := PayloadDriver[uint64]{
+	pd := PayloadDriver{
 		path:          "C:\\Users\\samar\\AppData\\Local\\Temp\\payload_test415599433",
 		PayloadScheme: mockPayloadScheme,
 	}
@@ -336,7 +336,7 @@ func TestEnsureDir(t *testing.T) {
 	tempDir := createTempDir(t)
 	// defer os.RemoveAll(tempDir)
 
-	pd := PayloadDriver[uint64]{
+	pd := PayloadDriver{
 		path: tempDir,
 	}
 
@@ -366,7 +366,7 @@ func TestReceive(t *testing.T) {
 	// }()
 
 	// Initialize PayloadDriver
-	pd := PayloadDriver[uint64]{
+	pd := PayloadDriver{
 		path:          tempDir,
 		PayloadScheme: mockPayloadScheme,
 	}

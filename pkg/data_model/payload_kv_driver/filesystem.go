@@ -10,20 +10,19 @@ import (
 
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
 	"github.com/PES-Innovation-Lab/willow-go/types"
-	"golang.org/x/exp/constraints"
 )
 
-type PayloadDriver[T constraints.Unsigned] struct {
+type PayloadDriver struct {
 	path          string
-	PayloadScheme datamodeltypes.PayloadScheme[T]
+	PayloadScheme datamodeltypes.PayloadScheme
 }
 
-func (pd *PayloadDriver[T]) GetKey(hash types.PayloadDigest) string {
-	encoded := pd.PayloadScheme.Encode(hash)
+func (pd *PayloadDriver) GetKey(hash types.PayloadDigest) string {
+	encoded := pd.PayloadScheme.EncodingScheme.Encode(hash)
 	return base32.StdEncoding.EncodeToString(encoded)
 }
 
-func (pd *PayloadDriver[T]) GetPayload(filepath string) datamodeltypes.Payload {
+func (pd *PayloadDriver) GetPayload(filepath string) datamodeltypes.Payload {
 	return datamodeltypes.Payload{
 		Bytes: func() []byte {
 			bytes, _ := os.ReadFile(filepath)
@@ -64,7 +63,7 @@ func (pd *PayloadDriver[T]) GetPayload(filepath string) datamodeltypes.Payload {
 
 }
 
-func (pd *PayloadDriver[T]) Get(PayloadHash types.PayloadDigest) (datamodeltypes.Payload, error) {
+func (pd *PayloadDriver) Get(PayloadHash types.PayloadDigest) (datamodeltypes.Payload, error) {
 	filepath := filepath.Join(pd.path, pd.GetKey(PayloadHash))
 	_, err := os.Lstat(filepath)
 	if err != nil {
@@ -74,7 +73,7 @@ func (pd *PayloadDriver[T]) Get(PayloadHash types.PayloadDigest) (datamodeltypes
 	return pd.GetPayload(filepath), nil
 }
 
-func (pd *PayloadDriver[T]) Erase(PayloadHash types.PayloadDigest) (bool, error) {
+func (pd *PayloadDriver) Erase(PayloadHash types.PayloadDigest) (bool, error) {
 	filepath := filepath.Join(pd.path, pd.GetKey(PayloadHash))
 	err := os.Remove(filepath)
 	if err != nil {
@@ -84,7 +83,7 @@ func (pd *PayloadDriver[T]) Erase(PayloadHash types.PayloadDigest) (bool, error)
 	return true, nil
 }
 
-func (pd *PayloadDriver[T]) Set(payload []byte) (types.PayloadDigest, datamodeltypes.Payload, uint64) {
+func (pd *PayloadDriver) Set(payload []byte) (types.PayloadDigest, datamodeltypes.Payload, uint64) {
 	digest := <-pd.PayloadScheme.FromBytes(payload)
 	pd.EnsureDir()
 	filepath := filepath.Join(pd.path, pd.GetKey(digest))
@@ -93,7 +92,7 @@ func (pd *PayloadDriver[T]) Set(payload []byte) (types.PayloadDigest, datamodelt
 	return digest, retPayload, uint64(len(payload))
 }
 
-func (pd *PayloadDriver[T]) EnsureDir(args ...string) (string, error) {
+func (pd *PayloadDriver) EnsureDir(args ...string) (string, error) {
 	path := filepath.Join(append([]string{pd.path}, args...)...)
 	err := os.MkdirAll(path, 0777)
 	fmt.Println(err, path)
@@ -133,7 +132,7 @@ func copyFile(from, to string) error {
 	return err
 }
 
-func (pd *PayloadDriver[T]) Receive(payload []byte, offset int64, expectedLength uint64, expectedDigest types.PayloadDigest) (types.PayloadDigest, uint64, datamodeltypes.CommitType, datamodeltypes.RejectType, error) {
+func (pd *PayloadDriver) Receive(payload []byte, offset int64, expectedLength uint64, expectedDigest types.PayloadDigest) (types.PayloadDigest, uint64, datamodeltypes.CommitType, datamodeltypes.RejectType, error) {
 
 	_, err := pd.EnsureDir("staging")
 	if err != nil {
@@ -238,8 +237,8 @@ func (pd *PayloadDriver[T]) Receive(payload []byte, offset int64, expectedLength
 	return digest, uint64(receivedLen), commit, reject, nil
 }
 
-func MakePayloadDriver[PayloadDigest constraints.Ordered, T constraints.Unsigned](pathParam string, payloadSchemeParam datamodeltypes.PayloadScheme[T]) PayloadDriver[T] {
-	return PayloadDriver[T]{
+func MakePayloadDriver(pathParam string, payloadSchemeParam datamodeltypes.PayloadScheme) PayloadDriver {
+	return PayloadDriver{
 		path:          pathParam,
 		PayloadScheme: payloadSchemeParam,
 	}
