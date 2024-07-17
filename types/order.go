@@ -18,6 +18,6 @@ const (
 type TotalOrder[T OrderableGeneric] func(a, b T) Rel
 
 // SuccessorFn returns the succeeding value for a given value of a set.
-type SuccessorFn[T OrderableGeneric] func(val T) (T, bool)
+type SuccessorFn[T OrderableGeneric] func(val T) T
 
 type EqualityFn[T OrderableGeneric] func(a, b T) bool

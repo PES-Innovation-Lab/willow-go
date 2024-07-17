@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"math"
+	"reflect"
 	"strconv"
 
 	"github.com/PES-Innovation-Lab/willow-go/types"
@@ -18,9 +19,9 @@ type Options struct {
 	MaxPathComponentLength int
 }
 
-type EntryOpts[PayloadDigest constraints.Ordered, K constraints.Unsigned] struct {
+type EntryOpts[K constraints.Unsigned] struct {
 	DecodeStreamSubspace      func(bytes *GrowingBytes) types.SubspaceId
-	DecodeStreamPayloadDigest func(bytes *GrowingBytes) PayloadDigest
+	DecodeStreamPayloadDigest func(bytes *GrowingBytes) types.PayloadDigest
 	pathScheme                types.PathParams[K]
 }
 
@@ -51,9 +52,9 @@ type DecodeStreamAreaInAreaOptions[Params constraints.Unsigned] struct {
 	DecodeStreamSubspace EncodingScheme[types.SubspaceId]
 }
 
-type EncodeEntryInNamespaceAreaOptions[Params constraints.Unsigned, PayloadDigest any] struct {
+type EncodeEntryInNamespaceAreaOptions[Params constraints.Unsigned] struct {
 	EncodeSubspaceId    func(subspace types.SubspaceId) []byte
-	EncodePayloadDigest func(digest PayloadDigest) []byte
+	EncodePayloadDigest func(digest types.PayloadDigest) []byte
 	PathScheme          types.PathParams[Params]
 }
 
@@ -151,8 +152,8 @@ func IntersectArea(orderSubspace types.TotalOrder[types.SubspaceId], a, b types.
 func AreaTo3dRange[Params constraints.Unsigned](opts Options, area types.Area, pathParams types.PathParams[Params]) types.Range3d {
 	var subspace_range types.Range[types.SubspaceId]
 	if !area.Any_subspace {
-		sucSubspace, foundSuccessor := opts.SuccessorSubspace(area.Subspace_id)
-		if foundSuccessor {
+		sucSubspace := opts.SuccessorSubspace(area.Subspace_id)
+		if !reflect.DeepEqual(sucSubspace, []byte{}) {
 			subspace_range = types.Range[types.SubspaceId]{
 				Start:   area.Subspace_id,
 				End:     sucSubspace, // NEED TO CHANGE THE SUCCESSOR DEFINITION IN ORDER
@@ -529,9 +530,9 @@ func DecodeStreamAreaInArea[Params constraints.Unsigned](
 
 /** Encode an {@linkcode Entry} relative to an {@linkcode Area}. */
 
-func EncodeEntryInNamespaceArea[PayloadDigest constraints.Ordered, Params constraints.Unsigned](
-	opts EncodeEntryInNamespaceAreaOptions[Params, PayloadDigest],
-	entry types.Entry[PayloadDigest],
+func EncodeEntryInNamespaceArea[Params constraints.Unsigned](
+	opts EncodeEntryInNamespaceAreaOptions[Params],
+	entry types.Entry,
 	outer types.Area,
 ) []byte {
 	var timeDiff uint64
@@ -599,7 +600,7 @@ func EncodeEntryInNamespaceArea[PayloadDigest constraints.Ordered, Params constr
 }
 
 /** Decode an Entry relative to a namespace area from {@linkcode GrowingBytes}. */
-func DecodeStreamEntryInNamespaceArea[K constraints.Ordered, T constraints.Unsigned](opts EntryOpts[K, T], bytes *GrowingBytes, outer types.Area, nameSpaceId types.NamespaceId) (types.Entry[K], error) {
+func DecodeStreamEntryInNamespaceArea[T constraints.Unsigned](opts EntryOpts[T], bytes *GrowingBytes, outer types.Area, nameSpaceId types.NamespaceId) (types.Entry, error) {
 	accumulatedBytes := bytes.NextAbsolute(1)
 	header := accumulatedBytes[0]
 
@@ -616,7 +617,7 @@ func DecodeStreamEntryInNamespaceArea[K constraints.Ordered, T constraints.Unsig
 	} else if !outer.Any_subspace {
 		subspaceId = outer.Subspace_id
 	} else {
-		return types.Entry[K]{}, fmt.Errorf("entry was encoded relative to area")
+		return types.Entry{}, fmt.Errorf("entry was encoded relative to area")
 	}
 
 	path := DecodeRelPathStream(opts.pathScheme, bytes, outer.Path)
@@ -624,12 +625,12 @@ func DecodeStreamEntryInNamespaceArea[K constraints.Ordered, T constraints.Unsig
 
 	timeDiff, err := DecodeIntMax64(accumulatedBytes[0:int(compactWidthTimeDiff)])
 	if err != nil {
-		return types.Entry[K]{}, err
+		return types.Entry{}, err
 	}
 	accumulatedBytes = bytes.NextAbsolute(int(compactWidthTimeDiff))
 	payloadLength, err := DecodeIntMax64(accumulatedBytes[int(compactWidthTimeDiff) : int(compactWidthTimeDiff)+int(compactWidthPayloadLength)])
 	if err != nil {
-		return types.Entry[K]{}, err
+		return types.Entry{}, err
 	}
 	bytes.Prune(int(compactWidthTimeDiff) + int(compactWidthPayloadLength))
 	payloadDigest := opts.DecodeStreamPayloadDigest(bytes)
@@ -641,9 +642,9 @@ func DecodeStreamEntryInNamespaceArea[K constraints.Ordered, T constraints.Unsig
 	} else if !outer.Times.OpenEnd {
 		timeStamp = outer.Times.End - timeDiff
 	} else {
-		return types.Entry[K]{}, fmt.Errorf("entry was encoded relative to area with concrete time end")
+		return types.Entry{}, fmt.Errorf("entry was encoded relative to area with concrete time end")
 	}
-	return types.Entry[K]{
+	return types.Entry{
 		Namespace_id:   nameSpaceId,
 		Subspace_id:    subspaceId,
 		Path:           path,

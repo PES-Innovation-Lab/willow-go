@@ -107,7 +107,7 @@ func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res
 		if utils.OrderTimestamp(Timestamp, QueryRange.TimeRange.Start) >= 0 {
 			QueryHelper(Node.Left, QueryRange, dim+1, res)
 		}
-		if QueryRange.TimeRange.OpenEnd || utils.OrderTimestamp(Timestamp, QueryRange.TimeRange.End) <= 0 {
+		if QueryRange.TimeRange.OpenEnd || utils.OrderTimestamp(Timestamp, QueryRange.TimeRange.End) < 0 {
 			if inRange {
 				*res = append(*res, Node.Value)
 			}
@@ -117,7 +117,7 @@ func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res
 		if utils.OrderSubspace(Subspace, QueryRange.SubspaceRange.Start) >= 0 {
 			QueryHelper(Node.Left, QueryRange, dim+1, res)
 		}
-		if QueryRange.SubspaceRange.OpenEnd || utils.OrderSubspace(Subspace, QueryRange.SubspaceRange.End) <= 0 {
+		if QueryRange.SubspaceRange.OpenEnd || utils.OrderSubspace(Subspace, QueryRange.SubspaceRange.End) < 0 {
 			if inRange {
 				*res = append(*res, Node.Value)
 			}
@@ -127,7 +127,7 @@ func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res
 		if utils.OrderPath(Path, QueryRange.PathRange.Start) >= 0 {
 			QueryHelper(Node.Left, QueryRange, dim+1, res)
 		}
-		if QueryRange.PathRange.OpenEnd || utils.OrderPath(Path, QueryRange.PathRange.End) <= 0 {
+		if QueryRange.PathRange.OpenEnd || utils.OrderPath(Path, QueryRange.PathRange.End) < 0 {
 			if inRange {
 				*res = append(*res, Node.Value)
 			}
