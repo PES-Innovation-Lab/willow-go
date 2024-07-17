@@ -53,7 +53,7 @@ func DecodeKey(encodedKey []byte, pathParams types.PathParams[uint64]) (uint64, 
 }
 
 // payloaddigest payloadlength and authdigest
-func EncodeValues(PayloadLength uint64, PayloadDigest string, AuthDigest string) []byte {
+func EncodeValues(PayloadLength uint64, PayloadDigest types.PayloadDigest, AuthDigest types.PayloadDigest) []byte {
 	var buffer bytes.Buffer
 
 	// Encode PayloadLength
@@ -61,18 +61,18 @@ func EncodeValues(PayloadLength uint64, PayloadDigest string, AuthDigest string)
 	buffer.Write(encodedLength)
 
 	// Encode PayloadDigest
-	encodedPayloadDigest := stringToBytes(PayloadDigest)
+	encodedPayloadDigest := stringToBytes(string(PayloadDigest))
 	buffer.Write(encodedPayloadDigest)
 
 	// Encode AuthDigest
-	encodedAuthDigest := stringToBytes(AuthDigest)
+	encodedAuthDigest := stringToBytes(string(AuthDigest))
 	buffer.Write(encodedAuthDigest)
 
 	return buffer.Bytes()
 }
 
 // Takes a byte array and returns payloadLength, payloadDigest, authDigest
-func DecodeValues(encoded []byte) (uint64, string, string) {
+func DecodeValues(encoded []byte) (uint64, types.PayloadDigest, types.PayloadDigest) {
 	// Decode PayloadLength
 	payloadLength := binary.BigEndian.Uint64(encoded[:8])
 	remaining := encoded[8:]
@@ -83,7 +83,7 @@ func DecodeValues(encoded []byte) (uint64, string, string) {
 	// Decode AuthDigest
 	authDigest, _ := bytesToString(remaining)
 
-	return payloadLength, payloadDigest, authDigest
+	return payloadLength, types.PayloadDigest(payloadDigest), types.PayloadDigest(authDigest)
 }
 
 // stringToBytes converts a string to a byte slice with a length prefix.

@@ -9,7 +9,7 @@ import (
 )
 
 type PaiFinderOpts[ReadCapability, PsiGroup, PsiScalar, NamespaceId, SubspaceId constraints.Ordered, K constraints.Unsigned] struct {
-	NamespaceScheme           datamodeltypes.NamespaceScheme[K]
+	NamespaceScheme           datamodeltypes.NamespaceScheme[NamespaceId, K]
 	PaiScheme                 wgpstypes.PaiScheme[ReadCapability, PsiGroup, PsiScalar, NamespaceId, SubspaceId, K]
 	IntersectionHandlesOurs   wgps.HandleStore[wgpstypes.Intersection[PsiGroup]]
 	IntersectionHandlesTheirs wgps.HandleStore[wgpstypes.Intersection[PsiGroup]]
