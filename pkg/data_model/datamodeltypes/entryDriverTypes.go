@@ -118,10 +118,12 @@ func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Query(QueryRange types.R
 }
 
 func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Remove(entry types.Position3d) bool {
+
 	NodeToDelete := Kdtree.KDNodeKey{
 		Subspace:  entry.Subspace,
 		Timestamp: entry.Time,
 		Path:      entry.Path,
 	}
+
 	return k.KDTree.Delete(NodeToDelete)
 }

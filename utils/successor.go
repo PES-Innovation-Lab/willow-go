@@ -114,17 +114,10 @@ func SuccessorBytesFixedWidth(bytes []byte) []byte {
 }
 
 func SuccessorSubspaceId(subspace types.SubspaceId) types.SubspaceId {
-	successor := make(types.SubspaceId, len(subspace))
+	// Copy the original subspace and append a single 0x00 byte
+	successor := make(types.SubspaceId, len(subspace)+1)
 	copy(successor, subspace)
+	successor[len(subspace)] = 0x00
 
-	for i := len(successor) - 1; i >= 0; i-- {
-		if successor[i] < 0xFF {
-			successor[i]++
-			return successor
-		} else {
-			successor[i] = 0
-		}
-	}
-
-	return append([]byte{0x00}, successor...)
+	return successor
 }

@@ -28,7 +28,7 @@ func (lhs KDNodeKey) Order(rhs KDNodeKey, dim int) Relation {
 
 		case 1:
 			// Compare subspace IDs
-			switch utils.OrderSubspace(lhs.Subspace, rhs.Subspace) {
+			switch utils.OrderBytes(lhs.Subspace, rhs.Subspace) {
 			case -1:
 				return Lesser
 			case 1:
@@ -86,7 +86,7 @@ func (lhs KDNodeKey) String() string {
 func Query(kdt *(KDTree[KDNodeKey]), QueryRange types.Range3d) []KDNodeKey {
 	dim := 0
 	var res []KDNodeKey
-	if(kdt==nil){
+	if kdt == nil {
 		return res
 	}
 	QueryHelper(kdt.Root, QueryRange, dim, &res)
@@ -106,7 +106,7 @@ func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res
 		Time:     Timestamp,
 	}
 
-	inRange := utils.IsIncluded3d(utils.OrderSubspace, QueryRange, Position)
+	inRange := utils.IsIncluded3d(utils.OrderSubspace, QueryRange, Position) //PLEASE CHANGE THE ordersubspace Call i have jugaad for now ~Samarth
 
 	switch dim % 3 {
 	case 0:
@@ -120,10 +120,10 @@ func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res
 			QueryHelper(Node.Right, QueryRange, dim+1, res)
 		}
 	case 1:
-		if utils.OrderSubspace(Subspace, QueryRange.SubspaceRange.Start) >= 0 {
+		if utils.OrderBytes(Subspace, QueryRange.SubspaceRange.Start) >= 0 {
 			QueryHelper(Node.Left, QueryRange, dim+1, res)
 		}
-		if QueryRange.SubspaceRange.OpenEnd || utils.OrderSubspace(Subspace, QueryRange.SubspaceRange.End) < 0 {
+		if QueryRange.SubspaceRange.OpenEnd || utils.OrderBytes(Subspace, QueryRange.SubspaceRange.End) < 0 {
 			if inRange {
 				*res = append(*res, Node.Value)
 			}

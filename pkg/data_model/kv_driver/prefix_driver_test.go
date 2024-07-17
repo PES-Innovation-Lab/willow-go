@@ -59,9 +59,8 @@ func TestPrefixedBy(t *testing.T) {
 	pd := PrefixDriver[uint64]{}
 	// Set up the KDTree with sample values
 	kdtree := Kdtree.NewKDTreeWithValues[Kdtree.KDNodeKey](3, []Kdtree.KDNodeKey{
-		{Timestamp: 500, Subspace: []byte{0}, Path: types.Path{{105,110,116,114,111},{116,111},{109,97,110,97,115}}},
-		{Timestamp: 700, Subspace: []byte{0}, Path: types.Path{{105,110,116,114,111},{116,111}}},
-		{Timestamp: 600, Subspace: []byte{0}, Path: types.Path{{105,110,116,114,111},{116,111},{109,97,110,97,116}}},
+		{Timestamp: 1721226604897504, Subspace: []byte{0}, Path: types.Path{{105, 110, 116, 114, 111}, {116, 111}, {109, 97, 110, 97, 115}}},
+		{Timestamp: 700, Subspace: []byte{0}, Path: types.Path{{105, 110, 116, 114, 111}, {116, 111}}},
 	})
 
 	pathParams := types.PathParams[uint64]{
@@ -71,24 +70,24 @@ func TestPrefixedBy(t *testing.T) {
 	}
 
 	// Define the path for the test
-	path := types.Path{{105,110,116,114,111},{116,111}}
+	path := types.Path{{105, 110, 116, 114, 111}, {116, 111}}
 
 	// Execute the PrefixedBy function
 	res := pd.PrefixedBy([]byte{0}, path, pathParams, kdtree)
 	fmt.Println(res)
 	// Verify the results
-// 	expected := []Kdtree.KDNodeKey{
-// 		{Timestamp: 500, Subspace: []byte{0}, Path: types.Path{{0}}},
-// 		{Timestamp: 700, Subspace: []byte{0}, Path: types.Path{{0}, {2}}},
-// 	}
+	// 	expected := []Kdtree.KDNodeKey{
+	// 		{Timestamp: 500, Subspace: []byte{0}, Path: types.Path{{0}}},
+	// 		{Timestamp: 700, Subspace: []byte{0}, Path: types.Path{{0}, {2}}},
+	// 	}
 
-// 	if len(res) != len(expected) {
-// 		t.Fatalf("expected %d results, got %d", len(expected), len(res))
-// 	}
+	// 	if len(res) != len(expected) {
+	// 		t.Fatalf("expected %d results, got %d", len(expected), len(res))
+	// 	}
 
-// 	for i, exp := range expected {
-// 		if !compareKDNodeKey(res[i], exp) {
-// 			t.Errorf("expected result %d to be %v, got %v", i, exp, res[i])
-// 		}
-// 	}
+	// 	for i, exp := range expected {
+	// 		if !compareKDNodeKey(res[i], exp) {
+	// 			t.Errorf("expected result %d to be %v, got %v", i, exp, res[i])
+	// 		}
+	// 	}
 }
