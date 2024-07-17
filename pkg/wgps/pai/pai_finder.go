@@ -21,31 +21,18 @@ const (
 	REPLY_READ_CAP
 )
 
-// Define the interface that all variants will implicitly implement
-type LocalFragmentInfo interface{}
+// Define an interface that both SubspaceId and any type of ANY_SUBSPACE can satisfy.
+type SubspaceOrAny interface{}
 
-type Variant1[ReadCapability, SubspaceReadCapability constraints.Ordered] struct {
+const ANY_SUBSPACE = -1
+
+type LocalFragmentInfo[ReadCapability, SubspaceReadCapability constraints.Ordered] struct {
+	ID             int //set this to 1 if defined, otherwise 0 (default value)
 	OnIntersection int
 	Authorisation  wgpstypes.ReadAuthorisation[ReadCapability, SubspaceReadCapability]
 	Path           types.Path
 	Namespace      types.NamespaceId
-	Subspace       types.SubspaceId
-}
-
-type Variant2[ReadCapability, SubspaceReadCapability constraints.Ordered] struct {
-	OnIntersection int
-	Authorisation  wgpstypes.ReadAuthorisation[ReadCapability, SubspaceReadCapability]
-	Path           types.Path
-	Namespace      types.NamespaceId
-	Subspace       types.SubspaceId
-}
-
-type Variant3[ReadCapability, SubspaceReadCapability constraints.Ordered] struct {
-	OnIntersection int
-	Authorisation  wgpstypes.ReadAuthorisation[ReadCapability, SubspaceReadCapability]
-	Path           types.Path
-	Namespace      types.NamespaceId
-	Subspace       types.SubspaceId
+	Subspace       SubspaceOrAny
 }
 
 /** Given `ReadAuthorisation`s, emits the intersected ones  */
@@ -81,9 +68,9 @@ type PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability const
 
 	SubspaceCapReplyQueue []SubspaceCapReply[SubspaceReadCapability]
 
-	FragmentsInfo map[uint64]LocalFragmentInfo
+	FragmentsInfo map[uint64]LocalFragmentInfo[ReadCapability, SubspaceReadCapability]
 
-	NamespaceScheme datamodeltypes.NamespaceScheme[K]
+	NamespaceScheme datamodeltypes.NamespaceScheme
 
 	PaiScheme wgpstypes.PaiScheme[ReadCapability, PsiGroup, PsiScalar, K]
 
@@ -100,7 +87,7 @@ func NewPaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability co
 		Scalar:                      opts.PaiScheme.GetScalar(),
 		IntersectionHandlesOurs:     opts.IntersectionHandlesOurs,
 		IntersectionHandlesTheirs:   opts.IntersectionHandlesTheirs,
-		FragmentsInfo:               make(map[uint64]LocalFragmentInfo),
+		FragmentsInfo:               make(map[uint64]LocalFragmentInfo[ReadCapability, SubspaceReadCapability]),
 	}
 }
 
@@ -130,11 +117,12 @@ func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, 
 
 			groupHandle := SubmitFragment(fragment, false)
 
-			var fragmentInfo LocalFragmentInfo
+			var fragmentInfo LocalFragmentInfo[ReadCapability, SubspaceReadCapability]
 
 			if isMostSpecific {
 				// Use Variant1 as an example for the most specific case
-				fragmentInfo = Variant1[ReadCapability, SubspaceReadCapability]{
+				fragmentInfo = LocalFragmentInfo[ReadCapability, SubspaceReadCapability]{
+					ID:             1,
 					OnIntersection: BIND_READ_CAP,
 					Authorisation:  authorisation,
 					Path:           path,
@@ -142,8 +130,8 @@ func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, 
 					Subspace:       ANY_SUBSPACE,
 				}
 			} else {
-				// Use Variant2 as an example for the non-specific case
-				fragmentInfo = Variant2[ReadCapability, SubspaceReadCapability]{
+				fragmentInfo = LocalFragmentInfo[ReadCapability, SubspaceReadCapability]{
+					ID:             1,
 					OnIntersection: REPLY_READ_CAP, // Assuming REPLY_READ_CAP is an int constant
 					Authorisation:  authorisation,
 					Path:           path,
@@ -156,17 +144,18 @@ func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, 
 			p.FragmentsInfo[groupHandle] = fragmentInfo
 		}
 	} else {
-		for i, fragment := range Fragments {
+		for i, fragment := range Fragments.Primary {
 			namespace, subspace, path := fragment[0], fragment[1], fragment[2]
-			isMostSpecific := i == len(Fragments)-1
+			isMostSpecific := i == len(Fragments.Primary)-1
 
 			groupHandle := SubmitFragment(fragment, false)
 
-			var fragmentInfo LocalFragmentInfo
+			var fragmentInfo LocalFragmentInfo[ReadCapability, SubspaceReadCapability]
 
 			if isMostSpecific {
 				// Use Variant1 as an example for the most specific case
-				fragmentInfo = Variant1[ReadCapability, SubspaceReadCapability]{
+				fragmentInfo = LocalFragmentInfo[ReadCapability, SubspaceReadCapability]{
+					ID:             1,
 					OnIntersection: BIND_READ_CAP,
 					Authorisation:  authorisation,
 					Path:           path,
@@ -175,7 +164,8 @@ func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, 
 				}
 			} else {
 				// Use Variant2 as an example for the non-specific case
-				fragmentInfo = Variant2[ReadCapability, SubspaceReadCapability]{
+				fragmentInfo = LocalFragmentInfo[ReadCapability, SubspaceReadCapability]{
+					ID:             1,
 					OnIntersection: REPLY_READ_CAP, // Assuming REPLY_READ_CAP is an int constant
 					Authorisation:  authorisation,
 					Path:           path,
@@ -189,17 +179,18 @@ func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, 
 		}
 	}
 
-	for i, fragment := range Fragments {
+	for i, fragment := range Fragments.Secondary {
 		namespace, path := fragment[0], fragment[1]
-		isMostSpecific := i == len(Fragments)-1
+		isMostSpecific := i == len(Fragments.Secondary)-1
 
 		groupHandle := SubmitFragment(fragment, false)
 
-		var fragmentInfo LocalFragmentInfo
+		var fragmentInfo LocalFragmentInfo[ReadCapability, SubspaceReadCapability]
 
 		if isMostSpecific {
 			// Use Variant1 as an example for the most specific case
-			fragmentInfo = Variant1[ReadCapability, SubspaceReadCapability]{
+			fragmentInfo = LocalFragmentInfo[ReadCapability, SubspaceReadCapability]{
+				ID:             1,
 				OnIntersection: BIND_READ_CAP,
 				Authorisation:  authorisation,
 				Path:           path,
@@ -208,7 +199,8 @@ func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, 
 			}
 		} else {
 			// Use Variant2 as an example for the non-specific case
-			fragmentInfo = Variant2[ReadCapability, SubspaceReadCapability]{
+			fragmentInfo = LocalFragmentInfo[ReadCapability, SubspaceReadCapability]{
+				ID:             1,
 				OnIntersection: REPLY_READ_CAP, // Assuming REPLY_READ_CAP is an int constant
 				Authorisation:  authorisation,
 				Path:           path,
@@ -237,9 +229,9 @@ func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, 
 }
 
 func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, K]) ReceivedReply(handle uint64, groupMember PsiGroup) {
-	intersection, _ := p.IntersectionHandlesOurs.Get(handle)
-	if !intersection {
-		//check how this can be done
+	_, found := p.IntersectionHandlesOurs.Get(handle)
+	if !found {
+		//throw an error
 	}
 	p.IntersectionHandlesOurs.Update(handle, wgpstypes.Intersection[PsiGroup]{
 		Group:       groupMember,
@@ -250,9 +242,9 @@ func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, 
 }
 
 func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, K]) ReceivedSubspaceCapRequest(handle uint64, isReply bool) {
-	result, _ := p.IntersectionHandlesTheirs.Get(handle)
-	if !result {
-		//check how this can be done
+	result, found := p.IntersectionHandlesTheirs.Get(handle)
+	if !found {
+		//throw an error
 	}
 	for ourHandle, intersection := range p.IntersectionHandlesOurs {
 		//Need to tell AC to incorporate the iterator into handle store
@@ -262,10 +254,14 @@ func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, 
 		if !p.PaiScheme.IsGroupEqual(intersection.Group, result.Group) {
 			continue
 		}
-		FragmentInfo := p.FragmentsInfo[ourHandle]
+		var FragmentInfo LocalFragmentInfo[ReadCapability, SubspaceReadCapability] = p.FragmentsInfo[ourHandle]
 
-		if !FragmentInfo {
-			//check how this can be done
+		if FragmentInfo.ID != 1 {
+			//throw an error
+		}
+
+		if !IsSubspaceReadAuthorisation(FragmentInfo.Authorisation) {
+			continue
 		}
 		p.SubspaceCapReplyQueue = append(p.SubspaceCapReplyQueue, SubspaceCapReply[SubspaceReadCapability]{
 			Handle:                 handle,
@@ -279,13 +275,13 @@ func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, 
 		//throw a willow error
 	}
 	delete(p.RequestedSubspaceCapHandles, handle)
-	result, _ := p.IntersectionHandlesTheirs.Get(handle)
-	if !result {
-		//see how this can be done
+	_, choice := p.IntersectionHandlesTheirs.Get(handle)
+	if !choice {
+		//throw an error
 	}
 	fragmentInfo := p.FragmentsInfo[handle]
-	if !fragmentInfo {
-		//see how this can be done
+	if fragmentInfo.ID != 1 {
+		//throw an error
 	}
 	if !p.NamespaceScheme.IsEqual(fragmentInfo.Namespace, namespace) { //need to see how to do this
 		//throw an error
@@ -311,8 +307,8 @@ func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, 
 		storeToCheckAgainst = p.IntersectionHandlesOurs
 	}
 
-	intersection, _ := storeToGetHandleFrom.Get(handle)
-	if !intersection {
+	intersection, choice := storeToGetHandleFrom.Get(handle)
+	if !choice {
 		//throw an error
 	}
 	if !intersection.IsComplete {
@@ -337,7 +333,7 @@ func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, 
 
 		fragmentInfo := p.FragmentsInfo[ourHandle]
 
-		if !fragmentInfo {
+		if fragmentInfo.ID != 1 {
 			//throw an error
 		}
 		if fragmentInfo.OnIntersection == BIND_READ_CAP {
@@ -355,19 +351,19 @@ func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, 
 
 func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, K]) GetHandleOuterArea(handle uint64) types.Area {
 	fragmentInfo := p.FragmentsInfo[handle]
-	if !fragmentInfo {
+	if fragmentInfo.ID != 1 {
 		//throw an error
 	}
 	return types.Area{
-		Subspace_id: fragmentInfo.Subspace,
+		Subspace_id: fragmentInfo.Subspace.(types.SubspaceId),
 		Path:        fragmentInfo.Path,
 		Times:       types.Range[uint64]{Start: 0, OpenEnd: true},
 	}
 }
 
 func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, K]) ReceivedReadCapForIntersection(theirIntersectionHandle uint64) {
-	theirIntersection, _ := p.IntersectionHandlesTheirs.Get(theirIntersectionHandle)
-	if !theirIntersection {
+	theirIntersection, choice := p.IntersectionHandlesTheirs.Get(theirIntersectionHandle)
+	if !choice {
 		//throw an error
 	}
 	for ourHandle, ourIntersection := range p.IntersectionHandlesOurs {
@@ -381,7 +377,7 @@ func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, 
 			continue
 		}
 		fragmentInfo := p.FragmentsInfo[ourHandle]
-		if !fragmentInfo {
+		if fragmentInfo.ID != 1 {
 			//throw an error
 		}
 		if fragmentInfo.OnIntersection == REPLY_READ_CAP {
@@ -407,8 +403,8 @@ func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, 
 	} else {
 		storeToCheckAgainst = p.IntersectionHandlesOurs
 	}
-	intersection, _ := storeToGetHandleFrom.Get(handle)
-	if !intersection {
+	intersection, choice := storeToGetHandleFrom.Get(handle)
+	if !choice {
 		//throw an error
 	}
 	// Here we are looping through the whole contents of the handle store because...
@@ -432,7 +428,7 @@ func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, 
 			ourHandle = otherHandle
 		}
 		fragmentInfo := p.FragmentsInfo[ourHandle]
-		if !fragmentInfo {
+		if fragmentInfo.ID != 1 {
 			//throw an error
 		}
 		outer := p.GetHandleOuterArea(ourHandle)

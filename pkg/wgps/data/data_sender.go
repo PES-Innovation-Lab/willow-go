@@ -11,8 +11,8 @@ type QueueItem interface {
 	// Define common methods here, if any
 }
 
-type DataSenderEntry[DynamicToken, PayloadDigest constraints.Ordered] struct {
-	Entry             types.Entry[PayloadDigest]
+type DataSenderEntry[DynamicToken constraints.Ordered] struct {
+	Entry             types.Entry
 	Offset            int
 	StaticTokenHandle uint64
 	DynamicToken      DynamicToken
@@ -25,13 +25,13 @@ type DataBindPayloadRequestPack struct {
 	Payload datamodeltypes.Payload
 }
 
-type PayloadRequest[PayloadDigest constraints.Ordered] struct {
+type PayloadRequest struct {
 	Offset int
-	Entry  types.Entry[PayloadDigest]
+	Entry  types.Entry
 }
 
 type DataSenderOpts[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, PayloadDigest, AuthorisationOpts constraints.Ordered] struct {
-	HandlesPayloadRequestsTheirs wgps.HandleStore[PayloadRequest[PayloadDigest]]
+	HandlesPayloadRequestsTheirs wgps.HandleStore[PayloadRequest]
 	GetStore                     GetStoreFn[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, NamespaceId, SubspaceId, PayloadDigest, AuthorisationOpts]
 	TransformPayload             func(chunk []byte) []byte
 }
@@ -61,7 +61,7 @@ func (q *DataSender[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToke
 	return item
 }
 
-func (q *DataSender[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, PayloadDigest, AuthorisationOpts]) QueueEntry(entry types.Entry[PayloadDigest], staticTokenHandle uint64, dynamicToken DynamicToken, offset int) {
+func (q *DataSender[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, PayloadDigest, AuthorisationOpts]) QueueEntry(entry types.Entry, staticTokenHandle uint64, dynamicToken DynamicToken, offset int) {
 	Store := q.Opts.GetStore(PayloadRequest[PayloadDigest].Entry.NamespaceId)
 	Payload := Store.GetPayload(entry)
 
@@ -69,7 +69,7 @@ func (q *DataSender[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToke
 		//throw an error
 	}
 
-	q.Push(DataSenderEntry[DynamicToken, PayloadDigest]{
+	q.Push(DataSenderEntry[DynamicToken]{
 		Entry:             entry,
 		Offset:            offset,
 		StaticTokenHandle: staticTokenHandle,
