@@ -92,21 +92,24 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	// the protocol specifies to decide which of them is newer.
 	// If the current inserting entry is found to be older, do not insert, otherwise
 	// remove the other entry from all storages
-	otherEntry, err := s.Storage.Get(entry.Subspace_id, entry.Path)
+	otherEntry := s.Storage.Get(entry.Subspace_id, entry.Path)
 
-	// To better handle other errors, the error returned by the function should specify what kind of error it is
-	if err != nil && err.Error() != "entry found" {
+	if !reflect.DeepEqual(otherEntry, types.Position3d{}) {
 		// Checking if path matches
-		if utils.OrderPath(otherEntry.Entry.Path, entry.Path) == 0 {
-			if otherEntry.Entry.Timestamp >= entry.Timestamp {
+		encodedKey, _ := kv_driver.EncodeKey(otherEntry.Time, otherEntry.Subspace, s.Schemes.PathParams, otherEntry.Path)
+		otherEntryBytes, _ := s.EntryDriver.Opts.KVDriver.Get(encodedKey)
+		payloadLength, payloadDigest, _ := kv_driver.DecodeValues(otherEntryBytes)
+
+		if utils.OrderPath(otherEntry.Path, entry.Path) == 0 {
+			if otherEntry.Time >= entry.Timestamp {
 				// Check timestamps for newer entry
 				s.IngestionMutexLock.Unlock()
 				log.Fatal("failed to ingest entry\nnewer entry already exists in store")
-			} else if otherEntry.Entry.Payload_digest >= entry.Payload_digest {
+			} else if payloadDigest >= entry.Payload_digest {
 				// Check payload digests for newer entry
 				s.IngestionMutexLock.Unlock()
 				log.Fatal("failed to ingest entry\nnewer prefix already exists in store")
-			} else if otherEntry.Entry.Payload_length == entry.Payload_length {
+			} else if payloadLength == entry.Payload_length {
 				// Check payload lengths for newer entry
 				s.IngestionMutexLock.Unlock()
 				log.Fatal("failed to ingest entry\nnewer prefix already exists in store")
@@ -115,43 +118,40 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 			// and the other entry should be removed
 			// Remove the other entry from all storages
 			s.Storage.Remove(types.Position3d{
-				Subspace: otherEntry.Entry.Subspace_id,
-				Path:     otherEntry.Entry.Path,
-				Time:     otherEntry.Entry.Timestamp,
+				Subspace: otherEntry.Subspace,
+				Path:     otherEntry.Path,
+				Time:     otherEntry.Time,
 			})
 
 			// Decrement payload ref counter of the other entry, if the count is 0, which means no entry is pointing to it
 			// remove the payload itself from the payload driver
-			count, err := s.EntryDriver.PayloadReferenceCounter.Decrement(otherEntry.AuthTokenHash)
+			count, err := s.EntryDriver.PayloadReferenceCounter.Decrement(payloadDigest)
 			if err != nil {
 				log.Fatal(err)
 			}
 			if count == 0 {
-				s.PayloadDriver.Erase(otherEntry.Entry.Payload_digest)
+				s.PayloadDriver.Erase(payloadDigest)
 			}
 			// TO-DO: remove the entry from entry KV
 		}
-	} else {
-		// If the error returned from get is some other error, then print it and exit
-		log.Fatal(err)
 	}
 
 	// Insert the entry into the storage
 	// This function also returns the entries which are pruned due to the insertion of the current entry
 	prunedEntries, err := s.InsertEntry(struct {
-		Path      types.Path
-		Subspace  types.SubspaceId
-		Timestamp uint64
-		Hash      types.PayloadDigest
-		Length    uint64
-		AuthToken AuthorisationToken
+		Path          types.Path
+		Subspace      types.SubspaceId
+		Timestamp     uint64
+		PayloadDigest types.PayloadDigest
+		PayloadLength uint64
+		AuthToken     AuthorisationToken
 	}{
-		Path:      entry.Path,
-		Subspace:  entry.Subspace_id,
-		Timestamp: entry.Timestamp,
-		Hash:      entry.Payload_digest,
-		Length:    entry.Payload_length,
-		AuthToken: authorisation,
+		Path:          entry.Path,
+		Subspace:      entry.Subspace_id,
+		Timestamp:     entry.Timestamp,
+		PayloadDigest: entry.Payload_digest,
+		PayloadLength: entry.Payload_length,
+		AuthToken:     authorisation,
 	})
 	// If there is an error in inserting the entry, print it and exit
 	if err != nil {
@@ -167,40 +167,40 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 
 func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]) InsertEntry(
 	entry struct {
-		Path      types.Path
-		Subspace  types.SubspaceId
-		Timestamp uint64
-		Hash      types.PayloadDigest
-		Length    uint64
-		AuthToken AuthorisationToken
+		Path          types.Path
+		Subspace      types.SubspaceId
+		Timestamp     uint64
+		PayloadDigest types.PayloadDigest
+		PayloadLength uint64
+		AuthToken     AuthorisationToken
 	},
 ) ([]types.Entry, error) {
 	// Encode the authorisation token and get the digest of the token
 	encodedToken := s.Schemes.AuthorisationScheme.TokenEncoding.Encode(entry.AuthToken)
-	tokenDigest, _, _ := s.PayloadDriver.Set(encodedToken)
+	authDigest, _, _ := s.PayloadDriver.Set(encodedToken)
 
 	// Insert the entry into the storage
-	err := s.Storage.Insert(struct {
-		Subspace      types.SubspaceId
-		Path          types.Path
-		PayloadDigest types.PayloadDigest
-		Timestamp     uint64
-		PayloadLength uint64
-		AuthTokenHash types.PayloadDigest
-	}{
-		Subspace:      entry.Subspace,
-		Path:          entry.Path,
-		PayloadDigest: entry.Hash,
-		Timestamp:     entry.Timestamp,
-		PayloadLength: entry.Length,
-		AuthTokenHash: tokenDigest,
-	})
+	err := s.Storage.Insert(entry.Subspace, entry.Path, entry.Timestamp)
 	// If there is an error in inserting the entry, print it and exit
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	//Encode keys and values of the entry and put it inside KV store to persist the entry values
+	encodedEntryKey, err := kv_driver.EncodeKey(entry.Timestamp, entry.Subspace, s.Schemes.PathParams, entry.Path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	encodedEntryValue := kv_driver.EncodeValues(entry.PayloadLength, entry.PayloadDigest, authDigest)
+
+	//Inserting into the KV store
+	err = s.EntryDriver.Opts.KVDriver.Set(encodedEntryKey, encodedEntryValue)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Increment the payload reference counter of the entry
-	s.EntryDriver.PayloadReferenceCounter.Increment(entry.Hash)
+	s.EntryDriver.PayloadReferenceCounter.Increment(entry.PayloadDigest)
 
 	// Variable to store pruned entries
 	var prunedEntries []types.Entry
@@ -218,12 +218,12 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	// Iterate through all the prunable entries and remove them from storage
 	for _, entry := range prunableEntries {
 		// Remove from storage
-		err := s.Storage.Remove(types.Position3d{
+		ok := s.Storage.Remove(types.Position3d{
 			Subspace: entry.entry.Subspace_id,
 			Path:     entry.entry.Path,
 			Time:     entry.entry.Timestamp,
 		})
-		if err != nil {
+		if !ok {
 			log.Fatal(err)
 		}
 
@@ -350,6 +350,6 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 		}
 
 	}
-	s.Storage.UpdateAvailablePayload(entryDetails.Subspace, entryDetails.Path)
+	// s.Storage.UpdateAvailablePayload(entryDetails.Subspace, entryDetails.Path)
 	return Success, nil
 }
