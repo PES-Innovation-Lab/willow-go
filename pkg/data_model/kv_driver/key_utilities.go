@@ -71,6 +71,7 @@ func EncodeValues(PayloadLength uint64, PayloadDigest string, AuthDigest string)
 	return buffer.Bytes()
 }
 
+// Takes a byte array and returns payloadLength, payloadDigest, authDigest
 func DecodeValues(encoded []byte) (uint64, string, string) {
 	// Decode PayloadLength
 	payloadLength := binary.BigEndian.Uint64(encoded[:8])

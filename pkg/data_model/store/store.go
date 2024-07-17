@@ -317,9 +317,9 @@ func (s *Store[PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts,
 
 	// Samar needs to make a DecodeValue Function that returns payloadDigest
 
-	var entry types.Entry[PayloadDigest]
+	payloadLength, payloadDigest, authDigest := kv_driver.DecodeValues(getEntry)
 
-	existingPayload := s.PayloadDriver.Get(entry.Payload_digest)
+	existingPayload := s.PayloadDriver.Get()
 
 	if !reflect.DeepEqual(existingPayload, datamodeltypes.Payload{}) {
 		return No_Op, fmt.Errorf("File already exists")
@@ -329,4 +329,5 @@ func (s *Store[PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts,
 	if err != nil {
 		log.Fatal("Unable to receive")
 	}
+
 }
