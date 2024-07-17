@@ -9,7 +9,7 @@ import (
 )
 
 type PaiFinderOpts[ReadCapability, PsiGroup, PsiScalar constraints.Ordered, K constraints.Unsigned] struct {
-	NamespaceScheme           datamodeltypes.NamespaceScheme[K]
+	NamespaceScheme           datamodeltypes.NamespaceScheme
 	PaiScheme                 wgpstypes.PaiScheme[ReadCapability, PsiGroup, PsiScalar, K]
 	IntersectionHandlesOurs   wgps.HandleStore[wgpstypes.Intersection[PsiGroup]]
 	IntersectionHandlesTheirs wgps.HandleStore[wgpstypes.Intersection[PsiGroup]]
@@ -110,7 +110,7 @@ func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, 
 		return handle
 	}
 
-	if !isSelectiveFragmentKit(Fragments) {
+	if !IsSelectiveFragmentKit(Fragments) {
 		for i, fragment := range Fragments {
 			namespace, path := fragment[0], fragment[1]
 			isMostSpecific := i == len(Fragments)-1
@@ -260,7 +260,7 @@ func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, 
 			//throw an error
 		}
 
-		if !IsSubspaceReadAuthorisation(FragmentInfo.Authorisation) {
+		if !wgps.IsSubspaceReadAuthorisation(FragmentInfo.Authorisation) {
 			continue
 		}
 		p.SubspaceCapReplyQueue = append(p.SubspaceCapReplyQueue, SubspaceCapReply[SubspaceReadCapability]{
@@ -441,9 +441,114 @@ func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, 
 	return wgpstypes.ReadCapPrivy{} // This is a placeholder
 }
 
-//NEED TO DO ALL THE ASYNC ITERABLES
+func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, K]) FragmentBinds() <-chan BindFragment[PsiGroup] {
+	// Assuming p.BindFragmentQueue is a channel or can be iterated over in some way
+	// This channel is where we'll send our FragmentBind structs
+	ch := make(chan BindFragment[PsiGroup])
 
-// Assuming prefixesOf is a function that takes a path and returns a slice of types.Path
-// func prefixesOf(path types.Path) []types.Path {
-//     // Implementation goes here
-// }
+	go func() {
+		defer close(ch) // Ensure the channel is closed when we're done sending data
+
+		// Simulate iterating over bindFragmentQueue similar to the JavaScript for-await loop
+		// This is a placeholder loop. You'll need to adapt this to your actual data source.
+		for bind := range p.BindFragmentQueue { // Assuming BindFragmentQueue is a channel
+			Group := p.BindFragmentQueue[bind].PsiGroup
+			IsSecondary := p.BindFragmentQueue[bind].IsSecondary
+			// Send a FragmentBind struct to the channel
+			ch <- BindFragment[PsiGroup]{
+				PsiGroup:    Group,
+				IsSecondary: IsSecondary,
+			}
+		}
+	}()
+
+	return ch // Return the channel to the caller
+}
+
+func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, K]) FragmentReplies() <-chan ReplyFragment[PsiGroup] {
+	ch := make(chan ReplyFragment[PsiGroup])
+
+	go func() {
+		defer close(ch)
+
+		for bind := range p.ReplyFragmentQueue {
+			Group := p.ReplyFragmentQueue[bind].PsiGroup
+			FragmentGrp := p.ReplyFragmentQueue[bind].FragmentGrp
+
+			ch <- ReplyFragment[PsiGroup]{
+				PsiGroup:    Group,
+				FragmentGrp: FragmentGrp,
+			}
+		}
+	}()
+
+	return ch
+}
+
+func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, K]) Intersections() <-chan Intersection[ReadCapability, SubspaceReadCapability] {
+	ch := make(chan Intersection[ReadCapability, SubspaceReadCapability])
+
+	go func() {
+		defer close(ch)
+
+		for bind := range p.IntersectionQueue {
+			NamespaceId := p.IntersectionQueue[bind].NamespaceId
+			ReadAuthorisation := p.IntersectionQueue[bind].ReadAuthorisation
+			Uint64 := p.IntersectionQueue[bind].Uint64
+
+			ch <- Intersection[ReadCapability, SubspaceReadCapability]{
+				NamespaceId:       NamespaceId,
+				ReadAuthorisation: ReadAuthorisation,
+				Uint64:            Uint64,
+			}
+		}
+	}()
+
+	return ch
+}
+
+func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, K]) SubspaceCapRequests() <-chan uint64 {
+	ch := make(chan uint64)
+
+	go func() {
+		defer close(ch)
+
+		for bind := range p.SubspaceCapRequestQueue {
+			handle := p.SubspaceCapRequestQueue[bind]
+
+			ch <- handle
+		}
+	}()
+
+	return ch
+}
+
+func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, K]) SubspaceCaReplies() <-chan SubspaceCapReply[SubspaceReadCapability] {
+	ch := make(chan SubspaceCapReply[SubspaceReadCapability])
+
+	go func() {
+		defer close(ch)
+
+		for bind := range p.SubspaceCapReplyQueue {
+			handle := p.SubspaceCapReplyQueue[bind].Handle
+			subspaceReadCapability := p.SubspaceCapReplyQueue[bind].SubspaceReadCapability
+
+			ch <- SubspaceCapReply[SubspaceReadCapability]{
+				Handle:                 handle,
+				SubspaceReadCapability: subspaceReadCapability,
+			}
+		}
+	}()
+
+	return ch
+}
+
+func IsSelectiveFragmentKit(set wgpstypes.FragmentSet) bool {
+	_, ok := set.(wgpstypes.FragmentsSelective)
+	return ok
+}
+
+func IsFragmentTriple(fragment wgpstypes.Fragment) bool {
+	_, ok := fragment.(*wgpstypes.FragmentTriple)
+	return ok
+}

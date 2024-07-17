@@ -21,8 +21,8 @@ type Fragment interface {
 	IsFragment()
 }
 
-func (FragmentTriple) isFragment() {}
-func (FragmentPair) isFragment()   {}
+func (FragmentTriple) IsFragment() {}
+func (FragmentPair) IsFragment()   {}
 
 type FragmentsComplete []FragmentPair
 type FragmentsSelective struct {
