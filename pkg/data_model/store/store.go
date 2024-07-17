@@ -308,18 +308,38 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	}
 
 	// Samar needs to make a DecodeValue Function that returns payloadDigest
-
+	// Len and Digest as mentioned by the entry
 	payloadLength, payloadDigest, authDigest := kv_driver.DecodeValues(getEntry)
 
-	existingPayload := s.PayloadDriver.Get()
+	existingPayload := s.PayloadDriver.Get(string(payloadDigest))
 
 	if !reflect.DeepEqual(existingPayload, datamodeltypes.Payload{}) {
 		return No_Op, fmt.Errorf("File already exists")
 	}
-
-	result, len, commit, reject, err := s.PayloadDriver.Receive(payload, offset, payloadLength, payloadDigest)
+	// Result after fully ingesting the paylaod
+	resDigest, resLen, resCommit, resReject, err := s.PayloadDriver.Receive(payload, offset, payloadLength, payloadDigest)
 	if err != nil {
 		log.Fatal("Unable to receive")
 	}
+	if resLen > payloadLength || (allowPartial == false && payloadLength != resLen) || (resLen == payloadLength && s.Schemes.PayloadScheme.Order(resDigest, payloadDigest) != 0) {
+		resReject()
+		return Failure, fmt.Errorf("Data mismatch")
+	}
 
+	resCommit(resLen == payloadLength)
+
+	if resLen == payloadLength && (s.Schemes.PayloadScheme.Order(resDigest, payloadDigest) == 0) {
+		complete := s.PayloadDriver.Get(string(payloadDigest))
+
+		if reflect.DeepEqual(complete, datamodeltypes.Payload{}) {
+			log.Fatalln("Could not get payload for a payload that was just ingested", err)
+		}
+		authToken := s.PayloadDriver.Get(string(authDigest))
+		if reflect.DeepEqual(authToken, datamodeltypes.Payload{}) {
+			log.Fatalln("Could not get authorisation token for a stored entry.", err)
+		}
+
+	}
+	s.Storage.UpdateAvailablePayload(entryDetails.Subspace, entryDetails.Path)
+	return Success, nil
 }
