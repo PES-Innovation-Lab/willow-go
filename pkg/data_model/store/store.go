@@ -293,6 +293,7 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 
 type Status int
 
+// Setting up an enum for the return values
 const (
 	Failure Status = -1
 	No_Op   Status = 0
