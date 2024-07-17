@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"math"
+	"reflect"
 	"strconv"
 
 	"github.com/PES-Innovation-Lab/willow-go/types"
@@ -151,8 +152,8 @@ func IntersectArea(orderSubspace types.TotalOrder[types.SubspaceId], a, b types.
 func AreaTo3dRange[Params constraints.Unsigned](opts Options, area types.Area, pathParams types.PathParams[Params]) types.Range3d {
 	var subspace_range types.Range[types.SubspaceId]
 	if !area.Any_subspace {
-		sucSubspace, foundSuccessor := opts.SuccessorSubspace(area.Subspace_id)
-		if foundSuccessor {
+		sucSubspace := opts.SuccessorSubspace(area.Subspace_id)
+		if !reflect.DeepEqual(sucSubspace, []byte{}) {
 			subspace_range = types.Range[types.SubspaceId]{
 				Start:   area.Subspace_id,
 				End:     sucSubspace, // NEED TO CHANGE THE SUCCESSOR DEFINITION IN ORDER

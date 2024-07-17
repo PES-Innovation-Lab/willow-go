@@ -16,16 +16,16 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-type Store[PreFingerPrint, FingerPrint constraints.Ordered, K constraints.Unsigned, AuthorisationOpts any, AuthorisationToken string, T datamodeltypes.KvPart] struct {
+type Store[PreFingerPrint, FingerPrint constraints.Ordered, K constraints.Unsigned, AuthorisationOpts any, AuthorisationToken string] struct {
 	Schemes            datamodeltypes.StoreSchemes[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]
-	EntryDriver        entrydriver.EntryDriver[PreFingerPrint, FingerPrint, T, K]
+	EntryDriver        entrydriver.EntryDriver[PreFingerPrint, FingerPrint, K]
 	PayloadDriver      datamodeltypes.PayloadDriver[K]
-	Storage            datamodeltypes.KDTreeStorage[PreFingerPrint, FingerPrint, T, K]
+	Storage            datamodeltypes.KDTreeStorage[PreFingerPrint, FingerPrint, K]
 	NameSpaceId        types.NamespaceId
 	IngestionMutexLock sync.Mutex
 }
 
-func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken, T]) Set(
+func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]) Set(
 	input datamodeltypes.EntryInput,
 	authorisation AuthorisationOpts,
 ) []types.Entry {
@@ -49,14 +49,17 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	if err != nil {
 		log.Fatal(err)
 	}
-	count := s.EntryDriver.PayloadReferenceCounter.Count(digest)
+	count, err := s.EntryDriver.PayloadReferenceCounter.Count(digest)
+	if err != nil {
+		log.Fatal(err)
+	}
 	if count == 0 {
 		s.PayloadDriver.Erase(digest)
 	}
 	return prunedEntries
 }
 
-func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken, T]) IngestEntry(
+func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]) IngestEntry(
 	entry types.Entry,
 	authorisation AuthorisationToken,
 ) ([]types.Entry, error) {
@@ -118,7 +121,10 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 
 			// Decrement payload ref counter of the other entry, if the count is 0, which means no entry is pointing to it
 			// remove the payload itself from the payload driver
-			count := s.EntryDriver.PayloadReferenceCounter.Decrement(otherEntry.AuthTokenHash)
+			count, err := s.EntryDriver.PayloadReferenceCounter.Decrement(otherEntry.AuthTokenHash)
+			if err != nil {
+				log.Fatal(err)
+			}
 			if count == 0 {
 				s.PayloadDriver.Erase(otherEntry.Entry.Payload_digest)
 			}
@@ -158,7 +164,7 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	return prunedEntries, nil
 }
 
-func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken, T]) InsertEntry(
+func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]) InsertEntry(
 	entry struct {
 		Path      types.Path
 		Subspace  types.SubspaceId
@@ -221,7 +227,10 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 		}
 
 		// Decrement the payload reference counter of the entry
-		count := s.EntryDriver.PayloadReferenceCounter.Decrement(entry.authTokenHash)
+		count, err := s.EntryDriver.PayloadReferenceCounter.Decrement(entry.authTokenHash)
+		if err != nil {
+			log.Fatal(err)
+		}
 		// If the count is 0, which means no entry is pointing to it, remove the payload itself from the payload driver
 		if count == 0 {
 			s.PayloadDriver.Erase(entry.entry.Payload_digest)
@@ -234,7 +243,7 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	return prunedEntries, nil
 }
 
-func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken, T]) PrunableEntries(
+func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]) PrunableEntries(
 	kdt *Kdtree.KDTree[Kdtree.KDNodeKey],
 	entry types.Position3d,
 	pathParams types.PathParams[K],
@@ -253,7 +262,7 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	}, 0, len(prunableEntries))
 	for _, prune_candidate := range prunableEntries {
 		if prune_candidate.Timestamp < entry.Time {
-			encodedEntry, err := kv_driver.EncodeKey(prune_candidate.Timestamp, prune_candidate.Subspace, pathParams, prune_candidate.Path)
+			encodedEntry, _ := kv_driver.EncodeKey(prune_candidate.Timestamp, prune_candidate.Subspace, pathParams, prune_candidate.Path)
 			encodedValue, err := s.EntryDriver.Opts.KVDriver.Get(encodedEntry)
 			if err != nil {
 				return nil, err
@@ -289,7 +298,7 @@ const (
 	Success Status = 1
 )
 
-func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken, T]) IngestPayload(
+func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]) IngestPayload(
 	entryDetails types.Position3d,
 	payload []byte,
 	allowPartial bool,
@@ -304,7 +313,7 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 		log.Fatal(err)
 	}
 	if getEntry != nil {
-		return Failure, fmt.Errorf("Entry does not exist")
+		return Failure, fmt.Errorf("entry does not exist")
 	}
 
 	// Samar needs to make a DecodeValue Function that returns payloadDigest
@@ -314,16 +323,16 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	existingPayload := s.PayloadDriver.Get(string(payloadDigest))
 
 	if !reflect.DeepEqual(existingPayload, datamodeltypes.Payload{}) {
-		return No_Op, fmt.Errorf("File already exists")
+		return No_Op, fmt.Errorf("file already exists")
 	}
 	// Result after fully ingesting the paylaod
 	resDigest, resLen, resCommit, resReject, err := s.PayloadDriver.Receive(payload, offset, payloadLength, payloadDigest)
 	if err != nil {
 		log.Fatal("Unable to receive")
 	}
-	if resLen > payloadLength || (allowPartial == false && payloadLength != resLen) || (resLen == payloadLength && s.Schemes.PayloadScheme.Order(resDigest, payloadDigest) != 0) {
+	if resLen > payloadLength || (!allowPartial && payloadLength != resLen) || (resLen == payloadLength && s.Schemes.PayloadScheme.Order(resDigest, payloadDigest) != 0) {
 		resReject()
-		return Failure, fmt.Errorf("Data mismatch")
+		return Failure, fmt.Errorf("data mismatch")
 	}
 
 	resCommit(resLen == payloadLength)

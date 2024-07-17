@@ -1,6 +1,8 @@
 package store
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"reflect"
 
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
@@ -48,12 +50,12 @@ var SubspaceEncoding utils.EncodingScheme[types.SubspaceId] = utils.EncodingSche
 	},
 }
 
-// var TestSubspaceScheme datamodeltypes.SubspaceScheme = datamodeltypes.SubspaceScheme{
-// 	EncodingScheme: SubspaceEncoding,
-// 	SuccessorSubspaceFn: ,
-// 	Order: utils.OrderSubspace,
-// 	MinimalSubspaceId: types.SubspaceId(""),
-// }
+var TestSubspaceScheme datamodeltypes.SubspaceScheme = datamodeltypes.SubspaceScheme{
+	EncodingScheme: SubspaceEncoding,
+	SuccessorSubspaceFn: utils.SuccessorSubspaceId,
+	Order: utils.OrderSubspace,
+	MinimalSubspaceId: types.SubspaceId(""),
+}
 
 var TestAuthorisationScheme datamodeltypes.AuthorisationScheme[interface{}, string] = datamodeltypes.AuthorisationScheme[interface{}, string]{
 	Authorise: func(entry types.Entry, opts interface{}) string {
@@ -85,10 +87,32 @@ var TestPathParams types.PathParams[uint8] = types.PathParams[uint8]{
 	MaxPathLength: 50,
 }
 
+var TestPayloadScheme datamodeltypes.PayloadScheme = datamodeltypes.PayloadScheme{
+	EncodingScheme: utils.EncodingScheme[types.PayloadDigest]{
+		Encode: func(value types.PayloadDigest) []byte {
+			decoded, err := hex.DecodeString(string(value))
+			if err != nil {
+				return []byte{}
+			}
+			return decoded
+		},
+	},
+	FromBytes: func(bytes []byte) chan types.PayloadDigest {
+		ch := make(chan types.PayloadDigest, 1)
+		go func() {
+			var hash = sha256.Sum256(bytes)
+			ch <- types.PayloadDigest(hex.EncodeToString(hash[:]))
+			close(ch)
+		}()
+		return ch
+	},
+}
+
+
 var StoreSchemes datamodeltypes.StoreSchemes[uint64, uint64, uint8, interface{}, string] = datamodeltypes.StoreSchemes[uint64, uint64, uint8, interface{}, string]{
 	PathParams: TestPathParams,
 	NamespaceScheme: TestNameSpaceScheme,
 	AuthorisationScheme: TestAuthorisationScheme,
 	SubspaceScheme: TestSubspaceScheme,
-
+	PayloadScheme: TestPayloadScheme,
 }

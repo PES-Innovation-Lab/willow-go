@@ -28,7 +28,7 @@ func TestSetGet(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	k := KvDriver[[]byte]{Db: db}
+	k := KvDriver{Db: db}
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -110,7 +110,7 @@ func TestListAllClear(t *testing.T) {
 		},
 	}
 	db, err := pebble.Open("demo", &pebble.Options{})
-	k := &KvDriver[[]byte]{Db: db}
+	k := &KvDriver{Db: db}
 	if err != nil {
 		log.Fatal(err)
 	}

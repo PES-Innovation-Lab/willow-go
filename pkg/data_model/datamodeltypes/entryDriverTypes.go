@@ -6,13 +6,7 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-type PayloadReferenceCounter interface {
-	Increment(payloadDigest types.PayloadDigest) uint
-	Decrement(payloadDigest types.PayloadDigest) uint
-	Count(payloadDigest types.PayloadDigest) uint
-}
-
-type KDTreeStorage[PreFingerPrint, FingerPrint constraints.Ordered, T KvPart, K constraints.Unsigned] struct {
+type KDTreeStorage[PreFingerPrint, FingerPrint constraints.Ordered, K constraints.Unsigned] struct {
 	KDTree *Kdtree.KDTree[Kdtree.KDNodeKey]
 
 	Opts struct {
