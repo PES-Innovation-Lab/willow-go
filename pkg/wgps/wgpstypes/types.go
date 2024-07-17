@@ -268,14 +268,14 @@ type MsgReconciliationAnnounceEntries struct {
 }
 
 /** Transmit a LengthyEntry as part of 3d range-based set reconciliation. */
-type MsgReconciliationSendEntryData[PayloadDigest, DynamicToken constraints.Ordered] struct {
-	Entry             datamodeltypes.LengthyEntry[PayloadDigest]
+type MsgReconciliationSendEntryData[DynamicToken constraints.Ordered] struct {
+	Entry             datamodeltypes.LengthyEntry
 	StaticTokenHandle uint64
 	DynamicToken      DynamicToken
 }
-type MsgReconciliationSendEntry[PayloadDigest, DynamicToken constraints.Ordered] struct {
+type MsgReconciliationSendEntry[DynamicToken constraints.Ordered] struct {
 	Kind MsgKind
-	T    MsgReconciliationSendEntryData[PayloadDigest, DynamicToken]
+	T    MsgReconciliationSendEntryData[DynamicToken]
 }
 
 /** Transmit a Payload as part of 3d range-based set reconciliation. */
@@ -296,15 +296,15 @@ type MsgReconciliationTerminatePayload struct {
 // 4. Data messages
 
 /** Transmit an AuthorisedEntry to the other peer, and optionally prepare transmission of its Payload. */
-type MsgDataSendEntryData[PayloadDigest, DynamicToken constraints.Ordered] struct {
-	Entry             types.Entry[PayloadDigest]
+type MsgDataSendEntryData[DynamicToken constraints.Ordered] struct {
+	Entry             types.Entry
 	StaticTokenHandle uint64
 	DynamicToken      DynamicToken
 	Offset            uint64
 }
-type MsgDataSendEntry[PayloadDigest, DynamicToken constraints.Ordered] struct {
+type MsgDataSendEntry[DynamicToken constraints.Ordered] struct {
 	Kind MsgKind
-	T    MsgDataSendEntryData[PayloadDigest, DynamicToken]
+	T    MsgDataSendEntryData[DynamicToken]
 }
 
 /** Transmit a Payload to the other peer. */
@@ -329,14 +329,14 @@ type MsgDataSetMetadata struct {
 }
 
 /** Bind a PayloadRequest to a PayloadRequestHandle. */
-type MsgDataBindPayloadRequestData[PayloadDigest constraints.Ordered] struct {
-	Entry      types.Entry[PayloadDigest]
+type MsgDataBindPayloadRequestData struct {
+	Entry      types.Entry
 	Offset     uint64
 	Capability uint64
 }
-type MsgDataBindPayloadRequest[PayloadDigest constraints.Ordered] struct {
+type MsgDataBindPayloadRequest struct {
 	Kind MsgKind
-	T    MsgDataBindPayloadRequestData[PayloadDigest]
+	T    MsgDataBindPayloadRequestData
 }
 
 /** Transmit a Payload to the other peer. */
@@ -368,14 +368,14 @@ func (MsgSetupBindAreaOfinterest) isSyncMessage()                               
 func (MsgSetupBindStaticToken[StaticToken]) isSyncMessage()                                     {}
 func (MsgReconciliationSendFingerprint[Fingerprint]) isSyncMessage()                            {}
 func (MsgReconciliationAnnounceEntries) isSyncMessage()                                         {}
-func (MsgReconciliationSendEntry[PayloadLength, DynamicToken]) isSyncMessage() {
+func (MsgReconciliationSendEntry[DynamicToken]) isSyncMessage() {
 }
-func (MsgReconciliationSendPayload) isSyncMessage()             {}
-func (MsgReconciliationTerminatePayload) isSyncMessage()        {}
-func (MsgDataSendPayload) isSyncMessage()                       {}
-func (MsgDataSetMetadata) isSyncMessage()                       {}
-func (MsgDataBindPayloadRequest[PayloadDigest]) isSyncMessage() {}
-func (MsgDataReplyPayload) isSyncMessage()                      {}
+func (MsgReconciliationSendPayload) isSyncMessage()      {}
+func (MsgReconciliationTerminatePayload) isSyncMessage() {}
+func (MsgDataSendPayload) isSyncMessage()                {}
+func (MsgDataSetMetadata) isSyncMessage()                {}
+func (MsgDataBindPayloadRequest) isSyncMessage()         {}
+func (MsgDataReplyPayload) isSyncMessage()               {}
 
 // Messages categorised by logical channel
 type ReconciliationChannelMsg interface {
@@ -384,7 +384,7 @@ type ReconciliationChannelMsg interface {
 
 func (MsgReconciliationSendFingerprint[Fingerprint]) isReconciliationChannelMsg() {}
 func (MsgReconciliationAnnounceEntries) isReconciliationChannelMsg()              {}
-func (MsgReconciliationSendEntry[PayloadLength, DynamicToken]) isReconciliationChannelMsg() {
+func (MsgReconciliationSendEntry[DynamicToken]) isReconciliationChannelMsg() {
 }
 func (MsgReconciliationSendPayload) isReconciliationChannelMsg()      {}
 func (MsgReconciliationTerminatePayload) isReconciliationChannelMsg() {}
@@ -393,9 +393,9 @@ type DataChannelMsg interface {
 	isDataChannelMsg()
 }
 
-func (MsgDataSendEntry[PayloadDigest, DynamicToken]) isDataChannelMsg() {}
-func (MsgDataReplyPayload) isDataChannelMsg()                           {}
-func (MsgDataSendPayload) isDataChannelMsg()                            {}
+func (MsgDataSendEntry[DynamicToken]) isDataChannelMsg() {}
+func (MsgDataReplyPayload) isDataChannelMsg()            {}
+func (MsgDataSendPayload) isDataChannelMsg()             {}
 
 type IntersectionChannelMsg interface {
 	isIntersectionChannelMsg()
@@ -419,7 +419,7 @@ type PayloadRequestChannelMsg interface {
 	isPayloadRequestChannelMsg()
 }
 
-func (MsgDataBindPayloadRequest[PayloadDigest]) isPayloadRequestChannelMsg() {
+func (MsgDataBindPayloadRequest) isPayloadRequestChannelMsg() {
 }
 
 type StaticTokenChannelMsg interface {
@@ -463,12 +463,12 @@ type ReadCapEncodingScheme[ReadCapability constraints.Ordered] struct {
 	PrivyEncodingScheme[ReadCapability, ReadCapPrivy]
 }
 
-type ReconciliationPrivy[PayloadDigest constraints.Ordered] struct {
+type ReconciliationPrivy struct {
 	PrevSenderHandle      uint64
 	PrevReceiverHandle    uint64
 	prevRange             types.Range3d
 	PrevStaticTokenHandle uint64
-	PrevEntry             types.Entry[PayloadDigest]
+	PrevEntry             types.Entry
 	Announced             struct {
 		Range     types.Range3d
 		Namespace types.NamespaceId
@@ -480,12 +480,12 @@ type SyncSchemes[ReadCapability, Receiver, SyncSignature, PsiGroup, PsiScalar, S
 	AccessControl      AccessControlScheme[SyncSignature, ReadCapability, Receiver, ReceiverSecretKey, K]
 	SubspaceCap        SubspaceCapScheme[SubspaceCapability, SubspaceReceiver, SyncSubspaceSignature, SubspaceSecretKey, K]
 	Pai                PaiScheme[ReadCapability, PsiGroup, PsiScalar, K]
-	Namespace          datamodeltypes.NamespaceScheme[K]
-	Subspace           datamodeltypes.SubspaceScheme[K]
+	Namespace          datamodeltypes.NamespaceScheme
+	Subspace           datamodeltypes.SubspaceScheme
 	Path               types.PathParams[K]
 	AuhtorisationToken AuthorisationTokenScheme[AuthorisationToken, StaticToken, DynamicToken, K]
-	Payload            datamodeltypes.PayloadScheme[PayloadDigest, K]
-	Fingerprint        datamodeltypes.FingerprintScheme[PayloadDigest, Prefingerprint, Fingerprint, K]
+	Payload            datamodeltypes.PayloadScheme
+	Fingerprint        datamodeltypes.FingerprintScheme[Prefingerprint, Fingerprint]
 }
 
 type AccessControlScheme[SyncSignature, ReadCapability, Receiver, ReceiverSecretKey constraints.Ordered, K constraints.Unsigned] struct {

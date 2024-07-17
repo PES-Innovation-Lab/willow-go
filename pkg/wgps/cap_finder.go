@@ -13,8 +13,8 @@ import (
 type Options[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey constraints.Ordered, K constraints.Unsigned] struct {
 	HandleStoreOurs HandleStore[ReadCapability]
 	Schemes         struct {
-		Namespace     datamodeltypes.NamespaceScheme[K]
-		Subspace      datamodeltypes.SubspaceScheme[K]
+		Namespace     datamodeltypes.NamespaceScheme
+		Subspace      datamodeltypes.SubspaceScheme
 		AccessControl wgpstypes.AccessControlScheme[SyncSignature, ReadCapability, Receiver, ReceiverSecretKey, K]
 	}
 }
@@ -78,7 +78,7 @@ func (c *CapFinder[ReadCapability, SyncSignature, PayloadDigest, Receiver, Recei
 	c.NamespaceMap[key][handle] = struct{}{}
 }
 
-func (c *CapFinder[ReadCapability, SyncSignature, PayloadDigest, Receiver, ReceiverSecretKey, K]) FindCapHandle(entry types.Entry[PayloadDigest]) uint64 {
+func (c *CapFinder[ReadCapability, SyncSignature, PayloadDigest, Receiver, ReceiverSecretKey, K]) FindCapHandle(entry types.Entry) uint64 {
 	key, _ := c.GetNamespaceKey(entry.Namespace_id)
 	set := c.NamespaceMap[key]
 	if set == nil {
