@@ -73,5 +73,6 @@ func (PD *PrefixDriver[PathParamValue]) PrefixedBy(Subspace types.SubspaceId, Pa
 		PathRange:     pathRange,
 		TimeRange:     timeRange,
 	}
-	return Kdtree.Query(kdt, range3d)
+	res:=Kdtree.Query(kdt, range3d)
+	return res[:len(res)-1]
 }
