@@ -59,37 +59,36 @@ func TestPrefixedBy(t *testing.T) {
 	pd := PrefixDriver[uint64]{}
 	// Set up the KDTree with sample values
 	kdtree := Kdtree.NewKDTreeWithValues[Kdtree.KDNodeKey](3, []Kdtree.KDNodeKey{
-		{Timestamp: 500, Subspace: []byte{0}, Path: types.Path{{0}}},
-		{Timestamp: 600, Subspace: []byte{1}, Path: types.Path{{0}, {10}, {99}}},
-		{Timestamp: 700, Subspace: []byte{0}, Path: types.Path{{0}, {2}}},
+		{Timestamp: 500, Subspace: []byte{0}, Path: types.Path{{105,110,116,114,111},{116,111},{109,97,110,97,115}}},
+		{Timestamp: 700, Subspace: []byte{0}, Path: types.Path{{105,110,116,114,111},{116,111}}},
+		{Timestamp: 600, Subspace: []byte{0}, Path: types.Path{{105,110,116,114,111},{116,111},{109,97,110,97,116}}},
 	})
 
 	pathParams := types.PathParams[uint64]{
 		MaxComponentCount:  50,
-		MaxComponentLength: 200,
+		MaxComponentLength: 50,
 		MaxPathLength:      50,
 	}
 
 	// Define the path for the test
-	path := types.Path{{0}}
+	path := types.Path{{105,110,116,114,111},{116,111}}
 
 	// Execute the PrefixedBy function
 	res := pd.PrefixedBy([]byte{0}, path, pathParams, kdtree)
 	fmt.Println(res)
 	// Verify the results
-	// expected := []Kdtree.KDNodeKey{
-	// 	{Timestamp: 500, Subspace: []byte{0}, Path: types.Path{{0}}},
-	// 	{Timestamp: 600, Subspace: []byte{0}, Path: types.Path{{0}, {10}, {99}}},
-	// 	{Timestamp: 700, Subspace: []byte{0}, Path: types.Path{{0}, {2}}},
-	// }
+// 	expected := []Kdtree.KDNodeKey{
+// 		{Timestamp: 500, Subspace: []byte{0}, Path: types.Path{{0}}},
+// 		{Timestamp: 700, Subspace: []byte{0}, Path: types.Path{{0}, {2}}},
+// 	}
 
-	// if len(res) != len(expected) {
-	// 	t.Fatalf("expected %d results, got %d", len(expected), len(res))
-	// }
+// 	if len(res) != len(expected) {
+// 		t.Fatalf("expected %d results, got %d", len(expected), len(res))
+// 	}
 
-	// for i, exp := range expected {
-	// 	if !compareKDNodeKey(res[i], exp) {
-	// 		t.Errorf("expected result %d to be %v, got %v", i, exp, res[i])
-	// 	}
-	// }
+// 	for i, exp := range expected {
+// 		if !compareKDNodeKey(res[i], exp) {
+// 			t.Errorf("expected result %d to be %v, got %v", i, exp, res[i])
+// 		}
+// 	}
 }

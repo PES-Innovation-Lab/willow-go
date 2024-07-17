@@ -86,12 +86,16 @@ func (lhs KDNodeKey) String() string {
 func Query(kdt *(KDTree[KDNodeKey]), QueryRange types.Range3d) []KDNodeKey {
 	dim := 0
 	var res []KDNodeKey
+	if(kdt==nil){
+		return res
+	}
 	QueryHelper(kdt.Root, QueryRange, dim, &res)
 	return res
 }
 
 // A helper function to recursively query for range
 func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res *[]KDNodeKey) {
+	// fmt.Println(Node)
 	if Node == nil {
 		return
 	}

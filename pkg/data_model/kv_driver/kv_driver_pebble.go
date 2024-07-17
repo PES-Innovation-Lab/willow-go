@@ -67,10 +67,10 @@ func (k *KvDriver)Close() error {
 
 func (k *KvDriver)Get(key []byte) ([]byte, error) {
 	value, closer, err := k.Db.Get(key)
-	defer closer.Close()
 	if err != nil {
-		return nil, err
+		return []byte{}, err
 	}
+	closer.Close()
 	return value, nil
 }
 

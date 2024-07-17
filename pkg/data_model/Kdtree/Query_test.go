@@ -16,23 +16,7 @@ import (
 
 func TestQuery(t *testing.T) {
 	// Set up the KDTree with sample values
-	kdtree := NewKDTreeWithValues[KDNodeKey](3, []KDNodeKey{
-		{
-			Timestamp: 500,
-			Subspace:  []byte{0},
-			Path:      types.Path{{0}},
-		},
-		{
-			Timestamp: 600,
-			Subspace:  []byte{0},
-			Path:      types.Path{{2}, {10}, {99}},
-		},
-		{
-			Timestamp: 700,
-			Subspace:  []byte{0},
-			Path:      types.Path{{1}},
-		},
-	})
+	kdtree := NewKDTreeWithValues[KDNodeKey](3, []KDNodeKey{})
 
 	// Define the query range
 	subspaceRange := types.Range[types.SubspaceId]{

@@ -27,8 +27,8 @@ type PayloadScheme struct {
 	DefaultPayloadDigest types.PayloadDigest
 }
 
-type AuthorisationScheme[AuthorisationOpts any, AuthorisationToken string] struct {
-	Authorise        func(entry types.Entry, opts AuthorisationOpts) AuthorisationToken
+type AuthorisationScheme[AuthorisationOpts []byte, AuthorisationToken string] struct {
+	Authorise        func(entry types.Entry, opts AuthorisationOpts) (AuthorisationToken, error)
 	IsAuthoriseWrite func(entry types.Entry, token AuthorisationToken) bool
 	TokenEncoding    utils.EncodingScheme[AuthorisationToken]
 }
@@ -43,7 +43,7 @@ type FingerprintScheme[PreFingerPrint, FingerPrint constraints.Ordered] struct {
 	Encoding             utils.EncodingScheme[FingerPrint]
 }
 
-type StoreSchemes[PreFingerPrint, FingerPrint constraints.Ordered, K constraints.Unsigned, AuthorisationOpts any, AuthorisationToken string] struct {
+type StoreSchemes[PreFingerPrint, FingerPrint constraints.Ordered, K constraints.Unsigned, AuthorisationOpts []byte, AuthorisationToken string] struct {
 	PathParams          types.PathParams[K]
 	NamespaceScheme     NamespaceScheme
 	SubspaceScheme      SubspaceScheme
