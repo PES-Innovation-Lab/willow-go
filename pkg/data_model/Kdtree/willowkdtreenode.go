@@ -8,9 +8,10 @@ import (
 )
 
 type KDNodeKey struct {
-	Timestamp uint64
-	Subspace  types.SubspaceId
-	Path      types.Path
+	Timestamp   uint64
+	Subspace    types.SubspaceId
+	Path        types.Path
+	Fingerprint []byte
 }
 
 func (lhs KDNodeKey) Order(rhs KDNodeKey, dim int) Relation {
