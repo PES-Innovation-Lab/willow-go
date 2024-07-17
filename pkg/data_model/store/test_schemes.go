@@ -108,7 +108,6 @@ var TestPayloadScheme datamodeltypes.PayloadScheme = datamodeltypes.PayloadSchem
 	},
 }
 
-
 var StoreSchemes datamodeltypes.StoreSchemes[uint64, uint64, uint8, interface{}, string] = datamodeltypes.StoreSchemes[uint64, uint64, uint8, interface{}, string]{
 	PathParams: TestPathParams,
 	NamespaceScheme: TestNameSpaceScheme,
