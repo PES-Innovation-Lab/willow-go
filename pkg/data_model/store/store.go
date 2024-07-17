@@ -224,21 +224,22 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	// Iterate through all the prunable entries and remove them from storage
 	for _, entry := range prunableEntries {
 		// Remove from storage
-		fmt.Println("======================================")
-		fmt.Println(s.Storage.Get(entry.entry.Subspace_id, entry.entry.Path))
-		fmt.Println("======================================")
+
 		ok := s.Storage.Remove(types.Position3d{
 			Subspace: entry.entry.Subspace_id,
 			Path:     entry.entry.Path,
 			Time:     entry.entry.Timestamp,
 		})
+		fmt.Println(ok)
 		if !ok {
 			log.Fatal("Unable to remove", ok)
 		}
 
 		// Decrement the payload reference counter of the entry
-		count, err := s.EntryDriver.PayloadReferenceCounter.Decrement(entry.authTokenHash)
+
+		count, err := s.EntryDriver.PayloadReferenceCounter.Decrement(entry.entry.Payload_digest)
 		if err != nil {
+			fmt.Println(err)
 			log.Fatal(err)
 		}
 		// If the count is 0, which means no entry is pointing to it, remove the payload itself from the payload driver

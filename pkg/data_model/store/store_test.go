@@ -111,8 +111,10 @@ func TestSet(t *testing.T) {
 	}
 	TestStore.Storage = TestStore.EntryDriver.MakeStorage([]byte("Test"))
 	for _, cases := range tc {
+
 		// fmt.Println(utils.OrderBytes(first, second))
 		returnedValue := TestStore.Set(cases.input, cases.authOpts)
+		fmt.Println("\n", TestStore.Storage.KDTree)
 		fmt.Println("Pruned Entries: ", returnedValue)
 		fmt.Println("============================")
 		entry := TestStore.Storage.Get(cases.input.Subspace, cases.input.Path)

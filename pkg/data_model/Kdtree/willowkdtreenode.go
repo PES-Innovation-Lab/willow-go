@@ -69,8 +69,22 @@ func (lhs KDNodeKey) DistDim(rhs KDNodeKey, dim int) int {
 }
 
 func (lhs KDNodeKey) Dist(rhs KDNodeKey) int {
-	// TODO for distances between keys (Size of Range Query)
-	return int(1)
+	// Calculate the squared difference between timestamps
+	timeDist := (lhs.Timestamp - rhs.Timestamp) * (lhs.Timestamp - rhs.Timestamp)
+
+	// Use a simple constant distance for differing subspace IDs and paths
+	subspaceDist := 0
+	if utils.OrderBytes(lhs.Subspace, rhs.Subspace) != 0 {
+		subspaceDist = 1
+	}
+
+	pathDist := 0
+	if utils.OrderPath(lhs.Path, rhs.Path) != 0 {
+		pathDist = 1
+	}
+
+	// Sum these values to get the overall distance
+	return int(timeDist + uint64(subspaceDist+pathDist))
 }
 
 func (lhs KDNodeKey) Encode() []byte {

@@ -33,7 +33,7 @@ func EncodeKey[Params constraints.Unsigned](timestamp uint64, subspaceId []byte,
 }
 
 /* Decodes the key from the kv store into the timestamp, subspaceId, and path */
-func DecodeKey(encodedKey []byte, pathParams types.PathParams[uint64]) (uint64, []byte, types.Path, error) {
+func DecodeKey[K constraints.Unsigned](encodedKey []byte, pathParams types.PathParams[K]) (uint64, []byte, types.Path, error) {
 	var timestamp uint64
 
 	// Read timestamp from the encoded key
