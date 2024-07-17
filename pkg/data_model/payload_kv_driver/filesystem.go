@@ -14,7 +14,7 @@ import (
 
 type PayloadDriver[PayloadDigest constraints.Ordered, T constraints.Unsigned] struct {
 	path          string
-	PayloadScheme datamodeltypes.PayloadScheme[PayloadDigest, T]
+	PayloadScheme datamodeltypes.PayloadScheme[T]
 }
 
 func (pd *PayloadDriver[PayloadDigest, T]) GetKey(hash PayloadDigest) string {

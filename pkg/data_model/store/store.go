@@ -16,7 +16,7 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-type Store[PayloadDigest, PreFingerPrint, FingerPrint constraints.Ordered, K constraints.Unsigned, AuthorisationOpts any, AuthorisationToken string, T datamodeltypes.KvPart] struct {
+type Store[PreFingerPrint, FingerPrint constraints.Ordered, K constraints.Unsigned, AuthorisationOpts any, AuthorisationToken string, T datamodeltypes.KvPart] struct {
 	Schemes            datamodeltypes.StoreSchemes[PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]
 	EntryDriver        entrydriver.EntryDriver[PayloadDigest, PreFingerPrint, FingerPrint, T, K]
 	PayloadDriver      datamodeltypes.PayloadDriver[PayloadDigest, K]
@@ -25,17 +25,17 @@ type Store[PayloadDigest, PreFingerPrint, FingerPrint constraints.Ordered, K con
 	IngestionMutexLock sync.Mutex
 }
 
-func (s *Store[PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken, T]) Set(
+func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken, T]) Set(
 	input datamodeltypes.EntryInput,
 	authorisation AuthorisationOpts,
-) []types.Entry[PayloadDigest] {
+) []types.Entry {
 	timestamp := input.Timestamp
 	if timestamp == 0 {
 		timestamp = uint64(time.Now().UnixMicro())
 	}
 	digest, _, length := s.PayloadDriver.Set(input.Payload)
 
-	entry := types.Entry[PayloadDigest]{
+	entry := types.Entry{
 		Subspace_id:    input.Subspace,
 		Payload_digest: digest,
 		Path:           input.Path,
@@ -258,16 +258,8 @@ func (s *Store[PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts,
 			if err != nil {
 				return nil, err
 			}
-			//get decoded value
-			// decodedValue :=
-			var decodedValue struct {
-				PayloadDigest PayloadDigest
-				AuthTokenHash PayloadDigest
-				PayloadLentgh uint64
-			}
-			if err != nil {
-				return nil, err
-			}
+			payloadLengthDecoded, payloadDigestDecoded, authDigestDecoded := kv_driver.DecodeValues(encodedValue)
+
 			// Get the authorisation token hash of the entry
 			final_prunables = append(final_prunables, struct {
 				entry         types.Entry[PayloadDigest]
@@ -275,7 +267,7 @@ func (s *Store[PayloadDigest, PreFingerPrint, FingerPrint, K, AuthorisationOpts,
 			}{
 				entry: types.Entry[PayloadDigest]{
 					Subspace_id:    prune_candidate.Subspace,
-					Payload_digest: decodedValue.PayloadDigest,
+					Payload_digest: payloadDigestDecoded,
 					Timestamp:      prune_candidate.Timestamp,
 					Path:           prune_candidate.Path,
 					Payload_length: decodedValue.PayloadLentgh,

@@ -5,5 +5,6 @@ type Path [][]byte
 
 type SubspaceId []byte
 
-
 type NamespaceId []byte
+
+type PayloadDigest string

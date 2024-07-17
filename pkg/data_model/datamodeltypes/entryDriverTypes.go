@@ -17,15 +17,15 @@ type KDTreeStorage[PayloadDigest, PreFingerPrint, FingerPrint constraints.Ordere
 	Opts struct {
 		Namespace         types.NamespaceId
 		SubspaceScheme    SubspaceScheme[K]
-		PayloadScheme     PayloadScheme[PayloadDigest, K]
+		PayloadScheme     PayloadScheme[K]
 		PathParams        types.PathParams[K]
-		FingerprintScheme FingerprintScheme[PayloadDigest, PreFingerPrint, FingerPrint, K]
+		FingerprintScheme FingerprintScheme[PreFingerPrint, FingerPrint, K]
 		GetPayloadLength  func(digest PayloadDigest) uint64
 	}
 
 	/** Retrieve an entry at a subspace and path. */
 	Get func(subspace types.SubspaceId, path types.Path) (struct {
-		Entry         types.Entry[PayloadDigest]
+		Entry         types.Entry
 		AuthTokenHash PayloadDigest
 	}, error)
 	/** Insert a new entry. */
@@ -54,7 +54,7 @@ type KDTreeStorage[PayloadDigest, PreFingerPrint, FingerPrint constraints.Ordere
 	SplitRange func(range3d types.Range3d, knownSize uint) []types.Range3d
 	/** 3D Range Query **/
 	Query func(range3d types.Range3d, reverse bool) []struct {
-		Entry         types.Entry[PayloadDigest]
+		Entry         types.Entry
 		AuthTokenHash PayloadDigest
 	}
 }
