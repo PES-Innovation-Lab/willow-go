@@ -104,7 +104,7 @@ func (pd *PayloadDriver) Set(payload []byte) (types.PayloadDigest, datamodeltype
 func (pd *PayloadDriver) EnsureDir(args ...string) (string, error) {
 	path := filepath.Join(append([]string{pd.path}, args...)...)
 	err := os.MkdirAll(path, 0777)
-	fmt.Println(err, path)
+	// fmt.Println(err, path)
 	if err != nil {
 		return "", err
 	}
@@ -249,9 +249,9 @@ func (pd *PayloadDriver) Receive(payload []byte, offset int64, expectedLength ui
 	return digest, uint64(receivedLen), commit, reject, nil
 }
 
-func MakePayloadDriver(pathParam string, payloadSchemeParam datamodeltypes.PayloadScheme) PayloadDriver {
+func MakePayloadDriver(path string, payloadSchemeParam datamodeltypes.PayloadScheme) PayloadDriver {
 	return PayloadDriver{
-		path:          pathParam,
+		path:          path,
 		PayloadScheme: payloadSchemeParam,
 	}
 }

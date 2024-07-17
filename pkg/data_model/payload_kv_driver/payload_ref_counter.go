@@ -27,15 +27,15 @@ If it does exist, then it increments the value and updates in database
 func (p *PayloadReferenceCounter) Increment(payloadDigest types.PayloadDigest) (uint64, error) {
 	currCountBytes, err := p.Store.Get([]byte(payloadDigest))
 	var currCount uint64
-	var buf []byte
+	buf := make([]byte, 8)
 	if err != nil && strings.Compare(err.Error(), "pebble: not found") != 0 {
 		return 0, err
-	} else if err != nil && strings.Compare(err.Error(), "pebble: not found") == 0 {
+		} else if err != nil && strings.Compare(err.Error(), "pebble: not found") == 0 {
 		currCount = 1
-	} else {
+		} else {
 		currCount = binary.BigEndian.Uint64(currCountBytes) + 1
 	}
-	binary.BigEndian.AppendUint64(buf, currCount)
+	binary.BigEndian.PutUint64(buf, currCount)
 	p.Store.Set([]byte(payloadDigest), buf)
 	return currCount, nil
 }
@@ -49,13 +49,13 @@ If it does exist, then it decrements the value and updates in database
 func (p *PayloadReferenceCounter) Decrement(payloadDigest types.PayloadDigest) (uint64, error) {
 	currCountBytes, err := p.Store.Get([]byte(payloadDigest))
 	var currCount uint64
-	var buf []byte
+	buf := make([]byte, 8)
 	if err != nil {
 		return 0, err
 	} else {
 		currCount = binary.BigEndian.Uint64(currCountBytes) - 1
 	}
-	binary.BigEndian.AppendUint64(buf, currCount)
+	binary.BigEndian.PutUint64(buf, currCount)
 	p.Store.Set([]byte(payloadDigest), buf)
 	return currCount, nil
 }

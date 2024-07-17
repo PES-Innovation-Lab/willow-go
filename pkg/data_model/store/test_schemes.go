@@ -3,7 +3,8 @@ package store
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"reflect"
+	"fmt"
+	"strings"
 
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
 	"github.com/PES-Innovation-Lab/willow-go/types"
@@ -29,7 +30,7 @@ var NameSpaceEncoding utils.EncodingScheme[types.NamespaceId] = utils.EncodingSc
 var TestNameSpaceScheme datamodeltypes.NamespaceScheme = datamodeltypes.NamespaceScheme{
 	EncodingScheme: NameSpaceEncoding,
 	IsEqual: func(a types.NamespaceId, b types.NamespaceId) bool {
-		return reflect.DeepEqual(a, b)
+		return utils.OrderBytes(a, b) == 0
 	},
 	DefaultNamespaceId: types.NamespaceId(""),
 }
@@ -56,10 +57,15 @@ var TestSubspaceScheme datamodeltypes.SubspaceScheme = datamodeltypes.SubspaceSc
 	Order:               utils.OrderSubspace,
 	MinimalSubspaceId:   types.SubspaceId(""),
 }
+var TestFingerprintScheme datamodeltypes.FingerprintScheme[uint64,uint64] = datamodeltypes.FingerprintScheme[uint64,uint64]{} //Dummy scheme
 
-var TestAuthorisationScheme datamodeltypes.AuthorisationScheme[interface{}, string] = datamodeltypes.AuthorisationScheme[interface{}, string]{
-	Authorise: func(entry types.Entry, opts interface{}) string {
-		return string(entry.Subspace_id)
+var TestAuthorisationScheme datamodeltypes.AuthorisationScheme[[]byte, string] = datamodeltypes.AuthorisationScheme[[]byte, string]{
+	Authorise: func(entry types.Entry, opts []byte) (string, error) {
+		if strings.Compare(string(entry.Subspace_id),string(opts)) == 0{
+			return string(entry.Subspace_id) , nil
+		}
+		
+		return string(""),fmt.Errorf("user not authorised")
 	},
 	IsAuthoriseWrite: func(entry types.Entry, token string) bool {
 		return utils.OrderBytes(entry.Subspace_id, types.SubspaceId(token)) == 0
@@ -107,7 +113,7 @@ var TestPayloadScheme datamodeltypes.PayloadScheme = datamodeltypes.PayloadSchem
 		return ch
 	},
 }
-var StoreSchemes datamodeltypes.StoreSchemes[uint64, uint64, uint8, any, string] = datamodeltypes.StoreSchemes[uint64, uint64, uint8, interface{}, string]{
+var StoreSchemes datamodeltypes.StoreSchemes[uint64, uint64, uint8, []byte, string] = datamodeltypes.StoreSchemes[uint64, uint64, uint8, []byte, string]{
 	PathParams:          TestPathParams,
 	NamespaceScheme:     TestNameSpaceScheme,
 	AuthorisationScheme: TestAuthorisationScheme,
