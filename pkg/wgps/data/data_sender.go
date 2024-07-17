@@ -11,8 +11,8 @@ type QueueItem interface {
 	// Define common methods here, if any
 }
 
-type DataSenderEntry[DynamicToken, NamespaceId, SubspaceId, PayloadDigest constraints.Ordered] struct {
-	Entry             types.Entry[NamespaceId, SubspaceId, PayloadDigest]
+type DataSenderEntry[DynamicToken, PayloadDigest constraints.Ordered] struct {
+	Entry             types.Entry[PayloadDigest]
 	Offset            int
 	StaticTokenHandle uint64
 	DynamicToken      DynamicToken
@@ -25,34 +25,34 @@ type DataBindPayloadRequestPack struct {
 	Payload datamodeltypes.Payload
 }
 
-type PayloadRequest[NamespaceId, SubspaceId, PayloadDigest constraints.Ordered] struct {
+type PayloadRequest[PayloadDigest constraints.Ordered] struct {
 	Offset int
-	Entry  types.Entry[NamespaceId, SubspaceId, PayloadDigest]
+	Entry  types.Entry[PayloadDigest]
 }
 
-type DataSenderOpts[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, NamespaceId, SubspaceId, PayloadDigest, AuthorisationOpts constraints.Ordered] struct {
-	HandlesPayloadRequestsTheirs wgps.HandleStore[PayloadRequest[NamespaceId, SubspaceId, PayloadDigest]]
+type DataSenderOpts[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, PayloadDigest, AuthorisationOpts constraints.Ordered] struct {
+	HandlesPayloadRequestsTheirs wgps.HandleStore[PayloadRequest[PayloadDigest]]
 	GetStore                     GetStoreFn[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, NamespaceId, SubspaceId, PayloadDigest, AuthorisationOpts]
 	TransformPayload             func(chunk []byte) []byte
 }
 
-type DataSender[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, NamespaceId, SubspaceId, PayloadDigest, AuthorisationOpts constraints.Ordered] struct {
-	Opts  DataSenderOpts[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, NamespaceId, SubspaceId, PayloadDigest, AuthorisationOpts]
+type DataSender[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, PayloadDigest, AuthorisationOpts constraints.Ordered] struct {
+	Opts  DataSenderOpts[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, PayloadDigest, AuthorisationOpts]
 	Items []QueueItem
 }
 
-func NewDataSender[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, NamespaceId, SubspaceId, PayloadDigest, AuthorisationOpts constraints.Ordered](opts DataSenderOpts[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, NamespaceId, SubspaceId, PayloadDigest, AuthorisationOpts]) *DataSender[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, NamespaceId, SubspaceId, PayloadDigest, AuthorisationOpts] {
-	return &DataSender[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, NamespaceId, SubspaceId, PayloadDigest, AuthorisationOpts]{
+func NewDataSender[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, PayloadDigest, AuthorisationOpts constraints.Ordered](opts DataSenderOpts[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, PayloadDigest, AuthorisationOpts]) *DataSender[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, PayloadDigest, AuthorisationOpts] {
+	return &DataSender[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, PayloadDigest, AuthorisationOpts]{
 		Opts:  opts,
 		Items: make([]QueueItem, 0),
 	}
 }
 
-func (q *DataSender[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, NamespaceId, SubspaceId, PayloadDigest, AuthorisationOpts]) Push(item QueueItem) {
+func (q *DataSender[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, PayloadDigest, AuthorisationOpts]) Push(item QueueItem) {
 	q.Items = append(q.Items, item)
 }
 
-func (q *DataSender[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, NamespaceId, SubspaceId, PayloadDigest, AuthorisationOpts]) Delete() QueueItem {
+func (q *DataSender[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, PayloadDigest, AuthorisationOpts]) Delete() QueueItem {
 	if len(q.Items) == 0 {
 		return nil // or handle underflow
 	}
@@ -61,15 +61,15 @@ func (q *DataSender[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToke
 	return item
 }
 
-func (q *DataSender[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, NamespaceId, SubspaceId, PayloadDigest, AuthorisationOpts]) QueueEntry(entry types.Entry[NamespaceId, SubspaceId, PayloadDigest], staticTokenHandle uint64, dynamicToken DynamicToken, offset int) {
-	Store := q.Opts.GetStore(PayloadRequest[NamespaceId, SubspaceId, PayloadDigest].Entry.NamespaceId)
+func (q *DataSender[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, PayloadDigest, AuthorisationOpts]) QueueEntry(entry types.Entry[PayloadDigest], staticTokenHandle uint64, dynamicToken DynamicToken, offset int) {
+	Store := q.Opts.GetStore(PayloadRequest[PayloadDigest].Entry.NamespaceId)
 	Payload := Store.GetPayload(entry)
 
 	if Payload == nil {
 		//throw an error
 	}
 
-	q.Push(DataSenderEntry[DynamicToken, NamespaceId, SubspaceId, PayloadDigest]{
+	q.Push(DataSenderEntry[DynamicToken, PayloadDigest]{
 		Entry:             entry,
 		Offset:            offset,
 		StaticTokenHandle: staticTokenHandle,
@@ -78,7 +78,7 @@ func (q *DataSender[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToke
 	})
 }
 
-func (q *DataSender[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, NamespaceId, SubspaceId, PayloadDigest, AuthorisationOpts]) QueuePayloadRequest(handle uint64) {
+func (q *DataSender[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, PayloadDigest, AuthorisationOpts]) QueuePayloadRequest(handle uint64) {
 	payloadRequest, _ := q.Opts.HandlesPayloadRequestsTheirs.Get(handle) //This is actually supposed to be getEventually, need to see if writing it this way affects the code in any way
 	store := q.Opts.GetStore(payloadRequest.Entry.NamespaceId)
 	payload := store.GetPayload(payloadRequest.Entry)
