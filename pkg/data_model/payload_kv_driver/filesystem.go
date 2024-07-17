@@ -17,17 +17,21 @@ type PayloadDriver struct {
 	PayloadScheme datamodeltypes.PayloadScheme
 }
 
+// GetKey generates a base32 encoded key for the given payload hash.
 func (pd *PayloadDriver) GetKey(hash types.PayloadDigest) string {
 	encoded := pd.PayloadScheme.EncodingScheme.Encode(hash)
 	return base32.StdEncoding.EncodeToString(encoded)
 }
 
+// GetPayload returns a datamodeltypes.Payload with methods to access the payload bytes.
 func (pd *PayloadDriver) GetPayload(filepath string) datamodeltypes.Payload {
 	return datamodeltypes.Payload{
+		// Returns the entire payload as a byte slice.
 		Bytes: func() []byte {
 			bytes, _ := os.ReadFile(filepath)
 			return bytes
 		},
+		// Returns the payload bytes starting from the given offset.
 		BytesWithOffset: func(offset int) ([]byte, error) {
 			file, err := os.Open(filepath)
 			if err != nil {
@@ -48,6 +52,7 @@ func (pd *PayloadDriver) GetPayload(filepath string) datamodeltypes.Payload {
 			}
 			return bytes, nil
 		},
+		// Returns the length of the payload.
 		Length: func() (uint64, error) {
 			file, err := os.Open(filepath)
 			if err != nil {
@@ -63,6 +68,7 @@ func (pd *PayloadDriver) GetPayload(filepath string) datamodeltypes.Payload {
 
 }
 
+// Retrieves the payload corresponding to the given hash.
 func (pd *PayloadDriver) Get(PayloadHash types.PayloadDigest) (datamodeltypes.Payload, error) {
 	filepath := filepath.Join(pd.path, pd.GetKey(PayloadHash))
 	_, err := os.Lstat(filepath)
@@ -73,6 +79,7 @@ func (pd *PayloadDriver) Get(PayloadHash types.PayloadDigest) (datamodeltypes.Pa
 	return pd.GetPayload(filepath), nil
 }
 
+// Deletes the payload corresponding to the given hash.
 func (pd *PayloadDriver) Erase(PayloadHash types.PayloadDigest) (bool, error) {
 	filepath := filepath.Join(pd.path, pd.GetKey(PayloadHash))
 	err := os.Remove(filepath)
@@ -83,6 +90,7 @@ func (pd *PayloadDriver) Erase(PayloadHash types.PayloadDigest) (bool, error) {
 	return true, nil
 }
 
+// Stores the given payload and returns the payload digest, payload, and length.
 func (pd *PayloadDriver) Set(payload []byte) (types.PayloadDigest, datamodeltypes.Payload, uint64) {
 	digest := <-pd.PayloadScheme.FromBytes(payload)
 	pd.EnsureDir()
@@ -92,6 +100,7 @@ func (pd *PayloadDriver) Set(payload []byte) (types.PayloadDigest, datamodeltype
 	return digest, retPayload, uint64(len(payload))
 }
 
+// Ensures that the specified directory exists, creating it if necessary.
 func (pd *PayloadDriver) EnsureDir(args ...string) (string, error) {
 	path := filepath.Join(append([]string{pd.path}, args...)...)
 	err := os.MkdirAll(path, 0777)
@@ -103,6 +112,7 @@ func (pd *PayloadDriver) EnsureDir(args ...string) (string, error) {
 	return path, nil
 }
 
+// generates a slice of random bytes.
 func getRandomBytes() ([]byte, error) {
 	bytes := make([]byte, 32)
 	_, err := rand.Read(bytes)
@@ -112,6 +122,7 @@ func getRandomBytes() ([]byte, error) {
 	return bytes, nil
 }
 
+// copies the contents from one file to another.
 func copyFile(from, to string) error {
 	src, err := os.Open(from)
 	if err != nil {
@@ -120,7 +131,7 @@ func copyFile(from, to string) error {
 	}
 	defer src.Close()
 
-	dst, err := os.Create(to) // Use os.Create to truncate the destination file if it exists
+	dst, err := os.Create(to)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -132,6 +143,7 @@ func copyFile(from, to string) error {
 	return err
 }
 
+// Handles the reception of a payload, storing it in a temporary staging area and then committing or rejecting it.
 func (pd *PayloadDriver) Receive(payload []byte, offset int64, expectedLength uint64, expectedDigest types.PayloadDigest) (types.PayloadDigest, uint64, datamodeltypes.CommitType, datamodeltypes.RejectType, error) {
 
 	_, err := pd.EnsureDir("staging")
