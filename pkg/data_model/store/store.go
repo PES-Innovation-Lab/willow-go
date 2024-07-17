@@ -270,10 +270,10 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 					Payload_digest: payloadDigestDecoded,
 					Timestamp:      prune_candidate.Timestamp,
 					Path:           prune_candidate.Path,
-					Payload_length: decodedValue.PayloadLentgh,
+					Payload_length: payloadLengthDecoded,
 					Namespace_id:   s.NameSpaceId,
 				},
-				authTokenHash: decodedValue.AuthTokenHash,
+				authTokenHash: authDigestDecoded,
 			})
 		}
 	}
