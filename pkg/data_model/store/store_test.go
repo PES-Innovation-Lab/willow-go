@@ -24,12 +24,12 @@ func InitStorage() *Store[uint64, uint64, uint8, any, string] {
 	entryDriver := entrydriver.EntryDriver[uint64, uint64, uint64]{
 		PayloadReferenceCounter: PayloadReferenceCounter,
 		Opts: {
-		KVDriver          kv_driver.KvDriver
-		NamespaceScheme   datamodeltypes.NamespaceScheme
-		SubspaceScheme    datamodeltypes.SubspaceScheme
-		PayloadScheme     datamodeltypes.PayloadScheme
-		PathParams        types.PathParams[K]
-		FingerprintScheme datamodeltypes.FingerprintScheme[PreFingerPrint, FingerPrint]
+			KVDriver          kv_driver.KvDriver
+			NamespaceScheme   datamodeltypes.NamespaceScheme
+			SubspaceScheme    datamodeltypes.SubspaceScheme
+			PayloadScheme     datamodeltypes.PayloadScheme
+			PathParams        types.PathParams[K]
+			FingerprintScheme datamodeltypes.FingerprintScheme[PreFingerPrint, FingerPrint]
 		}{
 			
 		},
