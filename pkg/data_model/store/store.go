@@ -357,3 +357,9 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	// s.Storage.UpdateAvailablePayload(entryDetails.Subspace, entryDetails.Path)
 	return Success, nil
 }
+
+func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]) AreaOfInterestToRange(
+	areaOfInterest types.AreaOfInterest,
+) types.Range3d {
+	return s.Storage.GetInterestRange(areaOfInterest)
+}

@@ -129,3 +129,16 @@ func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Remove(entry types.Posit
 
 	return k.KDTree.Delete(NodeToDelete)
 }
+
+func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) GetInterestRange(areaOfInterest types.AreaOfInterest) types.Range3d {
+	newRange := utils.AreaTo3dRange[K](
+		utils.Options[K]{
+			MinimalSubspace:        k.Opts.SubspaceScheme.MinimalSubspaceId,
+			SuccessorSubspace:      k.Opts.SubspaceScheme.SuccessorSubspaceFn,
+			MaxPathLength:          k.Opts.PathParams.MaxPathLength,
+			MaxComponentCount:      k.Opts.PathParams.MaxComponentCount,
+			MaxPathComponentLength: k.Opts.PathParams.MaxComponentLength,
+		}, areaOfInterest.Area,
+	)
+	return newRange
+}
