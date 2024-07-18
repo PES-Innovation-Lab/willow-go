@@ -18,7 +18,7 @@ import (
 func BuildFingerprints(entries []Kdtree.KDNodeKey) []string {
 	// check for empty entries
 	if len(entries) == 0 {
-		log.Fatal("Empty entry list, line 22, fingerprinting.go")
+		log.Fatal(`Empty entry list, line 21, fingerprinting.go`)
 	}
 
 	temp := math.Pow(2, math.Ceil(math.Log2(float64(len(entries)))+1))
