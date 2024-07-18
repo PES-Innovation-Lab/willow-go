@@ -27,10 +27,10 @@ func IsBetty(role SyncRole) bool {
 }
 
 type ReadAuthorisation[ReadCapability, SubspaceReadCapability constraints.Ordered] struct {
-	capability ReadCapability
+	Capability ReadCapability
 	// SubspaceCapability is optional here
-	subspaceCapability    SubspaceReadCapability
-	hasSubspaceCapability bool
+	SubspaceCapability    SubspaceReadCapability
+	HasSubspaceCapability bool
 }
 
 //will need to check if the type is any or something else
@@ -47,29 +47,43 @@ type Transport interface {
 type HandleType int
 
 const (
-	IntersectionHandle = iota
+	/* Resource handle for the private set intersection part of private area intersection. More precisely, an IntersectionHandle stores a PsiGroup member together with one of two possible states:
+	- pending (waiting for the other peer to perform scalar multiplication),
+	 - completed (both peers performed scalar multiplication). */
+	IntersectionHandle HandleType = iota
+	/* Logical channel for controlling the binding of new CapabilityHandles. */
 	CapabilityHandle
+	/* Resource handle for AreaOfInterests that peers wish to sync. */
 	AreaOfInterestHandle
+	/* Resource handle that controls the matching from Payload transmissions to Payload requests. */
 	PayloadRequestHandle
+	/* Resource handle for StaticTokens that peers need to transmit. */
 	StaticTokenHandle
 )
 
 type LogicalChannel int
 
 const (
-	ReconciliationChannel = iota
+	/* Logical channel for performing 3d range-based set reconciliation. */
+	ReconciliationChannel LogicalChannel = iota
+	/* Logical channel for transmitting Entries and Payloads outside of 3d range-based set reconciliation. */
 	DataChannel
-	InteresectionChannel
+	/* Logical channel for controlling the binding of new IntersectionHandles. */
+	IntersectionChannel
+	/* Logical channel for controlling the binding of new CapabilityHandles. */
 	CapabilityChannel
+	/* Logical channel for controlling the binding of new AreaOfInterestHandles. */
 	AreaOfInterestChannel
+	/* Logical channel for controlling the binding of new PayloadRequestHandles. */
 	PayloadRequestChannel
+	/* Logical channel for controlling the binding of new StaticTokenHandles. */
 	StaticTokenChannel
 )
 
 type MsgKind int
 
 const (
-	CommitmentReveal = iota
+	CommitmentReveal MsgKind = iota
 	PaiBindFragment
 	PaiReplyFragment
 	PaiRequestSubspaceCapability
@@ -104,7 +118,7 @@ type ControlIssueGuaranteeData struct {
 }
 type MsgControlIssueGuarantee struct {
 	Kind MsgKind
-	T    ControlIssueGuaranteeData
+	Data ControlIssueGuaranteeData
 }
 
 /** Allow the other peer to reduce its total buffer capacity by amount. */
@@ -114,7 +128,7 @@ type ControlAbsolveData struct {
 }
 type MsgControlAbsolve struct {
 	Kind MsgKind
-	T    ControlAbsolveData
+	Data ControlAbsolveData
 }
 
 /** Ask the other peer to send an ControlAbsolve message such that the receiver remaining guarantees will be target. */
@@ -124,7 +138,7 @@ type ControlPleadData struct {
 }
 type MsgControlPlead struct {
 	Kind MsgKind
-	T    ControlPleadData
+	Data ControlPleadData
 }
 
 type ControlAnnounceDroppingData struct {
@@ -132,7 +146,7 @@ type ControlAnnounceDroppingData struct {
 }
 type MsgControlAnnounceDropping struct {
 	Kind MsgKind
-	T    ControlAnnounceDroppingData
+	Data ControlAnnounceDroppingData
 }
 
 /** Notify the other peer that it can stop dropping messages of this logical channel. */
@@ -141,7 +155,7 @@ type ControlApologiseData struct {
 }
 type MsgControlApologise struct {
 	Kind MsgKind
-	T    ControlApologiseData
+	Data ControlApologiseData
 }
 
 type MsgControlFreeData struct {
@@ -152,7 +166,7 @@ type MsgControlFreeData struct {
 }
 type MsgControlFree struct {
 	Kind MsgKind
-	T    MsgControlFreeData
+	Data MsgControlFreeData
 }
 
 /** Complete the commitment scheme to determine the challenge for read authentication. */
@@ -161,7 +175,7 @@ type MsgCommitmentRevealData struct {
 }
 type MsgCommitmentReveal struct {
 	Kind MsgKind
-	T    MsgCommitmentRevealData
+	Data MsgCommitmentRevealData
 }
 
 // 2. Intersection messages
@@ -285,7 +299,7 @@ type MsgReconciliationSendPayloadData struct {
 }
 type MsgReconciliationSendPayload struct {
 	Kind MsgKind
-	T    MsgReconciliationSendPayloadData
+	Data MsgReconciliationSendPayloadData
 }
 
 /** Notify the other peer that the payload transmission is complete. */
@@ -304,7 +318,7 @@ type MsgDataSendEntryData[SubspaceId, NamespaceId, PayloadDigest constraints.Ord
 }
 type MsgDataSendEntry[SubspaceId, NamespaceId, PayloadDigest constraints.Ordered, DynamicToken any] struct {
 	Kind MsgKind
-	T    MsgDataSendEntryData[SubspaceId, NamespaceId, PayloadDigest, DynamicToken]
+	Data MsgDataSendEntryData[SubspaceId, NamespaceId, PayloadDigest, DynamicToken]
 }
 
 /** Transmit a Payload to the other peer. */
@@ -466,7 +480,7 @@ type ReadCapEncodingScheme[ReadCapability, NamespaceId, SubspaceId constraints.O
 type ReconciliationPrivy[NamespaceId, SubspaceId, PayloadDigest constraints.Ordered] struct {
 	PrevSenderHandle      uint64
 	PrevReceiverHandle    uint64
-	prevRange             types.Range3d[SubspaceId]
+	PrevRange             types.Range3d[SubspaceId]
 	PrevStaticTokenHandle uint64
 	PrevEntry             types.Entry[NamespaceId, SubspaceId, PayloadDigest]
 	Announced             struct {
