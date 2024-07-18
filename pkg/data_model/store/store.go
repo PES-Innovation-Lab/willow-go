@@ -361,5 +361,5 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]) AreaOfInterestToRange(
 	areaOfInterest types.AreaOfInterest,
 ) types.Range3d {
-	return s.Storage.GetInterestRange(areaOfInterest)
+	return s.EntryDriver.Storage.GetInterestRange(areaOfInterest)
 }
