@@ -8,9 +8,10 @@ import (
 )
 
 type KDNodeKey struct {
-	Timestamp uint64
-	Subspace  types.SubspaceId
-	Path      types.Path
+	Timestamp   uint64
+	Subspace    types.SubspaceId
+	Path        types.Path
+	Fingerprint []byte
 }
 
 func (lhs KDNodeKey) Order(rhs KDNodeKey, dim int) Relation {
@@ -28,7 +29,7 @@ func (lhs KDNodeKey) Order(rhs KDNodeKey, dim int) Relation {
 
 		case 1:
 			// Compare subspace IDs
-			switch utils.OrderSubspace(lhs.Subspace, rhs.Subspace) {
+			switch utils.OrderBytes(lhs.Subspace, rhs.Subspace) {
 			case -1:
 				return Lesser
 			case 1:
@@ -69,8 +70,22 @@ func (lhs KDNodeKey) DistDim(rhs KDNodeKey, dim int) int {
 }
 
 func (lhs KDNodeKey) Dist(rhs KDNodeKey) int {
-	// TODO for distances between keys (Size of Range Query)
-	return int(1)
+	// Calculate the squared difference between timestamps
+	timeDist := (lhs.Timestamp - rhs.Timestamp) * (lhs.Timestamp - rhs.Timestamp)
+
+	// Use a simple constant distance for differing subspace IDs and paths
+	subspaceDist := 0
+	if utils.OrderBytes(lhs.Subspace, rhs.Subspace) != 0 {
+		subspaceDist = 1
+	}
+
+	pathDist := 0
+	if utils.OrderPath(lhs.Path, rhs.Path) != 0 {
+		pathDist = 1
+	}
+
+	// Sum these values to get the overall distance
+	return int(timeDist + uint64(subspaceDist+pathDist))
 }
 
 func (lhs KDNodeKey) Encode() []byte {
@@ -86,7 +101,7 @@ func (lhs KDNodeKey) String() string {
 func Query(kdt *(KDTree[KDNodeKey]), QueryRange types.Range3d) []KDNodeKey {
 	dim := 0
 	var res []KDNodeKey
-	if(kdt==nil){
+	if kdt == nil {
 		return res
 	}
 	QueryHelper(kdt.Root, QueryRange, dim, &res)
@@ -106,7 +121,7 @@ func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res
 		Time:     Timestamp,
 	}
 
-	inRange := utils.IsIncluded3d(utils.OrderSubspace, QueryRange, Position)
+	inRange := utils.IsIncluded3d(utils.OrderSubspace, QueryRange, Position) //PLEASE CHANGE THE ordersubspace Call i have jugaad for now ~Samarth
 
 	switch dim % 3 {
 	case 0:
@@ -120,10 +135,10 @@ func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res
 			QueryHelper(Node.Right, QueryRange, dim+1, res)
 		}
 	case 1:
-		if utils.OrderSubspace(Subspace, QueryRange.SubspaceRange.Start) >= 0 {
+		if utils.OrderBytes(Subspace, QueryRange.SubspaceRange.Start) >= 0 {
 			QueryHelper(Node.Left, QueryRange, dim+1, res)
 		}
-		if QueryRange.SubspaceRange.OpenEnd || utils.OrderSubspace(Subspace, QueryRange.SubspaceRange.End) < 0 {
+		if QueryRange.SubspaceRange.OpenEnd || utils.OrderBytes(Subspace, QueryRange.SubspaceRange.End) < 0 {
 			if inRange {
 				*res = append(*res, Node.Value)
 			}

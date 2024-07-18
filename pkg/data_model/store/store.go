@@ -49,7 +49,7 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	prunedEntries, err := s.IngestEntry(entry, authToken)
 	if err != nil {
 		log.Fatal(err)
@@ -85,9 +85,9 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	// Get all the prefixes of the entry path to be inserted, iterate through them
 	// and check if a newer prefix exists, if it does, then this entry is not allowed to be inserted!
 	// this is wrt to prefix pruning and this case is not allowed.
-	prefixes:=s.PrefixDriver.DriverPrefixesOf(entry.Subspace_id, entry.Path, s.Schemes.PathParams, s.Storage.KDTree)
+	prefixes := s.PrefixDriver.DriverPrefixesOf(entry.Subspace_id, entry.Path, s.Schemes.PathParams, s.Storage.KDTree)
 	for i, prefix := range prefixes {
-		fmt.Println(i,prefix)
+		fmt.Println(i, prefix)
 		if prefix.Timestamp >= entry.Timestamp {
 			s.IngestionMutexLock.Unlock()
 			log.Fatal("failed to ingest entry\nnewer prefix already exists in store")
@@ -99,6 +99,7 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	// If the current inserting entry is found to be older, do not insert, otherwise
 	// remove the other entry from all storages
 	otherEntry := s.Storage.Get(entry.Subspace_id, entry.Path)
+
 	if !reflect.DeepEqual(otherEntry, types.Position3d{}) {
 		// Checking if path matches
 		encodedKey, _ := kv_driver.EncodeKey(otherEntry.Time, otherEntry.Subspace, s.Schemes.PathParams, otherEntry.Path)
@@ -130,7 +131,9 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 
 			// Decrement payload ref counter of the other entry, if the count is 0, which means no entry is pointing to it
 			// remove the payload itself from the payload driver
+			fmt.Println("Ooga booga ding dong")
 			count, err := s.EntryDriver.PayloadReferenceCounter.Decrement(payloadDigest)
+			fmt.Println(count)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -217,24 +220,28 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 		Time:     entry.Timestamp,
 	}, s.Schemes.PathParams)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln(err)
 	}
 
 	// Iterate through all the prunable entries and remove them from storage
 	for _, entry := range prunableEntries {
 		// Remove from storage
+
 		ok := s.Storage.Remove(types.Position3d{
 			Subspace: entry.entry.Subspace_id,
 			Path:     entry.entry.Path,
 			Time:     entry.entry.Timestamp,
 		})
+		fmt.Println(ok)
 		if !ok {
-			log.Fatal(err)
+			log.Fatal("Unable to remove", ok)
 		}
 
 		// Decrement the payload reference counter of the entry
-		count, err := s.EntryDriver.PayloadReferenceCounter.Decrement(entry.authTokenHash)
+
+		count, err := s.EntryDriver.PayloadReferenceCounter.Decrement(entry.entry.Payload_digest)
 		if err != nil {
+			fmt.Println(err)
 			log.Fatal(err)
 		}
 		// If the count is 0, which means no entry is pointing to it, remove the payload itself from the payload driver
@@ -263,9 +270,9 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 
 	prunableEntries := s.PrefixDriver.PrefixedBy(entry.Subspace, entry.Path, pathParams, kdt)
 	fmt.Println(prunableEntries)
-	for _,entry := range prunableEntries{
+	for _, entry := range prunableEntries {
 
-		fmt.Printf("| prefixed by return | %v, %s,%v",entry.Path,entry.Subspace,entry.Timestamp)
+		fmt.Printf("| prefixed by return | %v, %s,%v\n", entry.Path, entry.Subspace, entry.Timestamp)
 	}
 	final_prunables := make([]struct {
 		entry         types.Entry
@@ -297,7 +304,7 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 			})
 		}
 	}
-	fmt.Println("prunables",final_prunables)
+	fmt.Println("prunables", final_prunables)
 	return final_prunables, nil
 }
 
@@ -332,7 +339,7 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	// Len and Digest as mentioned by the entry
 	payloadLength, payloadDigest, authDigest := kv_driver.DecodeValues(getEntry)
 
-	existingPayload,err := s.PayloadDriver.Get(payloadDigest)
+	existingPayload, err := s.PayloadDriver.Get(payloadDigest)
 	if err != nil {
 		log.Fatal("Unable to Get")
 	}

@@ -57,7 +57,7 @@ func (PD *PrefixDriver[PathParamValue]) PrefixedBy(Subspace types.SubspaceId, Pa
 	}
 
 	pathRange := types.Range[types.Path]{
-		Start:   Path,
+		Start:   utils.SuccessorPath(Path, PathParams),
 		End:     utils.SuccessorPrefix(Path, PathParams),
 		OpenEnd: false,
 	}
@@ -73,6 +73,7 @@ func (PD *PrefixDriver[PathParamValue]) PrefixedBy(Subspace types.SubspaceId, Pa
 		PathRange:     pathRange,
 		TimeRange:     timeRange,
 	}
-	res:=Kdtree.Query(kdt, range3d)
-	return res[:len(res)-1]
+	res := Kdtree.Query(kdt, range3d)
+
+	return res
 }

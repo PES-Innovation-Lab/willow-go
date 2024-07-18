@@ -83,6 +83,7 @@ func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Get(Subspace types.Subsp
 	}
 
 	res := Kdtree.Query(k.KDTree, range3d)
+
 	if len(res) > 1 {
 
 		log.Fatalln("get returned multiple nodes")
@@ -118,10 +119,12 @@ func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Query(QueryRange types.R
 }
 
 func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Remove(entry types.Position3d) bool {
+
 	NodeToDelete := Kdtree.KDNodeKey{
 		Subspace:  entry.Subspace,
 		Timestamp: entry.Time,
 		Path:      entry.Path,
 	}
+
 	return k.KDTree.Delete(NodeToDelete)
 }

@@ -27,7 +27,7 @@
   read_compaction_rate=16000
   read_sampling_multiplier=16
   strict_wal_tail=true
-  table_cache_shards=8
+  table_cache_shards=16
   table_property_collectors=[]
   validate_on_ingest=false
   wal_dir=

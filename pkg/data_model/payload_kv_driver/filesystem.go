@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
 	"github.com/PES-Innovation-Lab/willow-go/types"
@@ -15,6 +16,7 @@ import (
 type PayloadDriver struct {
 	path          string
 	PayloadScheme datamodeltypes.PayloadScheme
+	mu            sync.Mutex
 }
 
 // GetKey generates a base32 encoded key for the given payload hash.
@@ -70,6 +72,9 @@ func (pd *PayloadDriver) GetPayload(filepath string) datamodeltypes.Payload {
 
 // Retrieves the payload corresponding to the given hash.
 func (pd *PayloadDriver) Get(PayloadHash types.PayloadDigest) (datamodeltypes.Payload, error) {
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
+
 	filepath := filepath.Join(pd.path, pd.GetKey(PayloadHash))
 	_, err := os.Lstat(filepath)
 	if err != nil {
@@ -81,6 +86,9 @@ func (pd *PayloadDriver) Get(PayloadHash types.PayloadDigest) (datamodeltypes.Pa
 
 // Deletes the payload corresponding to the given hash.
 func (pd *PayloadDriver) Erase(PayloadHash types.PayloadDigest) (bool, error) {
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
+
 	filepath := filepath.Join(pd.path, pd.GetKey(PayloadHash))
 	err := os.Remove(filepath)
 	if err != nil {
@@ -92,6 +100,9 @@ func (pd *PayloadDriver) Erase(PayloadHash types.PayloadDigest) (bool, error) {
 
 // Stores the given payload and returns the payload digest, payload, and length.
 func (pd *PayloadDriver) Set(payload []byte) (types.PayloadDigest, datamodeltypes.Payload, uint64) {
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
+
 	digest := <-pd.PayloadScheme.FromBytes(payload)
 	pd.EnsureDir()
 	filepath := filepath.Join(pd.path, pd.GetKey(digest))
@@ -145,6 +156,8 @@ func copyFile(from, to string) error {
 
 // Handles the reception of a payload, storing it in a temporary staging area and then committing or rejecting it.
 func (pd *PayloadDriver) Receive(payload []byte, offset int64, expectedLength uint64, expectedDigest types.PayloadDigest) (types.PayloadDigest, uint64, datamodeltypes.CommitType, datamodeltypes.RejectType, error) {
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
 
 	_, err := pd.EnsureDir("staging")
 	if err != nil {
@@ -214,6 +227,9 @@ func (pd *PayloadDriver) Receive(payload []byte, offset int64, expectedLength ui
 
 	// Commit function to move the file to the final destination
 	commit := func(isCompletePayload bool) {
+		pd.mu.Lock()
+		defer pd.mu.Unlock()
+
 		_, err = pd.EnsureDir("partial")
 		if err != nil {
 			fmt.Printf("Unable to ensure partial directory: %v\n", err)
@@ -238,6 +254,9 @@ func (pd *PayloadDriver) Receive(payload []byte, offset int64, expectedLength ui
 
 	// Reject function to delete the staging file
 	reject := func() {
+		pd.mu.Lock()
+		defer pd.mu.Unlock()
+
 		err = os.Remove(stagingFilePath)
 		if err != nil {
 			fmt.Printf("Unable to remove staging file: %v\n", err)
