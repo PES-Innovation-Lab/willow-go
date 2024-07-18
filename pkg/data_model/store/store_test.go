@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/Kdtree"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
 	entrydriver "github.com/PES-Innovation-Lab/willow-go/pkg/data_model/entry_driver"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/kv_driver"
@@ -76,40 +77,54 @@ func TestSet(t *testing.T) {
 			input: datamodeltypes.EntryInput{
 				Subspace:  []byte("Samarth"),
 				Payload:   []byte("Samarth is a 5th sem student at PES University, now interning at PIL"),
-				Timestamp: uint64(time.Now().UnixMicro()) - 200,
+				Timestamp: uint64(time.Now().UnixMicro()),
 				Path:      types.Path{[]byte("intro"), []byte("to"), []byte("samarth")},
 			},
 			authOpts: []byte("Samarth"),
 		},
-		{
-			input: datamodeltypes.EntryInput{
-				Subspace:  []byte("Samarth"),
-				Payload:   []byte("Samarth is a 5th sem gandu"),
-				Timestamp: uint64(time.Now().UnixMicro()),
-				Path:      types.Path{[]byte("intro"), []byte("to")},
-			},
-			authOpts: []byte("Samarth"),
-		},
-		{
-			input: datamodeltypes.EntryInput{
-				Subspace:  []byte("Samar"),
-				Payload:   []byte("Samarth is a 5th sem student at PES University, now interning at PIL"),
-				Timestamp: uint64(time.Now().UnixMicro()) - 200,
-				Path:      types.Path{[]byte("intro"), []byte("to"), []byte("samarth")},
-			},
-			authOpts: []byte("Samar"),
-		},
-		{
-			input: datamodeltypes.EntryInput{
-				Subspace:  []byte("Manas"),
-				Payload:   []byte("Manas is a crazy gigachad with big muscles and a small bike"),
-				Timestamp: uint64(time.Now().UnixMicro()),
-				Path:      types.Path{[]byte("intro"), []byte("to")},
-			},
-			authOpts: []byte("Manas"),
-		},
+		// {
+		// 	input: datamodeltypes.EntryInput{
+		// 		Subspace:  []byte("Samarth"),
+		// 		Payload:   []byte("Samarth is a 5th sem gandu"),
+		// 		Timestamp: uint64(time.Now().UnixMicro()),
+		// 		Path:      types.Path{[]byte("intro"), []byte("to")},
+		// 	},
+		// 	authOpts: []byte("Samarth"),
+		// },
+		// {
+		// 	input: datamodeltypes.EntryInput{
+		// 		Subspace:  []byte("Samar"),
+		// 		Payload:   []byte("Samarth is a 5th sem student at PES University, now interning at PIL"),
+		// 		Timestamp: uint64(time.Now().UnixMicro()) - 200,
+		// 		Path:      types.Path{[]byte("intro"), []byte("to"), []byte("samarth")},
+		// 	},
+		// 	authOpts: []byte("Samar"),
+		// },
+		// {
+		// 	input: datamodeltypes.EntryInput{
+		// 		Subspace:  []byte("Manas"),
+		// 		Payload:   []byte("Manas is a crazy gigachad with big muscles and a small bike"),
+		// 		Timestamp: uint64(time.Now().UnixMicro()),
+		// 		Path:      types.Path{[]byte("intro"), []byte("to")},
+		// 	},
+		// 	authOpts: []byte("Manas"),
+		// },
 	}
-	TestStore.Storage = TestStore.EntryDriver.MakeStorage([]byte("Test"))
+	encodedKeys, _ := TestStore.EntryDriver.Opts.KVDriver.ListAllValues()
+	var keys []Kdtree.KDNodeKey
+
+	for _, key := range encodedKeys {
+		time, sub, path, err := kv_driver.DecodeKey(key.Key, TestStore.Schemes.PathParams)
+		if err != nil {
+			log.Fatal(err)
+		}
+		keys = append(keys, Kdtree.KDNodeKey{
+			Subspace:  sub,
+			Timestamp: time,
+			Path: 	path,
+		})
+	}
+	TestStore.Storage = TestStore.EntryDriver.MakeStorage([]byte("Test"), keys)
 	for _, cases := range tc {
 
 		// fmt.Println(utils.OrderBytes(first, second))

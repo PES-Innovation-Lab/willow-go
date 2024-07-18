@@ -86,6 +86,7 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	// and check if a newer prefix exists, if it does, then this entry is not allowed to be inserted!
 	// this is wrt to prefix pruning and this case is not allowed.
 	prefixes := s.PrefixDriver.DriverPrefixesOf(entry.Subspace_id, entry.Path, s.Schemes.PathParams, s.Storage.KDTree)
+	fmt.Println("Prefixes: ", prefixes)
 	for i, prefix := range prefixes {
 		fmt.Println(i, prefix)
 		if prefix.Timestamp >= entry.Timestamp {
@@ -99,7 +100,8 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	// If the current inserting entry is found to be older, do not insert, otherwise
 	// remove the other entry from all storages
 	otherEntry := s.Storage.Get(entry.Subspace_id, entry.Path)
-
+	fmt.Println("Other Entry: ", otherEntry)
+	fmt.Println("Entry: ", entry.Subspace_id, entry.Path, entry.Timestamp)
 	if !reflect.DeepEqual(otherEntry, types.Position3d{}) {
 		// Checking if path matches
 		encodedKey, _ := kv_driver.EncodeKey(otherEntry.Time, otherEntry.Subspace, s.Schemes.PathParams, otherEntry.Path)
@@ -111,14 +113,14 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 				// Check timestamps for newer entry
 				s.IngestionMutexLock.Unlock()
 				log.Fatal("failed to ingest entry\nnewer entry already exists in store")
-			} else if payloadDigest >= entry.Payload_digest {
+			} else if entry.Timestamp == otherEntry.Time && payloadDigest >= entry.Payload_digest {
 				// Check payload digests for newer entry
 				s.IngestionMutexLock.Unlock()
-				log.Fatal("failed to ingest entry\nnewer prefix already exists in store")
-			} else if payloadLength == entry.Payload_length {
+				log.Fatal("failed to ingest entry\nnewer entry already exists in store")
+			} else if entry.Timestamp == otherEntry.Time && payloadDigest == entry.Payload_digest && payloadLength == entry.Payload_length {
 				// Check payload lengths for newer entry
 				s.IngestionMutexLock.Unlock()
-				log.Fatal("failed to ingest entry\nnewer prefix already exists in store")
+				log.Fatal("failed to ingest entry\nnewer entry already exists in store")
 			}
 			// If the three conditions does not satisgy, it means the entry to be inserted is newer
 			// and the other entry should be removed
@@ -128,6 +130,8 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 				Path:     otherEntry.Path,
 				Time:     otherEntry.Time,
 			})
+
+			s.EntryDriver.Opts.KVDriver.Delete(encodedKey)
 
 			// Decrement payload ref counter of the other entry, if the count is 0, which means no entry is pointing to it
 			// remove the payload itself from the payload driver
