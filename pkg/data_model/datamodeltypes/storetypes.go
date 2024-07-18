@@ -7,6 +7,11 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
+type ExtendedEntry struct {
+	Entry         types.Entry
+	AuthDigest types.PayloadDigest
+}
+
 type NamespaceScheme struct {
 	EncodingScheme 	   utils.EncodingScheme[types.NamespaceId]
 	IsEqual            types.EqualityFn[types.NamespaceId]

@@ -53,13 +53,10 @@ func (e *EntryDriver[PreFingerPrint, FingerPrint, K]) MakeStorage(nameSpaceId ty
 	return storage
 }
 
-func (e *EntryDriver[PreFingerPrint, FingerPrint, K]) Get(Subspace types.SubspaceId, Path types.Path) (struct {
-	Entry         types.Entry
-	AuthTokenHash types.PayloadDigest
-}, error) {
+func (e *EntryDriver[PreFingerPrint, FingerPrint, K]) Get(Subspace types.SubspaceId, Path types.Path) (datamodeltypes.ExtendedEntry, error) {
 	entryExists := e.Storage.Get(Subspace, Path)
 	if reflect.DeepEqual(entryExists, types.Position3d{}) {
-		return struct{Entry types.Entry; AuthTokenHash types.PayloadDigest}{}, errors.New("entry does not exist")
+		return datamodeltypes.ExtendedEntry{}, errors.New("entry does not exist")
 	}
 	encodedKey, err := kv_driver.EncodeKey(types.Position3d{
 		Time:     entryExists.Time,
@@ -68,43 +65,43 @@ func (e *EntryDriver[PreFingerPrint, FingerPrint, K]) Get(Subspace types.Subspac
 	}, e.Opts.PathParams)
 
 	if err != nil {
-		return struct{Entry types.Entry; AuthTokenHash types.PayloadDigest}{}, err
+		return datamodeltypes.ExtendedEntry{}, err
 	}
 	entryBytes, err := e.Opts.KVDriver.Get(encodedKey)
 	fmt.Println("Got entry from pebble")
 	if err != nil {
-		return struct{Entry types.Entry; AuthTokenHash types.PayloadDigest}{}, err
+		return datamodeltypes.ExtendedEntry{}, err
 	}
 	value := kv_driver.DecodeValues(entryBytes)
-	entry := types.Entry{
-		Timestamp: entryExists.Time,
-		Path: 	Path,
-		Subspace_id: 	Subspace,
-		Payload_digest: value.PayloadDigest,
-		Payload_length: value.PayloadLength,
-		Namespace_id: e.Storage.Opts.Namespace,
-	}
 	
-	return struct{Entry types.Entry; AuthTokenHash types.PayloadDigest}{
-		Entry: entry, 
-		AuthTokenHash: value.AuthDigest}, nil
+	return datamodeltypes.ExtendedEntry{
+		Entry: types.Entry{
+			Timestamp: entryExists.Time,
+			Path: 	Path,
+			Subspace_id: 	Subspace,
+			Payload_digest: value.PayloadDigest,
+			Payload_length: value.PayloadLength,
+			Namespace_id: e.Storage.Opts.Namespace,
+		},
+		AuthDigest: value.AuthDigest,
+	}, nil
 }
 
-func (e *EntryDriver[PreFingerPrint, FingerPrint, K]) Insert(entry types.Entry, authDigest types.PayloadDigest) error {
-	encodedKey, err := kv_driver.EncodeKey(types.Position3d{Time: entry.Timestamp, Subspace: entry.Subspace_id, Path: entry.Path}, e.Opts.PathParams)
+func (e *EntryDriver[PreFingerPrint, FingerPrint, K]) Insert(extendedEntry datamodeltypes.ExtendedEntry) error {
+	encodedKey, err := kv_driver.EncodeKey(types.Position3d{Time: extendedEntry.Entry.Timestamp, Subspace: extendedEntry.Entry.Subspace_id, Path: extendedEntry.Entry.Path}, e.Opts.PathParams)
 	if err != nil {
 		return err
 	}
 	encodedValue := kv_driver.EncodeValues(struct{PayloadLength uint64; PayloadDigest types.PayloadDigest; AuthDigest types.PayloadDigest}{
-		PayloadLength: entry.Payload_length,
-		PayloadDigest: entry.Payload_digest,
-		AuthDigest: authDigest,
+		PayloadLength: extendedEntry.Entry.Payload_length,
+		PayloadDigest: extendedEntry.Entry.Payload_digest,
+		AuthDigest: extendedEntry.AuthDigest,
 	})
 	err = e.Opts.KVDriver.Set(encodedKey, encodedValue)
 	if err != nil {
 		return err
 	}
-	err = e.Storage.Insert(entry.Subspace_id, entry.Path, entry.Timestamp)
+	err = e.Storage.Insert(extendedEntry.Entry.Subspace_id, extendedEntry.Entry.Path, extendedEntry.Entry.Timestamp)
 	if err != nil {
 		return err
 	}
@@ -127,18 +124,18 @@ func (e *EntryDriver[PreFingerPrint, FingerPrint, K])Delete(entry types.Entry) e
 	return nil
 }
 
-func (e *EntryDriver[PreFingerPrint, FingerPrint, K]) Query(range3d types.Range3d) ([]types.Entry, error){
+func (e *EntryDriver[PreFingerPrint, FingerPrint, K]) Query(range3d types.Range3d) ([]datamodeltypes.ExtendedEntry, error){
 	entryNodes := e.Storage.Query(range3d)
-	Entries := make([]types.Entry,len(entryNodes))
+	Entries := make([]datamodeltypes.ExtendedEntry,len(entryNodes))
 	for _,node := range entryNodes {
 		encodedKey,err := kv_driver.EncodeKey(types.Position3d{Time: node.Timestamp, Subspace: node.Subspace, Path: node.Path},e.Opts.PathParams)
 		if err!=nil {
 			log.Fatalln(err, "can't Encode key")
-		}
 
+		}
 		encodedValue,err:= e.Opts.KVDriver.Get(encodedKey)
 		if err!=nil {
-			return []types.Entry{},err
+			return nil,err
 		}
 
 		decodedValue:= kv_driver.DecodeValues(encodedValue)
@@ -150,8 +147,10 @@ func (e *EntryDriver[PreFingerPrint, FingerPrint, K]) Query(range3d types.Range3
 			Payload_length: decodedValue.PayloadLength,
 			Namespace_id: e.Storage.Opts.Namespace,
 		}
-		Entries = append(Entries,entry)
-
+		Entries = append(Entries, datamodeltypes.ExtendedEntry{
+			Entry: entry, 
+			AuthDigest: decodedValue.AuthDigest,
+		})
 	}
 	return Entries,nil
 }
