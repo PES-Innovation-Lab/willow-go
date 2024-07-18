@@ -34,7 +34,8 @@ func InitStorage(nameSpaceId types.NamespaceId) *Store[uint64, uint64, uint8, []
 	}
 	entryKvStore := kv_driver.KvDriver{Db: entryDb}
 
-	TestPayloadDriver := payloadDriver.MakePayloadDriver("willow/payload", TestPayloadScheme)
+	PayloadLock := &sync.Mutex{}
+	TestPayloadDriver := payloadDriver.MakePayloadDriver("willow/payload", TestPayloadScheme,PayloadLock)
 
 	entryDriver := entrydriver.EntryDriver[uint64, uint64, uint8]{
 		PayloadReferenceCounter: PayloadReferenceCounter,
@@ -129,6 +130,7 @@ func TestSet(t *testing.T) {
 
 		// fmt.Println(utils.OrderBytes(first, second))
 		returnedValue := TestStore.Set(cases.input, cases.authOpts)
+		fmt.Println(TestStore.Storage.KDTree)
 		fmt.Println("\n", TestStore.Storage.KDTree)
 		fmt.Println("Pruned Entries: ", returnedValue)
 		fmt.Println("============================")

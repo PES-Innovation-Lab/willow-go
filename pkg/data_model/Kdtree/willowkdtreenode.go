@@ -11,7 +11,7 @@ type KDNodeKey struct {
 	Timestamp   uint64
 	Subspace    types.SubspaceId
 	Path        types.Path
-	Fingerprint []byte
+	Fingerprint string
 }
 
 func (lhs KDNodeKey) Order(rhs KDNodeKey, dim int) Relation {

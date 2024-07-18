@@ -16,7 +16,7 @@ import (
 type PayloadDriver struct {
 	path          string
 	PayloadScheme datamodeltypes.PayloadScheme
-	mu            sync.Mutex
+	mu            *sync.Mutex
 }
 
 // GetKey generates a base32 encoded key for the given payload hash.
@@ -268,9 +268,10 @@ func (pd *PayloadDriver) Receive(payload []byte, offset int64, expectedLength ui
 	return digest, uint64(receivedLen), commit, reject, nil
 }
 
-func MakePayloadDriver(path string, payloadSchemeParam datamodeltypes.PayloadScheme) PayloadDriver {
+func MakePayloadDriver(path string, payloadSchemeParam datamodeltypes.PayloadScheme,lock *sync.Mutex) PayloadDriver {
 	return PayloadDriver{
 		path:          path,
 		PayloadScheme: payloadSchemeParam,
+		mu: lock,
 	}
 }
