@@ -5,6 +5,7 @@ import (
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/wgpstypes"
 	"github.com/PES-Innovation-Lab/willow-go/types"
+	"github.com/PES-Innovation-Lab/willow-go/utils"
 	"golang.org/x/exp/constraints"
 )
 
@@ -111,9 +112,9 @@ func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, 
 	}
 
 	if !IsSelectiveFragmentKit(Fragments) {
-		for i, fragment := range Fragments {
-			namespace, path := fragment[0], fragment[1]
-			isMostSpecific := i == len(Fragments)-1
+		for i, fragment := range Fragments.(wgpstypes.FragmentsComplete) {
+			namespace, path := fragment.NamespaceId, fragment.Path
+			isMostSpecific := i == len(Fragments.(wgpstypes.FragmentsComplete))-1
 
 			groupHandle := SubmitFragment(fragment, false)
 
@@ -144,9 +145,9 @@ func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, 
 			p.FragmentsInfo[groupHandle] = fragmentInfo
 		}
 	} else {
-		for i, fragment := range Fragments.Primary {
-			namespace, subspace, path := fragment[0], fragment[1], fragment[2]
-			isMostSpecific := i == len(Fragments.Primary)-1
+		for i, fragment := range Fragments.(wgpstypes.FragmentsSelective).Primary {
+			namespace, subspace, path := fragment.NamespaceId, fragment.SubspaceId, fragment.Path
+			isMostSpecific := i == len(Fragments.(wgpstypes.FragmentsSelective).Primary)-1
 
 			groupHandle := SubmitFragment(fragment, false)
 
@@ -179,9 +180,9 @@ func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, 
 		}
 	}
 
-	for i, fragment := range Fragments.Secondary {
-		namespace, path := fragment[0], fragment[1]
-		isMostSpecific := i == len(Fragments.Secondary)-1
+	for i, fragment := range Fragments.(wgpstypes.FragmentsSelective).Secondary {
+		namespace, path := fragment.NamespaceId, fragment.Path
+		isMostSpecific := i == len(Fragments.(wgpstypes.FragmentsSelective).Secondary)-1
 
 		groupHandle := SubmitFragment(fragment, false)
 
@@ -541,6 +542,44 @@ func (p *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, 
 	}()
 
 	return ch
+}
+
+func CreateFragmentSet(kit wgpstypes.FragmentKit) wgpstypes.FragmentSet {
+	primaryFragment := []wgpstypes.FragmentTriple{}
+	secondaryFragment := []wgpstypes.FragmentPair{}
+	switch v := kit.(type) {
+	case wgpstypes.FragmentKitSelective:
+		prefixes := utils.PrefixesOf(kit.(wgpstypes.FragmentKitSelective).GrantedPath)
+		for _, prefix := range prefixes {
+			primaryFragmentInfo := wgpstypes.FragmentTriple{
+				NamespaceId: v.GrantedNamespace,
+				SubspaceId:  v.GrantedSubspace,
+				Path:        prefix,
+			}
+			secondaryFragmentInfo := wgpstypes.FragmentPair{
+				NamespaceId: v.GrantedNamespace,
+				Path:        prefix,
+			}
+			primaryFragment = append(primaryFragment, primaryFragmentInfo)
+			secondaryFragment = append(secondaryFragment, secondaryFragmentInfo)
+		}
+		return wgpstypes.FragmentsSelective{
+			Primary:   primaryFragment,
+			Secondary: secondaryFragment,
+		}
+	}
+	prefixes := utils.PrefixesOf(kit.(wgpstypes.FragmentKitComplete).GrantedPath)
+	pairs := []wgpstypes.FragmentPair{}
+	for _, prefix := range prefixes {
+		pairsInfo := wgpstypes.FragmentPair{
+			NamespaceId: kit.(wgpstypes.FragmentKitComplete).GrantedNamespace,
+			Path:        prefix,
+		}
+		pairs = append(pairs, pairsInfo)
+	}
+	return wgpstypes.FragmentsSelective{
+		Secondary: pairs,
+	}
 }
 
 func IsSelectiveFragmentKit(set wgpstypes.FragmentSet) bool {
