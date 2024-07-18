@@ -1,9 +1,7 @@
 // Types related to Entry in the data model
 package types
 
-import "golang.org/x/exp/constraints"
-
-type Entry[NamespaceId, SubspaceId, PayloadDigest constraints.Ordered] struct {
+type Entry struct {
 	// ID of the namespace the Entry is a part of
 	Namespace_id NamespaceId
 	// ID of the subspace to which the Entry belongs to

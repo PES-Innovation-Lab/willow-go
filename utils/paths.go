@@ -128,7 +128,7 @@ func DecodePath[T constraints.Unsigned](pathParams types.PathParams[T], encPath 
 	return pos, path, nil
 }
 
-func EncodePathLength[T constraints.Unsigned](pathParams types.PathParams[T], path types.Path) T {
+func EncodePathLength[T constraints.Unsigned](pathParams types.PathParams[T], path types.Path) uint64 {
 	countWidth := GetWidthMax32Int(pathParams.MaxComponentCount)
 
 	length := countWidth
@@ -139,7 +139,7 @@ func EncodePathLength[T constraints.Unsigned](pathParams types.PathParams[T], pa
 		length += compLenWidth
 		length += len(comp)
 	}
-	return T(length)
+	return uint64(length)
 }
 
 func EncodeRelativePath[T constraints.Unsigned](pathParams types.PathParams[T], toEncode types.Path, reference types.Path) []byte {

@@ -1,26 +1,26 @@
 package kv_driver
 
 import (
-	"fmt"
-
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/Kdtree"
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/PES-Innovation-Lab/willow-go/utils"
 	"golang.org/x/exp/constraints"
 )
 
-func DriverPrefixesOf[T constraints.Ordered, K constraints.Unsigned](Path types.Path, pathParams types.PathParams[K], kdt *Kdtree.KDTree[Kdtree.KDNodeKey[T]]) []Kdtree.KDNodeKey[T] {
+type PrefixDriver[PathParamValue constraints.Unsigned] struct{}
+
+func (PD *PrefixDriver[PathParamValue]) DriverPrefixesOf(Subspace types.SubspaceId, Path types.Path, pathParams types.PathParams[PathParamValue], kdt *Kdtree.KDTree[Kdtree.KDNodeKey]) []Kdtree.KDNodeKey {
 	prefixes := utils.PrefixesOf(Path)
 	prefixes = prefixes[1:(len(prefixes) - 1)]
 
-	var results []Kdtree.KDNodeKey[T]
-	var nothing T
+	var results []Kdtree.KDNodeKey
+	// var nothing types.SubspaceId
 
 	for _, prefix := range prefixes {
-		subspaceRange := types.Range[T]{
-			Start:   nothing,
-			End:     nothing,
-			OpenEnd: true,
+		subspaceRange := types.Range[types.SubspaceId]{
+			Start:   Subspace,
+			End:     utils.SuccessorSubspaceId(Subspace),
+			OpenEnd: false,
 		}
 
 		pathRange := types.Range[types.Path]{
@@ -35,7 +35,7 @@ func DriverPrefixesOf[T constraints.Ordered, K constraints.Unsigned](Path types.
 			OpenEnd: true,
 		}
 
-		range3d := types.Range3d[T]{
+		range3d := types.Range3d{
 			SubspaceRange: subspaceRange,
 			PathRange:     pathRange,
 			TimeRange:     timeRange,
@@ -43,23 +43,21 @@ func DriverPrefixesOf[T constraints.Ordered, K constraints.Unsigned](Path types.
 
 		queryResults := Kdtree.Query(kdt, range3d)
 		results = append(results, queryResults...)
-	}
 
-	fmt.Println(results)
+	}
 	return results
 }
 
-func PrefixedBy[T constraints.Ordered, K constraints.Unsigned](Subspace T, Path types.Path, PathParams types.PathParams[K], kdt *(Kdtree.KDTree[Kdtree.KDNodeKey[T]])) []Kdtree.KDNodeKey[T] {
+func (PD *PrefixDriver[PathParamValue]) PrefixedBy(Subspace types.SubspaceId, Path types.Path, PathParams types.PathParams[PathParamValue], kdt *(Kdtree.KDTree[Kdtree.KDNodeKey])) []Kdtree.KDNodeKey {
 	// var nothing T
-
-	subspaceRange := types.Range[T]{
+	subspaceRange := types.Range[types.SubspaceId]{
 		Start:   Subspace,
-		End:     Subspace,
+		End:     utils.SuccessorSubspaceId(Subspace),
 		OpenEnd: false,
 	}
 
 	pathRange := types.Range[types.Path]{
-		Start:   Path,
+		Start:   utils.SuccessorPath(Path, PathParams),
 		End:     utils.SuccessorPrefix(Path, PathParams),
 		OpenEnd: false,
 	}
@@ -70,11 +68,12 @@ func PrefixedBy[T constraints.Ordered, K constraints.Unsigned](Subspace T, Path 
 		OpenEnd: true,
 	}
 
-	range3d := types.Range3d[T]{
+	range3d := types.Range3d{
 		SubspaceRange: subspaceRange,
 		PathRange:     pathRange,
 		TimeRange:     timeRange,
 	}
-	fmt.Println(range3d, kdt)
-	return Kdtree.Query(kdt, range3d)
+	res := Kdtree.Query(kdt, range3d)
+
+	return res
 }

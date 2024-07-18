@@ -10,8 +10,8 @@ import (
 )
 
 /** Returns the `Position3d` of an `Entry`. */
-func EntryPosition[NamespaceKey, SubspaceKey, PayloadDigest constraints.Ordered](entry types.Entry[NamespaceKey, SubspaceKey, PayloadDigest]) types.Position3d[SubspaceKey] {
-	return types.Position3d[SubspaceKey]{
+func EntryPosition(entry types.Entry) types.Position3d {
+	return types.Position3d{
 		Time:     entry.Timestamp,
 		Path:     entry.Path,
 		Subspace: entry.Subspace_id,
@@ -23,14 +23,14 @@ func EntryPosition[NamespaceKey, SubspaceKey, PayloadDigest constraints.Ordered]
 https://willowprotocol.org/specs/encodings/index.html#enc_entry
 */
 
-func EncodeEntry[NamespaceKey, SubspaceKey, PayloadDigest constraints.Ordered, ValueType constraints.Unsigned](
+func EncodeEntry[ValueType constraints.Unsigned](
 	opts struct {
-		EncodeNamespace     func(namespace NamespaceKey) []byte
-		EncodeSubspace      func(subspace SubspaceKey) []byte
-		EncodePayloadDigest func(digest PayloadDigest) []byte
+		EncodeNamespace     func(namespace types.NamespaceId) []byte
+		EncodeSubspace      func(subspace types.SubspaceId) []byte
+		EncodePayloadDigest func(digest types.PayloadDigest) []byte
 		PathParams          types.PathParams[ValueType]
 	},
-	entry types.Entry[NamespaceKey, SubspaceKey, PayloadDigest],
+	entry types.Entry,
 ) []byte {
 	result := append(
 		append(
@@ -52,25 +52,25 @@ func EncodeEntry[NamespaceKey, SubspaceKey, PayloadDigest constraints.Ordered, V
  *
  * https://willowprotocol.org/specs/encodings/index.html#enc_entry
  */
-func DecodeEntry[NamespaceKey, SubspaceKey, PayloadDigest constraints.Ordered, ValueType constraints.Unsigned](
+func DecodeEntry[ValueType constraints.Unsigned](
 	opts struct {
-		NameSpaceScheme EncodingScheme[NamespaceKey, ValueType]
-		SubSpaceScheme  EncodingScheme[SubspaceKey, ValueType]
-		PayloadScheme   EncodingScheme[PayloadDigest, ValueType]
+		NameSpaceScheme EncodingScheme[types.NamespaceId]
+		SubSpaceScheme  EncodingScheme[types.SubspaceId]
+		PayloadScheme   EncodingScheme[types.PayloadDigest]
 		PathScheme      types.PathParams[ValueType]
 	},
 	encEntry []byte,
-) (types.Entry[NamespaceKey, SubspaceKey, PayloadDigest], error) {
+) (types.Entry, error) {
 	// first get the namespace.
 	namespaceId, err := opts.NameSpaceScheme.Decode(encEntry)
 	if err != nil {
-		return types.Entry[NamespaceKey, SubspaceKey, PayloadDigest]{}, fmt.Errorf("failed to decode namespace: %w", err)
+		return types.Entry{}, fmt.Errorf("failed to decode namespace: %w", err)
 	}
 	// now get the the subSpace after finding starting position
 	subspacePos := opts.NameSpaceScheme.EncodedLength(namespaceId)
 	subspaceId, err := opts.SubSpaceScheme.Decode(encEntry[subspacePos:])
 	if err != nil {
-		return types.Entry[NamespaceKey, SubspaceKey, PayloadDigest]{}, fmt.Errorf("failed to decode subspace: %w", err)
+		return types.Entry{}, fmt.Errorf("failed to decode subspace: %w", err)
 	}
 	// Similar approach for Path but decoded as a stream instead
 	pathPos := subspacePos + opts.SubSpaceScheme.EncodedLength(subspaceId)
@@ -101,10 +101,10 @@ func DecodeEntry[NamespaceKey, SubspaceKey, PayloadDigest constraints.Ordered, V
 
 	payloadDigest, err := opts.PayloadScheme.Decode(encEntry[payloadDigestPos:])
 	if err != nil {
-		return types.Entry[NamespaceKey, SubspaceKey, PayloadDigest]{}, fmt.Errorf("failed to decode payloaddigest: %w", err)
+		return types.Entry{}, fmt.Errorf("failed to decode payloaddigest: %w", err)
 	}
 	// decoded entry
-	return types.Entry[NamespaceKey, SubspaceKey, PayloadDigest]{
+	return types.Entry{
 		Namespace_id:   namespaceId,
 		Subspace_id:    subspaceId,
 		Path:           path,
@@ -116,16 +116,16 @@ func DecodeEntry[NamespaceKey, SubspaceKey, PayloadDigest constraints.Ordered, V
 
 /* Encode entry relative to another entry */
 
-func EncodeEntryRelativeEntry[NamespaceId, SubspaceId, PayloadDigest constraints.Ordered, ValueType constraints.Unsigned](
+func EncodeEntryRelativeEntry[ValueType constraints.Unsigned](
 	opts struct {
-		EncodeNamespace     func(namespace NamespaceId) []byte
-		EncodeSubspace      func(subspace SubspaceId) []byte
-		EncodePayloadDigest func(digest PayloadDigest) []byte
-		IsEqualNamespace    func(a NamespaceId, b NamespaceId) bool
-		OrderSubspace       types.TotalOrder[SubspaceId]
+		EncodeNamespace     func(namespace types.NamespaceId) []byte
+		EncodeSubspace      func(subspace types.SubspaceId) []byte
+		EncodePayloadDigest func(digest types.PayloadDigest) []byte
+		IsEqualNamespace    func(a types.NamespaceId, b types.NamespaceId) bool
+		OrderSubspace       types.TotalOrder[types.SubspaceId]
 		PathScheme          types.PathParams[ValueType]
-	}, entry types.Entry[NamespaceId, SubspaceId, PayloadDigest],
-	ref types.Entry[NamespaceId, SubspaceId, PayloadDigest],
+	}, entry types.Entry,
+	ref types.Entry,
 ) []byte {
 
 	// Time difference
@@ -206,23 +206,23 @@ var CompactWidthEndMasks = map[int]int{
 	8: 0x3,
 }
 
-type DecodeResult[NamespaceId, SubspaceId, PayloadDigest constraints.Ordered] struct {
-	Entry types.Entry[NamespaceId, SubspaceId, PayloadDigest]
+type DecodeResult struct {
+	Entry types.Entry
 	Err   error
 }
 
 // Decode an entry encoded relative to another `Entry` from GrowingBytes.
 
-func DecodeStreamEntryRelativeEntry[NamespaceId, SubspaceId, PayloadDigest constraints.Ordered, ValueType constraints.Unsigned](
+func DecodeStreamEntryRelativeEntry[ValueType constraints.Unsigned](
 	opts struct {
-		DecodeStreamNamespace     func(bytes *GrowingBytes) chan NamespaceId
-		DecodeStreamSubspace      func(bytes *GrowingBytes) chan SubspaceId
-		DecodeStreamPayloadDigest func(bytes *GrowingBytes) chan PayloadDigest
+		DecodeStreamNamespace     func(bytes *GrowingBytes) chan types.NamespaceId
+		DecodeStreamSubspace      func(bytes *GrowingBytes) chan types.SubspaceId
+		DecodeStreamPayloadDigest func(bytes *GrowingBytes) chan types.PayloadDigest
 		PathScheme                types.PathParams[ValueType]
-	}, bytes *GrowingBytes, ref types.Entry[NamespaceId, SubspaceId, PayloadDigest],
-) chan DecodeResult[NamespaceId, SubspaceId, PayloadDigest] {
+	}, bytes *GrowingBytes, ref types.Entry,
+) chan DecodeResult {
 
-	resultChan := make(chan DecodeResult[NamespaceId, SubspaceId, PayloadDigest], 1)
+	resultChan := make(chan DecodeResult, 1)
 	go func() {
 		firstByte := bytes.NextAbsolute(1)
 		header := firstByte[0]
@@ -235,7 +235,7 @@ func DecodeStreamEntryRelativeEntry[NamespaceId, SubspaceId, PayloadDigest const
 		compactWidthPayloadLength := math.Pow(2, float64(header&0x3))
 
 		bytes.Prune(1)
-		var namespaceId NamespaceId
+		var namespaceId types.NamespaceId
 		if isNamespaceEncoded {
 
 			namespaceStream := opts.DecodeStreamNamespace(bytes)
@@ -247,7 +247,7 @@ func DecodeStreamEntryRelativeEntry[NamespaceId, SubspaceId, PayloadDigest const
 
 		}
 
-		var subspaceId SubspaceId
+		var subspaceId types.SubspaceId
 		if isSubspaceEncoded {
 
 			subspaceStream := opts.DecodeStreamSubspace(bytes)
@@ -264,7 +264,7 @@ func DecodeStreamEntryRelativeEntry[NamespaceId, SubspaceId, PayloadDigest const
 		timeDiffBytes := bytes.NextAbsolute(int(compactWidthTimeDiff))
 		timeDiff, err := (DecodeIntMax64(timeDiffBytes[:int(compactWidthTimeDiff)]))
 		if err != nil {
-			resultChan <- DecodeResult[NamespaceId, SubspaceId, PayloadDigest]{Err: fmt.Errorf("failed to decode time diff: %w", err)}
+			resultChan <- DecodeResult{Err: fmt.Errorf("failed to decode time diff: %w", err)}
 			return
 		}
 
@@ -273,7 +273,7 @@ func DecodeStreamEntryRelativeEntry[NamespaceId, SubspaceId, PayloadDigest const
 		payloadLengthBytes := bytes.NextAbsolute(int(compactWidthPayloadLength))
 		payloadLength, err := (DecodeIntMax64(payloadLengthBytes[:int(compactWidthPayloadLength)]))
 		if err != nil {
-			resultChan <- DecodeResult[NamespaceId, SubspaceId, PayloadDigest]{Err: fmt.Errorf("failed to decode time diff: %w", err)}
+			resultChan <- DecodeResult{Err: fmt.Errorf("failed to decode time diff: %w", err)}
 			return
 		}
 
@@ -289,7 +289,7 @@ func DecodeStreamEntryRelativeEntry[NamespaceId, SubspaceId, PayloadDigest const
 		} else {
 			timestamp = ref.Timestamp - uint64(timeDiff)
 		}
-		resultChan <- DecodeResult[NamespaceId, SubspaceId, PayloadDigest]{types.Entry[NamespaceId, SubspaceId, PayloadDigest]{
+		resultChan <- DecodeResult{types.Entry{
 			Namespace_id:   namespaceId,
 			Subspace_id:    subspaceId,
 			Path:           path,
@@ -304,15 +304,15 @@ func DecodeStreamEntryRelativeEntry[NamespaceId, SubspaceId, PayloadDigest const
 
 }
 
-func EncodeEntryRelativeRange3d[NamespaceId, SubspaceId, PayloadDigest constraints.Ordered, ValueType constraints.Unsigned](
+func EncodeEntryRelativeRange3d[ValueType constraints.Unsigned](
 	opts struct {
-		EncodeNamespace     func(namespace NamespaceId) []byte
-		EncodeSubspace      func(subspace SubspaceId) []byte
-		EncodePayloadDigest func(digest PayloadDigest) []byte
-		OrderSubspace       types.TotalOrder[SubspaceId]
+		EncodeNamespace     func(namespace types.NamespaceId) []byte
+		EncodeSubspace      func(subspace types.SubspaceId) []byte
+		EncodePayloadDigest func(digest types.PayloadDigest) []byte
+		OrderSubspace       types.TotalOrder[types.SubspaceId]
 		PathScheme          types.PathParams[ValueType]
-	}, entry types.Entry[NamespaceId, SubspaceId, PayloadDigest],
-	outer types.Range3d[SubspaceId],
+	}, entry types.Entry,
+	outer types.Range3d,
 ) ([]byte, error) {
 	var timeDiff uint64
 	if !outer.TimeRange.OpenEnd {
@@ -409,17 +409,17 @@ func EncodeEntryRelativeRange3d[NamespaceId, SubspaceId, PayloadDigest constrain
 		encodedPayloadDigest...), nil
 }
 
-func decodeStreamEntryRelativeRange3d[NamespaceId, SubspaceId, PayloadDigest constraints.Ordered, ValueType constraints.Unsigned](
+func DecodeStreamEntryRelativeRange3d[ValueType constraints.Unsigned](
 	opts struct {
-		DecodeStreamSubspace      func(bytes *GrowingBytes) chan SubspaceId
-		DecodeStreamPayloadDigest func(bytes *GrowingBytes) chan PayloadDigest
+		DecodeStreamSubspace      func(bytes *GrowingBytes) chan types.SubspaceId
+		DecodeStreamPayloadDigest func(bytes *GrowingBytes) chan types.PayloadDigest
 		PathScheme                types.PathParams[ValueType]
 	},
 	bytes *GrowingBytes,
-	outer types.Range3d[SubspaceId],
-	namespaceId NamespaceId,
-) chan DecodeResult[NamespaceId, SubspaceId, PayloadDigest] {
-	resultChan := make(chan DecodeResult[NamespaceId, SubspaceId, PayloadDigest], 1)
+	outer types.Range3d,
+	namespaceId types.NamespaceId,
+) chan DecodeResult {
+	resultChan := make(chan DecodeResult, 1)
 
 	go func() {
 
@@ -433,7 +433,7 @@ func decodeStreamEntryRelativeRange3d[NamespaceId, SubspaceId, PayloadDigest con
 		timeDiffCompactWidth := math.Pow(2, float64((header&0xc)>>2))
 		payloadLengthCompactWidth := math.Pow(2, float64(header&0x3))
 
-		var subspaceId SubspaceId
+		var subspaceId types.SubspaceId
 
 		bytes.Prune(1)
 
@@ -457,7 +457,7 @@ func decodeStreamEntryRelativeRange3d[NamespaceId, SubspaceId, PayloadDigest con
 		timeDiffBytes := bytes.NextAbsolute(int(timeDiffCompactWidth))
 		timeDiff, err := DecodeIntMax64(timeDiffBytes[:int(timeDiffCompactWidth)])
 		if err != nil {
-			resultChan <- DecodeResult[NamespaceId, SubspaceId, PayloadDigest]{Err: fmt.Errorf("failed to decode time diff: %w", err)}
+			resultChan <- DecodeResult{Err: fmt.Errorf("failed to decode time diff: %w", err)}
 			return
 
 		}
@@ -472,14 +472,14 @@ func decodeStreamEntryRelativeRange3d[NamespaceId, SubspaceId, PayloadDigest con
 			timestamp = outer.TimeRange.Start - timeDiff
 		} else if !isTimeDiffCombinedWithStart && addOrSubtractTimedDiff {
 			if outer.TimeRange.OpenEnd {
-				resultChan <- DecodeResult[NamespaceId, SubspaceId, PayloadDigest]{Err: fmt.Errorf("cannot apply time diff to an open end")}
+				resultChan <- DecodeResult{Err: fmt.Errorf("cannot apply time diff to an open end")}
 				return
 			}
 
 			timestamp = outer.TimeRange.End + timeDiff
 		} else {
 			if outer.TimeRange.OpenEnd {
-				resultChan <- DecodeResult[NamespaceId, SubspaceId, PayloadDigest]{Err: fmt.Errorf("cannot apply time diff to an open end")}
+				resultChan <- DecodeResult{Err: fmt.Errorf("cannot apply time diff to an open end")}
 				return
 			}
 
@@ -489,7 +489,7 @@ func decodeStreamEntryRelativeRange3d[NamespaceId, SubspaceId, PayloadDigest con
 		payloadLengthBytes := bytes.NextAbsolute(int(payloadLengthCompactWidth))
 		payloadLength, err := DecodeIntMax64(payloadLengthBytes[:int(payloadLengthCompactWidth)])
 		if err != nil {
-			resultChan <- DecodeResult[NamespaceId, SubspaceId, PayloadDigest]{Err: fmt.Errorf("failed to decode payload %w", err)}
+			resultChan <- DecodeResult{Err: fmt.Errorf("failed to decode payload %w", err)}
 			return
 		}
 
@@ -497,7 +497,7 @@ func decodeStreamEntryRelativeRange3d[NamespaceId, SubspaceId, PayloadDigest con
 
 		payloadDigest := <-opts.DecodeStreamPayloadDigest(bytes)
 
-		resultChan <- DecodeResult[NamespaceId, SubspaceId, PayloadDigest]{types.Entry[NamespaceId, SubspaceId, PayloadDigest]{
+		resultChan <- DecodeResult{types.Entry{
 			Namespace_id:   namespaceId,
 			Subspace_id:    subspaceId,
 			Path:           path,
@@ -512,12 +512,12 @@ func decodeStreamEntryRelativeRange3d[NamespaceId, SubspaceId, PayloadDigest con
 
 }
 
-func DefaultEntry[NamespaceId, SubspaceId, PayloadDigest constraints.Ordered, ValueType constraints.Unsigned](
-	defaultNamespace NamespaceId,
-	defaultSubspace SubspaceId,
-	defaultPayloadDigest PayloadDigest,
-) types.Entry[NamespaceId, SubspaceId, PayloadDigest] {
-	return types.Entry[NamespaceId, SubspaceId, PayloadDigest]{
+func DefaultEntry[ValueType constraints.Unsigned](
+	defaultNamespace types.NamespaceId,
+	defaultSubspace types.SubspaceId,
+	defaultPayloadDigest types.PayloadDigest,
+) types.Entry {
+	return types.Entry{
 		Namespace_id:   defaultNamespace,
 		Subspace_id:    defaultSubspace,
 		Path:           types.Path{},

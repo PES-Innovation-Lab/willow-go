@@ -2,43 +2,32 @@ package Kdtree
 
 import (
 	"fmt"
-	"reflect"
 	"testing"
 
 	"github.com/PES-Innovation-Lab/willow-go/types"
 )
 
 // Custom comparison function for KDNodeKey
-func compareKDNodeKey(a, b KDNodeKey[uint64]) bool {
-	return a.Timestamp == b.Timestamp &&
-		a.Subspace == b.Subspace &&
-		reflect.DeepEqual(a.Path, b.Path)
-}
+// func compareKDNodeKey(a, b KDNodeKey) bool {
+// 	return a.Timestamp == b.Timestamp &&
+// 		utils.OrderSubspace(a.Subspace, b.Subspace) == 0 &&
+// 		reflect.DeepEqual(a.Path, b.Path)
+// }
 
 func TestQuery(t *testing.T) {
 	// Set up the KDTree with sample values
-	kdtree := NewKDTreeWithValues[KDNodeKey[uint64]](3, []KDNodeKey[uint64]{
+	kdtree := NewKDTreeWithValues[KDNodeKey](3, []KDNodeKey{
 		{
-			Timestamp: 500,
-			Subspace:  0,
+			Subspace:  []byte{1},
+			Timestamp: 100,
 			Path:      types.Path{{0}},
-		},
-		{
-			Timestamp: 600,
-			Subspace:  0,
-			Path:      types.Path{{2}, {10}, {99}},
-		},
-		{
-			Timestamp: 700,
-			Subspace:  0,
-			Path:      types.Path{{1}},
 		},
 	})
 
 	// Define the query range
-	subspaceRange := types.Range[uint64]{
-		Start:   0,
-		End:     10,
+	subspaceRange := types.Range[types.SubspaceId]{
+		Start:   []byte{0},
+		End:     []byte{0},
 		OpenEnd: false,
 	}
 
@@ -54,14 +43,14 @@ func TestQuery(t *testing.T) {
 		OpenEnd: true,
 	}
 
-	range3d := types.Range3d[uint64]{
+	range3d := types.Range3d{
 		SubspaceRange: subspaceRange,
 		PathRange:     pathRange,
 		TimeRange:     timeRange,
 	}
 
 	// Execute the query
-	res := Query[uint64](kdtree, range3d)
+	res := Query(kdtree, range3d)
 
 	fmt.Println(res)
 	// Verify the results

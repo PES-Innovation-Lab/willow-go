@@ -1,77 +1,143 @@
 package datamodeltypes
 
 import (
+	"errors"
+	"log"
+
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/Kdtree"
 	"github.com/PES-Innovation-Lab/willow-go/types"
+	"github.com/PES-Innovation-Lab/willow-go/utils"
 	"golang.org/x/exp/constraints"
 )
 
-type EntryDriver[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint constraints.Ordered, T KvPart, K constraints.Unsigned] struct {
-	MakeStorage             func(namespace NamespaceId) KDTreeStorage[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint, T, K]
-	PayloadReferenceCounter PayloadReferenceCounter[PayloadDigest]
-	GetPayloadLength        func(digest PayloadDigest) uint64
-	Opts                    struct {
-		KVDriver          KvDriver
-		NamespaceScheme   NamespaceScheme[NamespaceId, K]
-		SubspaceScheme    SubspaceScheme[NamespaceId, K]
-		PayloadScheme     PayloadScheme[PayloadDigest, K]
-		PathParams        types.PathParams[K]
-		FingerprintScheme FingerprintScheme[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint, K]
-	}
-}
-
-type PayloadReferenceCounter[PayloadDigest constraints.Ordered] interface {
-	Increment(payloadDigest PayloadDigest) uint
-	Decrement(payloadDigest PayloadDigest) uint
-	Count(payloadDigest PayloadDigest) uint
-}
-
-type KDTreeStorage[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint constraints.Ordered, T KvPart, K constraints.Unsigned] struct {
-	KVDriver KvDriver
-
-	KDTree *Kdtree.KDTree[Kdtree.KDNodeKey[SubspaceId]]
+type KDTreeStorage[PreFingerPrint, FingerPrint constraints.Ordered, K constraints.Unsigned] struct {
+	KDTree *Kdtree.KDTree[Kdtree.KDNodeKey]
 
 	Opts struct {
-		Namespace         NamespaceId
-		SubspaceScheme    SubspaceScheme[NamespaceId, K]
-		PayloadScheme     PayloadScheme[PayloadDigest, K]
+		Namespace         types.NamespaceId
+		SubspaceScheme    SubspaceScheme
+		PayloadScheme     PayloadScheme
 		PathParams        types.PathParams[K]
-		FingerprintScheme FingerprintScheme[NamespaceId, SubspaceId, PayloadDigest, PreFingerPrint, FingerPrint, K]
-		GetPayloadLength  func(digest PayloadDigest) uint64
+		FingerprintScheme FingerprintScheme[PreFingerPrint, FingerPrint]
 	}
 
 	/** Retrieve an entry at a subspace and path. */
-	Get func(subspace SubspaceId, path types.Path) (struct {
-		Entry         types.Entry[NamespaceId, SubspaceId, PayloadDigest]
-		AuthTokenHash PayloadDigest
-	}, error)
-	/** Insert a new entry. */
-	Insert func(opts struct {
-		Subspace      SubspaceId
-		Path          types.Path
-		PayloadDigest PayloadDigest
-		Timestamp     uint64
-		PayloadLength uint64
-		AuthTokenHash PayloadDigest
-	}) error
+	// Get func(subspace types.SubspaceId, path types.Path) (struct {
+	// 	Entry         types.Entry
+	// 	AuthTokenHash types.PayloadDigest
+	// }, error)
+	// /** Insert a new entry. */
+	// Insert func(opts struct {
+	// 	Subspace      types.SubspaceId
+	// 	Path          types.Path
+	// 	PayloadDigest types.PayloadDigest
+	// 	Timestamp     uint64
+	// 	PayloadLength uint64
+	// 	AuthTokenHash types.PayloadDigest
+	// }) error
 
-	/** Update the available payload bytes for a given entry. */
+	// /** Update the available payload bytes for a given entry. */
 
-	UpdateAvailablePayload func(subspace SubspaceId, path types.Path) bool
-	/** Remove an entry. */
-	Remove func(entry types.Entry[NamespaceId, SubspaceId, PayloadDigest]) error
-	// Used during sync.
+	// UpdateAvailablePayload func(subspace types.SubspaceId, path types.Path) bool
+	// /** Remove an entry. */
+	// Remove func(entry types.Position3d) error
+	// // Used during sync.
 
-	/** Summarise a given `Range3d` by mapping the included set of `Entry` to ` PreFingerprint`.  */
-	Summarise func(range3d types.Range3d[SubspaceId]) chan struct {
-		Fingerprint PreFingerPrint
-		Size        uint64
+	// /** Summarise a given `Range3d` by mapping the included set of `Entry` to ` PreFingerprint`.  */
+	// Summarise func(range3d types.Range3d) struct {
+	// 	Fingerprint PreFingerPrint
+	// 	Size        uint64
+	// }
+	// /** Split a range into two smaller ranges. */
+	// SplitRange func(range3d types.Range3d, knownSize uint) []types.Range3d
+	// /** 3D Range Query **/
+	// Query func(range3d types.Range3d, reverse bool) []struct {
+	// 	Entry         types.Entry
+	// 	AuthTokenHash types.PayloadDigest
+	// }
+}
+
+func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Get(Subspace types.SubspaceId, Path types.Path) types.Position3d {
+	subspaceRange := types.Range[types.SubspaceId]{
+		Start:   Subspace,
+		End:     utils.SuccessorSubspaceId(Subspace),
+		OpenEnd: false,
 	}
-	/** Split a range into two smaller ranges. */
-	SplitRange func(range3d types.Range3d[SubspaceId], knownSize uint) []types.Range3d[SubspaceId]
-	/** 3D Range Query **/
-	Query func(range3d types.Range3d[SubspaceId], reverse bool) []struct {
-		Entry         types.Entry[NamespaceId, SubspaceId, PayloadDigest]
-		AuthTokenHash PayloadDigest
+
+	pathRange := types.Range[types.Path]{
+		Start:   Path,
+		End:     utils.SuccessorPath(Path, k.Opts.PathParams),
+		OpenEnd: false,
 	}
+
+	timeRange := types.Range[uint64]{
+		Start:   0,
+		End:     2,
+		OpenEnd: true,
+	}
+
+	range3d := types.Range3d{
+		SubspaceRange: subspaceRange,
+		PathRange:     pathRange,
+		TimeRange:     timeRange,
+	}
+
+	res := Kdtree.Query(k.KDTree, range3d)
+
+	if len(res) > 1 {
+
+		log.Fatalln("get returned multiple nodes")
+	}
+	switch len(res) {
+	case 0:
+		return types.Position3d{}
+	case 1:
+		return types.Position3d{
+			Subspace: res[0].Subspace,
+			Time:     res[0].Timestamp,
+			Path:     res[0].Path}
+	default:
+		log.Fatalln("get returned multiple nodes")
+		return types.Position3d{}
+	}
+}
+
+func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Insert(Subspace types.SubspaceId, Path types.Path, Timestamp uint64) error {
+	newVal := Kdtree.KDNodeKey{
+		Subspace:  Subspace,
+		Path:      Path,
+		Timestamp: Timestamp,
+	}
+	if !k.KDTree.Add(newVal) {
+		return errors.New("error inserting the node into the KD tree")
+	}
+	return nil
+}
+
+func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Query(QueryRange types.Range3d) []Kdtree.KDNodeKey {
+	return Kdtree.Query(k.KDTree, QueryRange)
+}
+
+func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Remove(entry types.Position3d) bool {
+
+	NodeToDelete := Kdtree.KDNodeKey{
+		Subspace:  entry.Subspace,
+		Timestamp: entry.Time,
+		Path:      entry.Path,
+	}
+
+	return k.KDTree.Delete(NodeToDelete)
+}
+
+func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) GetInterestRange(areaOfInterest types.AreaOfInterest) types.Range3d {
+	newRange := utils.AreaTo3dRange[K](
+		utils.Options[K]{
+			MinimalSubspace:        k.Opts.SubspaceScheme.MinimalSubspaceId,
+			SuccessorSubspace:      k.Opts.SubspaceScheme.SuccessorSubspaceFn,
+			MaxPathLength:          k.Opts.PathParams.MaxPathLength,
+			MaxComponentCount:      k.Opts.PathParams.MaxComponentCount,
+			MaxPathComponentLength: k.Opts.PathParams.MaxComponentLength,
+		}, areaOfInterest.Area,
+	)
+	return newRange
 }

@@ -11,7 +11,7 @@ import (
 func TeestEncodeKey(t *testing.T) {
 	type args struct {
 		timestamp  uint64
-		subspaceId uint64
+		subspaceId types.SubspaceId
 		pathParams types.PathParams[uint64]
 		path       types.Path
 	}
@@ -25,7 +25,7 @@ func TeestEncodeKey(t *testing.T) {
 			name: "simple case",
 			args: args{
 				timestamp:  123456789,
-				subspaceId: 1,
+				subspaceId: []byte{1},
 				pathParams: types.PathParams[uint64]{MaxComponentCount: 10, MaxComponentLength: 10, MaxPathLength: 100},
 				path:       types.Path{{0x01, 0x02}, {0x03, 0x04}},
 			},

@@ -3,21 +3,21 @@ package kv_driver
 import (
 	"errors"
 	"log"
-	"reflect"
-	"strings"
 
-	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
 	"github.com/PES-Innovation-Lab/willow-go/types"
-	"github.com/PES-Innovation-Lab/willow-go/utils"
 	"github.com/cockroachdb/pebble"
 )
 
-func IsFirstPrefixOfSecond[T datamodeltypes.KvPart](a, b datamodeltypes.KvKey[T]) (bool, error) {
-	if len(a.Key) > len(b.Key) {
+type KvDriver struct {
+	Db            *pebble.DB
+}
+
+func (k *KvDriver)IsFirstPrefixOfSecond(a, b []byte) (bool, error) {
+	if len(a) > len(b) {
 		return false, nil
 	}
-	for index, component := range a.Key {
-		res, err := CompareTwoKeyParts(component, b.Key[index])
+	for i, component := range a {
+		res, err := k.CompareTwoKeyParts(component, b[i])
 		if err != nil {
 			return false, err
 		}
@@ -28,49 +28,24 @@ func IsFirstPrefixOfSecond[T datamodeltypes.KvPart](a, b datamodeltypes.KvKey[T]
 	return true, nil
 }
 
-func CompareTwoKeyParts[T datamodeltypes.KvPart](a, b T) (types.Rel, error) {
-	typeA := reflect.TypeOf(a)
-	typeB := reflect.TypeOf(b)
-	valueA := reflect.ValueOf(a)
-	valueB := reflect.ValueOf(b)
-	if typeA == reflect.TypeOf([]byte(nil)) {
-		if typeB == reflect.TypeOf([]byte(nil)) {
-			utils.OrderBytes(valueA.Bytes(), valueB.Bytes())
-		} else {
-			return -1, nil
-		}
-	} else if typeA.Kind() == reflect.String {
-		if typeB == reflect.TypeOf([]byte(nil)) {
-			return 1, nil
-		} else if typeB.Kind() == reflect.String {
-			return types.Rel(strings.Compare(valueA.String(), valueB.String())), nil
-		} else {
-			return -1, nil
-		}
-	} else {
-		if typeB.Kind() == reflect.String || typeB == reflect.TypeOf([]byte(nil)) {
-			return 1, nil
-		} else {
-			if valueA.Float() < valueB.Float() {
-				return -1, nil
-			} else if valueA.Float() > valueB.Float() {
-				return 1, nil
-			} else {
-				return 0, nil
-			}
-		}
-	}
-	return 0, errors.New("the type of KV part is not matching with allowed types")
-}
-
-func CompareKeys[T datamodeltypes.KvPart](a, b datamodeltypes.KvKey[T]) (types.Rel, error) {
-	if len(a.Key) > len(b.Key) {
+func (k *KvDriver)CompareTwoKeyParts(a, b byte) (types.Rel, error) {
+	if a > b{
 		return 1, nil
-	} else if len(a.Key) < len(b.Key) {
+	} else if a < b {
 		return -1, nil
 	} else {
-		for i, ele := range a.Key {
-			res, err := CompareTwoKeyParts(ele, b.Key[i])
+		return 0, nil
+	}
+}
+
+func (k *KvDriver)CompareKeys(a, b []byte) (types.Rel, error) {
+	if len(a) > len(b) {
+		return 1, nil
+	} else if len(a) < len(b) {
+		return -1, nil
+	} else {
+		for i, ele := range a {
+			res, err := k.CompareTwoKeyParts(ele, b[i])
 			if err != nil {
 				return 0, err
 			}
@@ -82,46 +57,46 @@ func CompareKeys[T datamodeltypes.KvPart](a, b datamodeltypes.KvKey[T]) (types.R
 	return 0, nil
 }
 
-func Close(Db *pebble.DB) error {
-	err := Db.Close()
+func (k *KvDriver)Close() error {
+	err := k.Db.Close()
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func Get(Db *pebble.DB, key []byte) ([]byte, error) {
-	value, closer, err := Db.Get(key)
-	defer closer.Close()
+func (k *KvDriver)Get(key []byte) ([]byte, error) {
+	value, closer, err := k.Db.Get(key)
 	if err != nil {
-		return nil, err
+		return []byte{}, err
 	}
+	closer.Close()
 	return value, nil
 }
 
-func Set(Db *pebble.DB, key, value []byte) error {
-	err := Db.Set(key, value, pebble.Sync)
+func (k *KvDriver)Set(key, value []byte) error {
+	err := k.Db.Set(key, value, pebble.Sync)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func Delete(Db *pebble.DB, key []byte) error {
-	err := Db.Delete(key, pebble.Sync)
+func (k *KvDriver)Delete(key []byte) error {
+	err := k.Db.Delete(key, pebble.Sync)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func Clear(Db *pebble.DB) error {
-	iter, err := Db.NewIter(nil)
+func (k *KvDriver)Clear() error {
+	iter, err := k.Db.NewIter(nil)
 	if err != nil {
 		return err
 	}
 	for iter.First(); iter.Valid(); iter.Next() {
-		err := Db.Delete(iter.Key(), pebble.Sync)
+		err := k.Db.Delete(iter.Key(), pebble.Sync)
 		if err != nil {
 			return err
 		}
@@ -132,7 +107,7 @@ func Clear(Db *pebble.DB) error {
 	return nil
 }
 
-func ListAllValues(Db *pebble.DB) ([]struct {
+func (k *KvDriver)ListAllValues() ([]struct {
 	Key   []byte
 	Value []byte
 }, error,
@@ -141,7 +116,7 @@ func ListAllValues(Db *pebble.DB) ([]struct {
 		Key   []byte
 		Value []byte
 	}
-	iter, err := Db.NewIter(nil)
+	iter, err := k.Db.NewIter(nil)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +128,7 @@ func ListAllValues(Db *pebble.DB) ([]struct {
 	}()
 	for iter.First(); iter.Valid(); iter.Next() {
 		key := iter.Key()
-		value, closer, err := Db.Get(iter.Key())
+		value, closer, err := k.Db.Get(iter.Key())
 		if err != nil {
 			return nil, err
 		}
@@ -166,19 +141,19 @@ func ListAllValues(Db *pebble.DB) ([]struct {
 	return values, nil
 }
 
-func Batch(Db *pebble.DB) (*pebble.Batch, error) {
-	batch := Db.NewBatch()
+func (k *KvDriver)Batch() (*pebble.Batch, error) {
+	batch := k.Db.NewBatch()
 	return batch, nil
 }
 
-func CreateEntryDriver[T datamodeltypes.KvPart](Db *pebble.DB) (datamodeltypes.KvDriver, error) {
-	entryDriver := datamodeltypes.KvDriver{
-		Db:            Db,
-		Get:           Get,
-		Set:           Set,
-		Clear:         Clear,
-		ListAllValues: ListAllValues,
-		Batch:         Batch,
+func (k *KvDriver)GetMultipleValues(queryArray [][]byte)([][]byte, error){
+	queryValues := make([][]byte, 0, len(queryArray))
+	for _, key := range queryArray {
+		value, err := k.Get(key)
+		if err != nil {
+			return nil, err
+		}
+		queryValues = append(queryValues, value)
 	}
-	return entryDriver, nil
+	return queryValues, nil
 }

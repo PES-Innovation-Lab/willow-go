@@ -10,11 +10,11 @@ import (
 
 func TestEncodeRange3dRelative(t *testing.T) {
 	type args struct {
-		orderSubspace    types.TotalOrder[uint64]
-		encodeSubspaceId func(subspace uint64) []byte
+		orderSubspace    types.TotalOrder[types.SubspaceId]
+		encodeSubspaceId func(subspace types.SubspaceId) []byte
 		pathScheme       types.PathParams[uint8]
-		r                types.Range3d[uint64]
-		ref              types.Range3d[uint64]
+		r                types.Range3d
+		ref              types.Range3d
 	}
 	tests := []struct {
 		name string
