@@ -11,12 +11,12 @@ import (
 )
 
 // Define the options struct
-type Options struct {
+type Options[K constraints.Unsigned] struct {
 	MinimalSubspace        types.SubspaceId
 	SuccessorSubspace      types.SuccessorFn[types.SubspaceId]
-	MaxPathLength          int
-	MaxComponentCount      int
-	MaxPathComponentLength int
+	MaxPathLength          K
+	MaxComponentCount      K
+	MaxPathComponentLength K
 }
 
 type EntryOpts[K constraints.Unsigned] struct {
@@ -149,7 +149,7 @@ func IntersectArea(orderSubspace types.TotalOrder[types.SubspaceId], a, b types.
 
 /** Convert an `Area` to a `Range3d`. */
 //THIS FUNCTION NEEDS TO BE FIXED
-func AreaTo3dRange[Params constraints.Unsigned](opts Options, area types.Area, pathParams types.PathParams[Params]) types.Range3d {
+func AreaTo3dRange[Params constraints.Unsigned](opts Options[Params], area types.Area) types.Range3d {
 	var subspace_range types.Range[types.SubspaceId]
 	if !area.Any_subspace {
 		sucSubspace := opts.SuccessorSubspace(area.Subspace_id)
@@ -175,7 +175,11 @@ func AreaTo3dRange[Params constraints.Unsigned](opts Options, area types.Area, p
 	startPath := make(types.Path, len(area.Path))
 	copy(startPath, area.Path)
 
-	end := SuccessorPrefix(area.Path, pathParams) // Use the copied startPath
+	end := SuccessorPrefix(area.Path, types.PathParams[Params]{
+		MaxComponentCount:  opts.MaxComponentCount,
+		MaxComponentLength: opts.MaxPathComponentLength,
+		MaxPathLength:      opts.MaxPathLength,
+	}) // Use the copied startPath
 	var choice bool
 	if isEmpty(end) {
 		end = types.Path{}
