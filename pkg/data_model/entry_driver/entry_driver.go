@@ -27,9 +27,9 @@ type EntryDriver[PreFingerPrint, FingerPrint constraints.Ordered, K constraints.
 Instantiates a new KD tree and then returns the KD tree
 Thos function will be used when we want to instantiate a new KD tree at the start of the application
 */
-func (e *EntryDriver[PreFingerPrint, FingerPrint, K]) MakeStorage(nameSpaceId types.NamespaceId) datamodeltypes.KDTreeStorage[PreFingerPrint, FingerPrint, K] {
+func (e *EntryDriver[PreFingerPrint, FingerPrint, K]) MakeStorage(nameSpaceId types.NamespaceId, dbValues []Kdtree.KDNodeKey) datamodeltypes.KDTreeStorage[PreFingerPrint, FingerPrint, K] {
 	storage := datamodeltypes.KDTreeStorage[PreFingerPrint, FingerPrint, K]{
-		KDTree: Kdtree.NewKDTreeWithValues[Kdtree.KDNodeKey](3, []Kdtree.KDNodeKey{}),
+		KDTree: Kdtree.NewKDTreeWithValues[Kdtree.KDNodeKey](3, dbValues),
 		Opts: struct {
 			Namespace         types.NamespaceId
 			SubspaceScheme    datamodeltypes.SubspaceScheme
