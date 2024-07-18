@@ -132,7 +132,7 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 
 			// Decrement payload ref counter of the other entry, if the count is 0, which means no entry is pointing to it
 			// remove the payload itself from the payload driver
-			if  payloadDigest != entry.Payload_digest {
+			if payloadDigest != entry.Payload_digest {
 				count, err := s.EntryDriver.PayloadReferenceCounter.Decrement(payloadDigest)
 				fmt.Println(count)
 				if err != nil {

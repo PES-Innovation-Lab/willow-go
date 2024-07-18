@@ -129,6 +129,7 @@ func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Remove(entry types.Posit
 	return k.KDTree.Delete(NodeToDelete)
 }
 
+// TODO :- Not Fullproof, check triplestorage.ts implementation for further additions
 func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) GetInterestRange(areaOfInterest types.AreaOfInterest) types.Range3d {
 	newRange := utils.AreaTo3dRange[K](
 		utils.Options[K]{

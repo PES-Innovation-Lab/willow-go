@@ -243,12 +243,12 @@ type MsgSetupBindAreaOfinterest struct {
 	Data MsgSetupBindAreaOfInterestData
 }
 
-type MsgSetupBindStaticTokenData[StaticToken any] struct {
+type MsgSetupBindStaticTokenData[StaticToken constraints.Ordered] struct {
 	StaticToken StaticToken
 }
-type MsgSetupBindStaticToken[StaicToken any] struct {
+type MsgSetupBindStaticToken[StaticToken constraints.Ordered] struct {
 	Kind MsgKind
-	Data MsgSetupBindStaticTokenData[StaicToken]
+	Data MsgSetupBindStaticTokenData[StaticToken]
 }
 
 /** Send a Fingerprint as part of 3d range-based set reconciliation. */
@@ -497,7 +497,7 @@ type SyncSchemes[ReadCapability, Receiver, SyncSignature, PsiGroup, PsiScalar, S
 	Namespace          datamodeltypes.NamespaceScheme
 	Subspace           datamodeltypes.SubspaceScheme
 	Path               types.PathParams[K]
-	AuhtorisationToken AuthorisationTokenScheme[AuthorisationToken, StaticToken, DynamicToken, K]
+	AuhtorisationToken AuthorisationTokenScheme[AuthorisationToken, StaticToken, DynamicToken]
 	Payload            datamodeltypes.PayloadScheme
 	Fingerprint        datamodeltypes.FingerprintScheme[Prefingerprint, Fingerprint]
 }
@@ -527,7 +527,7 @@ type SubspaceCapScheme[SubspaceReceiver, SubspaceSecretKey constraints.Ordered, 
 	}
 }
 
-type AuthorisationTokenScheme[AuthorisationToken, StaticToken, DynamicToken types.OrderableGeneric, K constraints.Unsigned] struct {
+type AuthorisationTokenScheme[AuthorisationToken, StaticToken, DynamicToken types.OrderableGeneric] struct {
 	RecomposeAuthToken func(staticToken StaticToken, dynamicToken DynamicToken) AuthorisationToken
 	DecomposeAuthToken func(authToken AuthorisationToken) (StaticToken, DynamicToken)
 	Encodings          struct {
