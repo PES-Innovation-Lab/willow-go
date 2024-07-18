@@ -134,7 +134,7 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 
 			// Decrement payload ref counter of the other entry, if the count is 0, which means no entry is pointing to it
 			// remove the payload itself from the payload driver
-			if  otherEntry.Entry.Payload_digest != entry.Payload_digest {
+			if otherEntry.Entry.Payload_digest != entry.Payload_digest {
 				count, err := s.EntryDriver.PayloadReferenceCounter.Decrement(otherEntry.Entry.Payload_digest)
 				if err != nil {
 					log.Fatal(err)
@@ -188,23 +188,23 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	// Encode the authorisation token and get the digest of the token
 	encodedToken := s.Schemes.AuthorisationScheme.TokenEncoding.Encode(entry.AuthToken)
 	authDigest, _, _ := s.PayloadDriver.Set(encodedToken)
-	
+
 	// Insert the entry into the storage
 	err := s.EntryDriver.Insert(datamodeltypes.ExtendedEntry{
 		Entry: types.Entry{
-			Timestamp:     entry.Timestamp,
-			Path: 		entry.Path,
+			Timestamp:      entry.Timestamp,
+			Path:           entry.Path,
 			Payload_digest: entry.PayloadDigest,
 			Payload_length: entry.PayloadLength,
-			Subspace_id: 	entry.Subspace,
-			Namespace_id: 	s.NameSpaceId,
+			Subspace_id:    entry.Subspace,
+			Namespace_id:   s.NameSpaceId,
 		},
 		AuthDigest: authDigest,
 	})
-		if err != nil {
-			log.Fatal(err)
-		}
-		
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Increment the payload reference counter of the entry
 	s.EntryDriver.PayloadReferenceCounter.Increment(entry.PayloadDigest)
 
@@ -264,8 +264,8 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 			// 	Path:   prune_candidate.Path,
 			// }, pathParams)
 			// encodedValue, err := s.EntryDriver.Opts.KVDriver.Get(encodedEntry)
-			retEntry ,err := s.EntryDriver.Get(prune_candidate.Subspace, prune_candidate.Path)
-			
+			retEntry, err := s.EntryDriver.Get(prune_candidate.Subspace, prune_candidate.Path)
+
 			if err != nil {
 				return nil, err
 			}
@@ -296,7 +296,7 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	encodedKey, err := kv_driver.EncodeKey(types.Position3d{
 		Time:     entryDetails.Time,
 		Subspace: entryDetails.Subspace,
-		Path:   entryDetails.Path,
+		Path:     entryDetails.Path,
 	}, s.Schemes.PathParams)
 	if err != nil {
 		log.Fatal(err)
@@ -359,4 +359,23 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	areaOfInterest types.AreaOfInterest,
 ) types.Range3d {
 	return s.EntryDriver.Storage.GetInterestRange(areaOfInterest)
+}
+
+func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]) GetPayload(position types.Position3d) []byte {
+	encodedkey, err := kv_driver.EncodeKey(position, s.Schemes.PathParams)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	encodedValue, err := s.EntryDriver.Opts.KVDriver.Get(encodedkey)
+	if err != nil {
+		log.Fatal(err)
+	}
+	Entry := kv_driver.DecodeValues(encodedValue)
+
+	payload, err := s.PayloadDriver.Get(Entry.PayloadDigest)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return (payload.Bytes())
 }
