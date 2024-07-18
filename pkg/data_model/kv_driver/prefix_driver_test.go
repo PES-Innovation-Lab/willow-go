@@ -2,20 +2,18 @@ package kv_driver
 
 import (
 	"fmt"
-	"reflect"
 	"testing"
 
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/Kdtree"
 	"github.com/PES-Innovation-Lab/willow-go/types"
-	"github.com/PES-Innovation-Lab/willow-go/utils"
 )
 
 // Custom comparison function for KDNodeKey
-func compareKDNodeKey(a, b Kdtree.KDNodeKey) bool {
-	return a.Timestamp == b.Timestamp &&
-		utils.OrderSubspace(a.Subspace, b.Subspace) == 0 &&
-		reflect.DeepEqual(a.Path, b.Path)
-}
+// func compareKDNodeKey(a, b Kdtree.KDNodeKey) bool {
+// 	return a.Timestamp == b.Timestamp &&
+// 		utils.OrderSubspace(a.Subspace, b.Subspace) == 0 &&
+// 		reflect.DeepEqual(a.Path, b.Path)
+// }
 
 func TestPrefixesOf(t *testing.T) {
 	pd := PrefixDriver[uint64]{}

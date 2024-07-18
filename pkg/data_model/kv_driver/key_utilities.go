@@ -18,16 +18,16 @@ import (
 */
 
 /* Encodes the time, subspace and path from the kd tree into a key usable by the entries kv store */
-func EncodeKey[Params constraints.Unsigned](timestamp uint64, subspaceId []byte, pathParams types.PathParams[Params], path types.Path) ([]byte, error) {
+func EncodeKey[Params constraints.Unsigned](entry types.Position3d, pathParams types.PathParams[Params]) ([]byte, error) {
 	// Convert timestamp to byte slice
-	timestampBytes := utils.BigIntToBytes(timestamp)
+	timestampBytes := utils.BigIntToBytes(entry.Time)
 
 	// Convert path to byte slice
-	pathBytes := utils.EncodePath(pathParams, path)
+	pathBytes := utils.EncodePath(pathParams, entry.Path)
 
 	// Combine all byte slices
 	encodedKey := append(timestampBytes, pathBytes...)
-	encodedKey = append(encodedKey, subspaceId...)
+	encodedKey = append(encodedKey, entry.Subspace...)
 
 	return encodedKey, nil
 }
@@ -53,27 +53,35 @@ func DecodeKey[K constraints.Unsigned](encodedKey []byte, pathParams types.PathP
 }
 
 // payloaddigest payloadlength and authdigest
-func EncodeValues(PayloadLength uint64, PayloadDigest types.PayloadDigest, AuthDigest types.PayloadDigest) []byte {
+func EncodeValues(value struct{
+	PayloadLength uint64 
+	PayloadDigest types.PayloadDigest
+	AuthDigest types.PayloadDigest
+	}) []byte {
 	var buffer bytes.Buffer
 
 	// Encode PayloadLength
-	encodedLength := utils.BigIntToBytes(PayloadLength)
+	encodedLength := utils.BigIntToBytes(value.PayloadLength)
 	buffer.Write(encodedLength)
 
 	// Encode PayloadDigest
-	encodedPayloadDigest := stringToBytes(string(PayloadDigest))
+	encodedPayloadDigest := stringToBytes(string(value.PayloadDigest))
 	buffer.Write(encodedPayloadDigest)
 
 	// Encode AuthDigest
-	encodedAuthDigest := stringToBytes(string(AuthDigest))
+	encodedAuthDigest := stringToBytes(string(value.AuthDigest))
 	buffer.Write(encodedAuthDigest)
 
 	return buffer.Bytes()
 }
 
 // Takes a byte array and returns payloadLength, payloadDigest, authDigest
-func DecodeValues(encoded []byte) (uint64, types.PayloadDigest, types.PayloadDigest) {
-	// Decode PayloadLength
+func DecodeValues(encoded []byte) (struct{
+	PayloadLength uint64 
+	PayloadDigest types.PayloadDigest
+	AuthDigest types.PayloadDigest
+	}) {
+	// Decorode PayloadLength
 	payloadLength := binary.BigEndian.Uint64(encoded[:8])
 	remaining := encoded[8:]
 
@@ -83,7 +91,15 @@ func DecodeValues(encoded []byte) (uint64, types.PayloadDigest, types.PayloadDig
 	// Decode AuthDigest
 	authDigest, _ := bytesToString(remaining)
 
-	return payloadLength, types.PayloadDigest(payloadDigest), types.PayloadDigest(authDigest)
+	return struct{
+		PayloadLength uint64; 
+		PayloadDigest types.PayloadDigest; 
+		AuthDigest types.PayloadDigest
+		}{
+			PayloadLength: payloadLength, 
+			PayloadDigest: types.PayloadDigest(payloadDigest), 
+			AuthDigest: types.PayloadDigest(authDigest),
+		}
 }
 
 // stringToBytes converts a string to a byte slice with a length prefix.
