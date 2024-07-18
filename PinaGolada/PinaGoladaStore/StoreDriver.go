@@ -1,4 +1,4 @@
-package PinaGolada
+package PinaGoladaStore
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ import (
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/store"
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/cockroachdb/pebble"
-).
+)
 
 func InitStorage(nameSpaceId types.NamespaceId) *store.Store[uint64, uint64, uint8, []byte, string] {
 
@@ -64,6 +64,3 @@ func InitStorage(nameSpaceId types.NamespaceId) *store.Store[uint64, uint64, uin
 		PrefixDriver:       TestPrefixDriver,
 	}
 }
-
-
-
