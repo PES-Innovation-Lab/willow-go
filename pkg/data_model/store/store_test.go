@@ -125,21 +125,25 @@ func TestSet(t *testing.T) {
 			Path: 	path,
 		})
 	}
-	TestStore.Storage = TestStore.EntryDriver.MakeStorage([]byte("Test"), keys)
+	TestStore.EntryDriver.Storage = TestStore.EntryDriver.MakeStorage([]byte("Test"), keys)
 	for _, cases := range tc {
 
 		// fmt.Println(utils.OrderBytes(first, second))
 		returnedValue := TestStore.Set(cases.input, cases.authOpts)
-		fmt.Println(TestStore.Storage.KDTree)
-		fmt.Println("\n", TestStore.Storage.KDTree)
+		fmt.Println(TestStore.EntryDriver.Storage.KDTree)
+		fmt.Println("\n", TestStore.EntryDriver.Storage.KDTree)
 		fmt.Println("Pruned Entries: ", returnedValue)
 		fmt.Println("============================")
-		entry := TestStore.Storage.Get(cases.input.Subspace, cases.input.Path)
+		entry := TestStore.EntryDriver.Storage.Get(cases.input.Subspace, cases.input.Path)
 		fmt.Println("============================")
 		fmt.Println("Entry")
 		fmt.Printf("Subspace: %s Path: %v Timestamp: %v\n", entry.Subspace, entry.Path, entry.Time)
 		fmt.Println("============================")
-		encodedKey, err := kv_driver.EncodeKey(entry.Time, entry.Subspace, TestStore.Schemes.PathParams, entry.Path)
+		encodedKey, err := kv_driver.EncodeKey(types.Position3d{
+			Time:     entry.Time,
+			Subspace: entry.Subspace,
+			Path:    entry.Path,
+		}, TestStore.Schemes.PathParams)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -147,13 +151,13 @@ func TestSet(t *testing.T) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		payloadLength, payloadDigest, authDigest := kv_driver.DecodeValues(encodedValue)
+		decodedValue := kv_driver.DecodeValues(encodedValue)
 		fmt.Println("============================")
 		fmt.Println("Values from db")
-		fmt.Printf("PayloadLength: %v PayloadDigest: %v AuthDigest: %v\n", payloadLength, payloadDigest, authDigest)
+		fmt.Printf("PayloadLength: %v PayloadDigest: %v AuthDigest: %v\n", decodedValue.PayloadLength, decodedValue.PayloadDigest, decodedValue.AuthDigest)
 		fmt.Println("============================")
 
-		payload, err := TestStore.PayloadDriver.Get(payloadDigest)
+		payload, err := TestStore.PayloadDriver.Get(decodedValue.PayloadDigest)
 		if err != nil {
 			log.Fatal(err)
 		}

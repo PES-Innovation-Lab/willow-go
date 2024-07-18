@@ -99,6 +99,7 @@ func (lhs KDNodeKey) String() string {
 
 // Queries the given tree for the given 3-d Range
 func Query(kdt *(KDTree[KDNodeKey]), QueryRange types.Range3d) []KDNodeKey {
+
 	dim := 0
 	var res []KDNodeKey
 	if kdt == nil {
@@ -110,7 +111,6 @@ func Query(kdt *(KDTree[KDNodeKey]), QueryRange types.Range3d) []KDNodeKey {
 
 // A helper function to recursively query for range
 func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res *[]KDNodeKey) {
-	// fmt.Println(Node)
 	if Node == nil {
 		return
 	}
@@ -120,9 +120,8 @@ func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res
 		Path:     Path,
 		Time:     Timestamp,
 	}
-
+	
 	inRange := utils.IsIncluded3d(utils.OrderSubspace, QueryRange, Position) //PLEASE CHANGE THE ordersubspace Call i have jugaad for now ~Samarth
-
 	switch dim % 3 {
 	case 0:
 		if utils.OrderTimestamp(Timestamp, QueryRange.TimeRange.Start) >= 0 {

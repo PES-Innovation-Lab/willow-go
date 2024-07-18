@@ -35,7 +35,11 @@ func TeestEncodeKey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := EncodeKey(tt.args.timestamp, tt.args.subspaceId, tt.args.pathParams, tt.args.path)
+			got, err := EncodeKey(types.Position3d{
+				Time:     tt.args.timestamp,
+				Subspace: tt.args.subspaceId,
+				Path:    tt.args.path,
+			}, types.PathParams[uint64]{MaxComponentCount: 10, MaxComponentLength: 10, MaxPathLength: 100})
 			if (err != nil) != tt.wantErr {
 				t.Errorf("EncodeKey() error = %v, wantErr %v", err, tt.wantErr)
 				return
