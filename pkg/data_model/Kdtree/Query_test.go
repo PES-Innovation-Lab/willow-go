@@ -21,6 +21,7 @@ func TestQuery(t *testing.T) {
 			Subspace:  []byte{1},
 			Timestamp: 100,
 			Path:      types.Path{{0}},
+			Fingerprint: "AHSIDAIWDAWDNAINSDJNAWD",
 		},
 	})
 
