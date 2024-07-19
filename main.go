@@ -57,7 +57,7 @@ func main() {
 	dir := "willow"
 	f, err := os.Open(dir)
 	nameSpaces := make(map[string]uint8)
-	if err != nil && strings.Compare(err.Error(), "open willow: no such file or directory") != 0 {
+	if err != nil && strings.Compare(err.Error(), "open willow: no such file or directory") != 0 && strings.Compare(err.Error(), "open willow: The system cannot find the file specified.") != 0 {
 		fmt.Println(err)
 		return
 	} else if err == nil {
@@ -97,7 +97,7 @@ LOOP:
 		case "new":
 			if nameSpaces[input] != 255 {
 				fmt.Printf("Creating new NameSpaceID %s\n", input)
-				fmt.Println("Are sure you want to create a new NameSpaceID (y/n)")
+				fmt.Printf("Are sure you want to create a new NameSpaceID: %s  (y/n)", objects[1])
 				if !scanner.Scan() {
 					break LOOP
 				}
@@ -111,8 +111,9 @@ LOOP:
 					fmt.Println("Invalid input. Please enter 'y' or 'n'.")
 				}
 			} else {
-				setNamespace = types.NamespaceId(input)
-				NameSpaceInteraction(setNamespace)
+				fmt.Println("error: Namespace already exists")
+				fmt.Println("use enter to access existing Namespaces")
+				fmt.Println("\nusage: enter <namespace>")
 			}
 		case "list":
 			if len(nameSpaces) > 0 {
