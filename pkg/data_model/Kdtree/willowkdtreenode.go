@@ -138,7 +138,6 @@ func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res
 		}
 		if QueryRange.TimeRange.OpenEnd || utils.OrderTimestamp(Timestamp, QueryRange.TimeRange.End) < 0 {
 			if inRange {
-				fmt.Println("case 1 Adding")
 				mu.Lock()
 				*res = append(*res, Node.Value)
 				mu.Unlock()
@@ -157,9 +156,8 @@ func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res
 				QueryHelper(Node.Left, QueryRange, dim+1, res, mu, wg)
 			}()
 		}
-		if QueryRange.SubspaceRange.OpenEnd || utils.OrderBytes(Subspace, QueryRange.SubspaceRange.End) < 0 || utils.OrderBytes(QueryRange.SubspaceRange.Start, QueryRange.SubspaceRange.End) == 0 {
+		if QueryRange.SubspaceRange.OpenEnd || utils.OrderBytes(Subspace, QueryRange.SubspaceRange.End) < 0 {
 			if inRange {
-				fmt.Println("case 2 Adding")
 				mu.Lock()
 				*res = append(*res, Node.Value)
 				mu.Unlock()
@@ -180,7 +178,6 @@ func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res
 		}
 		if QueryRange.PathRange.OpenEnd || utils.OrderPath(Path, QueryRange.PathRange.End) < 0 {
 			if inRange {
-				fmt.Println("case 3 Adding")
 				mu.Lock()
 				*res = append(*res, Node.Value)
 				mu.Unlock()
