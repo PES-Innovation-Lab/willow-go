@@ -30,6 +30,8 @@ func BuildFingerprints(entries []Kdtree.KDNodeKey) []string {
 		buildHelper(entries[mid:], fptree, 2),
 	)
 
+	fptree = ShortenArray(fptree)
+
 	return fptree
 }
 
@@ -91,6 +93,25 @@ func buildHelper(entries []Kdtree.KDNodeKey, fps []string, index int) string {
 func xorStrings(a, b string) string {
 	// Implement the actual XOR logic for simplicity
 	return a + b
+}
+
+// ShortenArray shortens the array to include elements up to the last non-empty string.
+func ShortenArray(arr []string) []string {
+	lastIndex := -1
+	for i := len(arr) - 1; i >= 0; i-- {
+		if arr[i] != "" {
+			lastIndex = i
+			break
+		}
+	}
+
+	// if all elements are empty, return an empty slice
+	if lastIndex == -1 {
+		return []string{}
+	}
+
+	// return the slice up to the last non-empty string
+	return arr[:lastIndex+1]
 }
 
 // func xorStrings(a, b string) string {
