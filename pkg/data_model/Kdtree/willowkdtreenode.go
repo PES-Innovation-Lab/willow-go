@@ -2,6 +2,7 @@ package Kdtree
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/PES-Innovation-Lab/willow-go/utils"
@@ -11,7 +12,7 @@ type KDNodeKey struct {
 	Timestamp   uint64
 	Subspace    types.SubspaceId
 	Path        types.Path
-	Fingerprint []byte
+	Fingerprint string
 }
 
 func (lhs KDNodeKey) Order(rhs KDNodeKey, dim int) Relation {
@@ -99,18 +100,21 @@ func (lhs KDNodeKey) String() string {
 
 // Queries the given tree for the given 3-d Range
 func Query(kdt *(KDTree[KDNodeKey]), QueryRange types.Range3d) []KDNodeKey {
+
 	dim := 0
 	var res []KDNodeKey
 	if kdt == nil {
 		return res
 	}
-	QueryHelper(kdt.Root, QueryRange, dim, &res)
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	QueryHelper(kdt.Root, QueryRange, dim, &res, &mu, &wg)
+	wg.Wait() // Wait for all goroutines to finish
 	return res
 }
 
 // A helper function to recursively query for range
-func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res *[]KDNodeKey) {
-	// fmt.Println(Node)
+func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res *[]KDNodeKey, mu *sync.Mutex, wg *sync.WaitGroup) {
 	if Node == nil {
 		return
 	}
@@ -120,39 +124,68 @@ func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res
 		Path:     Path,
 		Time:     Timestamp,
 	}
-
+	
 	inRange := utils.IsIncluded3d(utils.OrderSubspace, QueryRange, Position) //PLEASE CHANGE THE ordersubspace Call i have jugaad for now ~Samarth
-
 	switch dim % 3 {
 	case 0:
 		if utils.OrderTimestamp(Timestamp, QueryRange.TimeRange.Start) >= 0 {
-			QueryHelper(Node.Left, QueryRange, dim+1, res)
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				QueryHelper(Node.Left, QueryRange, dim+1, res, mu, wg)
+			}()
 		}
 		if QueryRange.TimeRange.OpenEnd || utils.OrderTimestamp(Timestamp, QueryRange.TimeRange.End) < 0 {
 			if inRange {
+				mu.Lock()
 				*res = append(*res, Node.Value)
+				mu.Unlock()
 			}
-			QueryHelper(Node.Right, QueryRange, dim+1, res)
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				QueryHelper(Node.Right, QueryRange, dim+1, res, mu, wg)
+			}()
 		}
 	case 1:
 		if utils.OrderBytes(Subspace, QueryRange.SubspaceRange.Start) >= 0 {
-			QueryHelper(Node.Left, QueryRange, dim+1, res)
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				QueryHelper(Node.Left, QueryRange, dim+1, res, mu, wg)
+			}()
 		}
 		if QueryRange.SubspaceRange.OpenEnd || utils.OrderBytes(Subspace, QueryRange.SubspaceRange.End) < 0 {
 			if inRange {
+				mu.Lock()
 				*res = append(*res, Node.Value)
+				mu.Unlock()
 			}
-			QueryHelper(Node.Right, QueryRange, dim+1, res)
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				QueryHelper(Node.Right, QueryRange, dim+1, res, mu, wg)
+			}()
 		}
 	case 2:
 		if utils.OrderPath(Path, QueryRange.PathRange.Start) >= 0 {
-			QueryHelper(Node.Left, QueryRange, dim+1, res)
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				QueryHelper(Node.Left, QueryRange, dim+1, res, mu, wg)
+			}()
 		}
 		if QueryRange.PathRange.OpenEnd || utils.OrderPath(Path, QueryRange.PathRange.End) < 0 {
 			if inRange {
+				mu.Lock()
 				*res = append(*res, Node.Value)
+				mu.Unlock()
 			}
-			QueryHelper(Node.Right, QueryRange, dim+1, res)
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				QueryHelper(Node.Right, QueryRange, dim+1, res, mu, wg)
+			}()
 		}
 	}
 }

@@ -47,29 +47,43 @@ type Transport interface {
 type HandleType int
 
 const (
-	IntersectionHandle = iota
+	/* Resource handle for the private set intersection part of private area intersection. More precisely, an IntersectionHandle stores a PsiGroup member together with one of two possible states:
+	- pending (waiting for the other peer to perform scalar multiplication),
+	 - completed (both peers performed scalar multiplication). */
+	IntersectionHandle HandleType = iota
+	/* Logical channel for controlling the binding of new CapabilityHandles. */
 	CapabilityHandle
+	/* Resource handle for AreaOfInterests that peers wish to sync. */
 	AreaOfInterestHandle
+	/* Resource handle that controls the matching from Payload transmissions to Payload requests. */
 	PayloadRequestHandle
+	/* Resource handle for StaticTokens that peers need to transmit. */
 	StaticTokenHandle
 )
 
 type LogicalChannel int
 
 const (
-	ReconciliationChannel = iota
+	/* Logical channel for performing 3d range-based set reconciliation. */
+	ReconciliationChannel LogicalChannel = iota
+	/* Logical channel for transmitting Entries and Payloads outside of 3d range-based set reconciliation. */
 	DataChannel
-	InteresectionChannel
+	/* Logical channel for controlling the binding of new IntersectionHandles. */
+	IntersectionChannel
+	/* Logical channel for controlling the binding of new CapabilityHandles. */
 	CapabilityChannel
+	/* Logical channel for controlling the binding of new AreaOfInterestHandles. */
 	AreaOfInterestChannel
+	/* Logical channel for controlling the binding of new PayloadRequestHandles. */
 	PayloadRequestChannel
+	/* Logical channel for controlling the binding of new StaticTokenHandles. */
 	StaticTokenChannel
 )
 
 type MsgKind int
 
 const (
-	CommitmentReveal = iota
+	CommitmentReveal MsgKind = iota
 	PaiBindFragment
 	PaiReplyFragment
 	PaiRequestSubspaceCapability
@@ -104,7 +118,7 @@ type ControlIssueGuaranteeData struct {
 }
 type MsgControlIssueGuarantee struct {
 	Kind MsgKind
-	T    ControlIssueGuaranteeData
+	Data ControlIssueGuaranteeData
 }
 
 /** Allow the other peer to reduce its total buffer capacity by amount. */
@@ -114,7 +128,7 @@ type ControlAbsolveData struct {
 }
 type MsgControlAbsolve struct {
 	Kind MsgKind
-	T    ControlAbsolveData
+	Data ControlAbsolveData
 }
 
 /** Ask the other peer to send an ControlAbsolve message such that the receiver remaining guarantees will be target. */
@@ -124,7 +138,7 @@ type ControlPleadData struct {
 }
 type MsgControlPlead struct {
 	Kind MsgKind
-	T    ControlPleadData
+	Data ControlPleadData
 }
 
 type ControlAnnounceDroppingData struct {
@@ -132,7 +146,7 @@ type ControlAnnounceDroppingData struct {
 }
 type MsgControlAnnounceDropping struct {
 	Kind MsgKind
-	T    ControlAnnounceDroppingData
+	Data ControlAnnounceDroppingData
 }
 
 /** Notify the other peer that it can stop dropping messages of this logical channel. */
@@ -141,7 +155,7 @@ type ControlApologiseData struct {
 }
 type MsgControlApologise struct {
 	Kind MsgKind
-	T    ControlApologiseData
+	Data ControlApologiseData
 }
 
 type MsgControlFreeData struct {
@@ -152,7 +166,7 @@ type MsgControlFreeData struct {
 }
 type MsgControlFree struct {
 	Kind MsgKind
-	T    MsgControlFreeData
+	Data MsgControlFreeData
 }
 
 /** Complete the commitment scheme to determine the challenge for read authentication. */
@@ -161,7 +175,7 @@ type MsgCommitmentRevealData struct {
 }
 type MsgCommitmentReveal struct {
 	Kind MsgKind
-	T    MsgCommitmentRevealData
+	Data MsgCommitmentRevealData
 }
 
 // 2. Intersection messages
@@ -173,7 +187,7 @@ type MsgPaiBindFragmentData[PsiGroup any] struct {
 }
 type MsgPaiBindFragment[PsiGroup any] struct {
 	Kind MsgKind
-	T    MsgPaiBindFragmentData[PsiGroup]
+	Data MsgPaiBindFragmentData[PsiGroup]
 }
 
 /** Finalise private set intersection for a single item. */
@@ -183,7 +197,7 @@ type MsgPaiReplyFragmentData[PsiGroup any] struct {
 }
 type MsgPaiReplyFragment[PsiGroup any] struct {
 	Kind MsgKind
-	T    MsgPaiReplyFragmentData[PsiGroup]
+	Data MsgPaiReplyFragmentData[PsiGroup]
 }
 
 /** Request the subspace capability for a given IntersectionHandle (for the least-specific secondary fragment for whose NamespaceId the request is being made). */
@@ -192,7 +206,7 @@ type MsgPaiRequestSubspaceCapabilityData struct {
 }
 type MsgPaiRequestSubspaceCapability struct {
 	Kind MsgKind
-	T    MsgPaiRequestSubspaceCapabilityData
+	Data MsgPaiRequestSubspaceCapabilityData
 }
 
 /** Send a previously requested SubspaceCapability. */
@@ -203,7 +217,7 @@ type MsgPaiReplySubspaceCapabilityData[SubspaceCapability, SyncSubspaceSignature
 }
 type MsgPaiReplySubspaceCapability[SubspaceCapability, SyncSubspaceSignature constraints.Ordered] struct {
 	Kind MsgKind
-	T    MsgPaiReplySubspaceCapabilityData[SubspaceCapability, SyncSubspaceSignature]
+	Data MsgPaiReplySubspaceCapabilityData[SubspaceCapability, SyncSubspaceSignature]
 }
 
 // 3. Setup messages
@@ -216,7 +230,7 @@ type MsgSetupBindReadCapabilityData[ReadCapability, SyncSignature constraints.Or
 }
 type MsgSetupBindReadCapability[ReadCapability, SyncSignature constraints.Ordered] struct {
 	Kind MsgKind
-	T    MsgSetupBindReadCapabilityData[ReadCapability, SyncSignature]
+	Data MsgSetupBindReadCapabilityData[ReadCapability, SyncSignature]
 }
 
 /** Bind an AreaOfInterest to an AreaOfInterestHandle. */
@@ -226,7 +240,7 @@ type MsgSetupBindAreaOfInterestData struct {
 }
 type MsgSetupBindAreaOfinterest struct {
 	Kind MsgKind
-	T    MsgSetupBindAreaOfInterestData
+	Data MsgSetupBindAreaOfInterestData
 }
 
 type MsgSetupBindStaticTokenData[StaticToken any] struct {
@@ -234,7 +248,7 @@ type MsgSetupBindStaticTokenData[StaticToken any] struct {
 }
 type MsgSetupBindStaticToken[StaicToken any] struct {
 	Kind MsgKind
-	T    MsgSetupBindStaticTokenData[StaicToken]
+	Data MsgSetupBindStaticTokenData[StaicToken]
 }
 
 /** Send a Fingerprint as part of 3d range-based set reconciliation. */
@@ -248,7 +262,7 @@ type MsgReconciliationSendFingerprintData[Fingerprint constraints.Ordered] struc
 }
 type MsgReconciliationSendFingerprint[Fingerprint constraints.Ordered] struct {
 	Kind MsgKind
-	T    MsgReconciliationSendFingerprintData[Fingerprint]
+	Data MsgReconciliationSendFingerprintData[Fingerprint]
 }
 
 /** Prepare transmission of the LengthyEntries a peer has in a 3dRange as part of 3d range-based set reconciliation. */
@@ -264,7 +278,7 @@ type MsgReconciliationAnnounceEntriesData struct {
 }
 type MsgReconciliationAnnounceEntries struct {
 	Kind MsgKind
-	T    MsgReconciliationAnnounceEntriesData
+	Data MsgReconciliationAnnounceEntriesData
 }
 
 /** Transmit a LengthyEntry as part of 3d range-based set reconciliation. */
@@ -275,7 +289,7 @@ type MsgReconciliationSendEntryData[DynamicToken constraints.Ordered] struct {
 }
 type MsgReconciliationSendEntry[DynamicToken constraints.Ordered] struct {
 	Kind MsgKind
-	T    MsgReconciliationSendEntryData[DynamicToken]
+	Data MsgReconciliationSendEntryData[DynamicToken]
 }
 
 /** Transmit a Payload as part of 3d range-based set reconciliation. */
@@ -285,7 +299,7 @@ type MsgReconciliationSendPayloadData struct {
 }
 type MsgReconciliationSendPayload struct {
 	Kind MsgKind
-	T    MsgReconciliationSendPayloadData
+	Data MsgReconciliationSendPayloadData
 }
 
 /** Notify the other peer that the payload transmission is complete. */
@@ -304,7 +318,7 @@ type MsgDataSendEntryData[DynamicToken constraints.Ordered] struct {
 }
 type MsgDataSendEntry[DynamicToken constraints.Ordered] struct {
 	Kind MsgKind
-	T    MsgDataSendEntryData[DynamicToken]
+	Data MsgDataSendEntryData[DynamicToken]
 }
 
 /** Transmit a Payload to the other peer. */
@@ -314,7 +328,7 @@ type MsgDataSendPayloadData struct {
 }
 type MsgDataSendPayload struct {
 	Kind MsgKind
-	T    MsgDataSendPayloadData
+	Data MsgDataSendPayloadData
 }
 
 /** Express a preference whether the other peer should eagerly forward Payloads in the intersection of two AreaOfInterests. */
@@ -325,7 +339,7 @@ type MsgDataSetMetadataData struct {
 }
 type MsgDataSetMetadata struct {
 	Kind MsgKind
-	T    MsgDataSetMetadataData
+	Data MsgDataSetMetadataData
 }
 
 /** Bind a PayloadRequest to a PayloadRequestHandle. */
@@ -336,7 +350,7 @@ type MsgDataBindPayloadRequestData struct {
 }
 type MsgDataBindPayloadRequest struct {
 	Kind MsgKind
-	T    MsgDataBindPayloadRequestData
+	Data MsgDataBindPayloadRequestData
 }
 
 /** Transmit a Payload to the other peer. */
@@ -345,105 +359,105 @@ type MsgDataReplyPayloadData struct {
 }
 type MsgDataReplyPayload struct {
 	Kind MsgKind
-	T    MsgDataReplyPayloadData
+	Data MsgDataReplyPayloadData
 }
 
 type SyncMessage interface {
-	isSyncMessage()
+	IsSyncMessage()
 }
 
-func (MsgControlIssueGuarantee) isSyncMessage()                                                 {}
-func (MsgControlAbsolve) isSyncMessage()                                                        {}
-func (MsgControlPlead) isSyncMessage()                                                          {}
-func (MsgControlAnnounceDropping) isSyncMessage()                                               {}
-func (MsgControlApologise) isSyncMessage()                                                      {}
-func (MsgControlFree) isSyncMessage()                                                           {}
-func (MsgCommitmentReveal) isSyncMessage()                                                      {}
-func (MsgPaiBindFragment[PsiGroup]) isSyncMessage()                                             {}
-func (MsgPaiReplyFragment[PsiGroup]) isSyncMessage()                                            {}
-func (MsgPaiRequestSubspaceCapability) isSyncMessage()                                          {}
-func (MsgPaiReplySubspaceCapability[SubspaceCapability, SyncSubspaceSignature]) isSyncMessage() {}
-func (MsgSetupBindReadCapability[ReadCapability, SyncSignature]) isSyncMessage()                {}
-func (MsgSetupBindAreaOfinterest) isSyncMessage()                                               {}
-func (MsgSetupBindStaticToken[StaticToken]) isSyncMessage()                                     {}
-func (MsgReconciliationSendFingerprint[Fingerprint]) isSyncMessage()                            {}
-func (MsgReconciliationAnnounceEntries) isSyncMessage()                                         {}
-func (MsgReconciliationSendEntry[DynamicToken]) isSyncMessage() {
+func (MsgControlIssueGuarantee) IsSyncMessage()                                                 {}
+func (MsgControlAbsolve) IsSyncMessage()                                                        {}
+func (MsgControlPlead) IsSyncMessage()                                                          {}
+func (MsgControlAnnounceDropping) IsSyncMessage()                                               {}
+func (MsgControlApologise) IsSyncMessage()                                                      {}
+func (MsgControlFree) IsSyncMessage()                                                           {}
+func (MsgCommitmentReveal) IsSyncMessage()                                                      {}
+func (MsgPaiBindFragment[PsiGroup]) IsSyncMessage()                                             {}
+func (MsgPaiReplyFragment[PsiGroup]) IsSyncMessage()                                            {}
+func (MsgPaiRequestSubspaceCapability) IsSyncMessage()                                          {}
+func (MsgPaiReplySubspaceCapability[SubspaceCapability, SyncSubspaceSignature]) IsSyncMessage() {}
+func (MsgSetupBindReadCapability[ReadCapability, SyncSignature]) IsSyncMessage()                {}
+func (MsgSetupBindAreaOfinterest) IsSyncMessage()                                               {}
+func (MsgSetupBindStaticToken[StaticToken]) IsSyncMessage()                                     {}
+func (MsgReconciliationSendFingerprint[Fingerprint]) IsSyncMessage()                            {}
+func (MsgReconciliationAnnounceEntries) IsSyncMessage()                                         {}
+func (MsgReconciliationSendEntry[DynamicToken]) IsSyncMessage() {
 }
-func (MsgReconciliationSendPayload) isSyncMessage()      {}
-func (MsgReconciliationTerminatePayload) isSyncMessage() {}
-func (MsgDataSendPayload) isSyncMessage()                {}
-func (MsgDataSetMetadata) isSyncMessage()                {}
-func (MsgDataBindPayloadRequest) isSyncMessage()         {}
-func (MsgDataReplyPayload) isSyncMessage()               {}
+func (MsgReconciliationSendPayload) IsSyncMessage()      {}
+func (MsgReconciliationTerminatePayload) IsSyncMessage() {}
+func (MsgDataSendPayload) IsSyncMessage()                {}
+func (MsgDataSetMetadata) IsSyncMessage()                {}
+func (MsgDataBindPayloadRequest) IsSyncMessage()         {}
+func (MsgDataReplyPayload) IsSyncMessage()               {}
 
 // Messages categorised by logical channel
 type ReconciliationChannelMsg interface {
-	isReconciliationChannelMsg()
+	IsReconciliationChannelMsg()
 }
 
-func (MsgReconciliationSendFingerprint[Fingerprint]) isReconciliationChannelMsg() {}
-func (MsgReconciliationAnnounceEntries) isReconciliationChannelMsg()              {}
-func (MsgReconciliationSendEntry[DynamicToken]) isReconciliationChannelMsg() {
+func (MsgReconciliationSendFingerprint[Fingerprint]) IsReconciliationChannelMsg() {}
+func (MsgReconciliationAnnounceEntries) IsReconciliationChannelMsg()              {}
+func (MsgReconciliationSendEntry[DynamicToken]) IsReconciliationChannelMsg() {
 }
-func (MsgReconciliationSendPayload) isReconciliationChannelMsg()      {}
-func (MsgReconciliationTerminatePayload) isReconciliationChannelMsg() {}
+func (MsgReconciliationSendPayload) IsReconciliationChannelMsg()      {}
+func (MsgReconciliationTerminatePayload) IsReconciliationChannelMsg() {}
 
 type DataChannelMsg interface {
-	isDataChannelMsg()
+	IsDataChannelMsg()
 }
 
-func (MsgDataSendEntry[DynamicToken]) isDataChannelMsg() {}
-func (MsgDataReplyPayload) isDataChannelMsg()            {}
-func (MsgDataSendPayload) isDataChannelMsg()             {}
+func (MsgDataSendEntry[DynamicToken]) IsDataChannelMsg() {}
+func (MsgDataReplyPayload) IsDataChannelMsg()            {}
+func (MsgDataSendPayload) IsDataChannelMsg()             {}
 
 type IntersectionChannelMsg interface {
-	isIntersectionChannelMsg()
+	IsIntersectionChannelMsg()
 }
 
-func (MsgPaiBindFragment[PsiGroup]) isIntersectionChannelMsg() {}
+func (MsgPaiBindFragment[PsiGroup]) IsIntersectionChannelMsg() {}
 
 type CapabilityChannelMsg interface {
-	isCapabilityChannelMsg()
+	IsCapabilityChannelMsg()
 }
 
 func (MsgSetupBindReadCapability[ReadCapability, SyncSignature]) isCapabilityChannelMsg() {}
 
 type AreaOfInterestChannelMsg interface {
-	isAreaOfInterestChannelMsg()
+	IsAreaOfInterestChannelMsg()
 }
 
-func (MsgSetupBindAreaOfinterest) isAreaOfInterestChannelMsg() {}
+func (MsgSetupBindAreaOfinterest) IsAreaOfInterestChannelMsg() {}
 
 type PayloadRequestChannelMsg interface {
-	isPayloadRequestChannelMsg()
+	IsPayloadRequestChannelMsg()
 }
 
-func (MsgDataBindPayloadRequest) isPayloadRequestChannelMsg() {
+func (MsgDataBindPayloadRequest) IsPayloadRequestChannelMsg() {
 }
 
 type StaticTokenChannelMsg interface {
-	isStaticTokenChannelMsg()
+	IsStaticTokenChannelMsg()
 }
 
-func (MsgSetupBindStaticToken[StaticToken]) isStaticTokenChannelMsg() {}
+func (MsgSetupBindStaticToken[StaticToken]) IsStaticTokenChannelMsg() {}
 
 /** Messages which belong to no logical channel. */
 type NoChannelMsg interface {
-	isNoChannelMsg()
+	IsNoChannelMsg()
 }
 
-func (MsgControlIssueGuarantee) isNoChannelMsg()                                                 {}
-func (MsgControlAbsolve) isNoChannelMsg()                                                        {}
-func (MsgControlPlead) isNoChannelMsg()                                                          {}
-func (MsgControlAnnounceDropping) isNoChannelMsg()                                               {}
-func (MsgControlApologise) isNoChannelMsg()                                                      {}
-func (MsgControlFree) isNoChannelMsg()                                                           {}
-func (MsgCommitmentReveal) isNoChannelMsg()                                                      {}
-func (MsgPaiReplyFragment[PsiGroup]) isNoChannelMsg()                                            {}
-func (MsgPaiRequestSubspaceCapability) isNoChannelMsg()                                          {}
-func (MsgPaiReplySubspaceCapability[SubspaceCapability, SyncSubspaceSignature]) isNoChannelMsg() {}
-func (MsgDataSetMetadata) isNoChannelMsg()                                                       {}
+func (MsgControlIssueGuarantee) IsNoChannelMsg()                                                 {}
+func (MsgControlAbsolve) IsNoChannelMsg()                                                        {}
+func (MsgControlPlead) IsNoChannelMsg()                                                          {}
+func (MsgControlAnnounceDropping) IsNoChannelMsg()                                               {}
+func (MsgControlApologise) IsNoChannelMsg()                                                      {}
+func (MsgControlFree) IsNoChannelMsg()                                                           {}
+func (MsgCommitmentReveal) IsNoChannelMsg()                                                      {}
+func (MsgPaiReplyFragment[PsiGroup]) IsNoChannelMsg()                                            {}
+func (MsgPaiRequestSubspaceCapability) IsNoChannelMsg()                                          {}
+func (MsgPaiReplySubspaceCapability[SubspaceCapability, SyncSubspaceSignature]) IsNoChannelMsg() {}
+func (MsgDataSetMetadata) IsNoChannelMsg()                                                       {}
 
 // Encodings
 
@@ -466,7 +480,7 @@ type ReadCapEncodingScheme[ReadCapability constraints.Ordered] struct {
 type ReconciliationPrivy struct {
 	PrevSenderHandle      uint64
 	PrevReceiverHandle    uint64
-	prevRange             types.Range3d
+	PrevRange             types.Range3d
 	PrevStaticTokenHandle uint64
 	PrevEntry             types.Entry
 	Announced             struct {
