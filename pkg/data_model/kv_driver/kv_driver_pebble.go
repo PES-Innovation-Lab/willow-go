@@ -2,7 +2,6 @@ package kv_driver
 
 import (
 	"errors"
-	"fmt"
 	"log"
 
 	"github.com/PES-Innovation-Lab/willow-go/types"
@@ -121,7 +120,6 @@ func (k *KvDriver) ListAllValues() ([]struct {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("ooga booga")
 
 	defer func() {
 		if err := iter.Close(); err != nil {

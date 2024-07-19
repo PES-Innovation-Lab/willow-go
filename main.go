@@ -14,30 +14,6 @@ import (
 	"github.com/PES-Innovation-Lab/willow-go/types"
 )
 
-var pinacoladaAscii string = `
-    %#&
-      %&&
-        #&&
-     ,,,,............,,
-      ,,,,,,,.........
-      ,,,,,,..........
-      ,,..............
-      ,...............
-      ................,
-     ...................
-    ....................
-    ......,,,....,......,
-    ..,,,,,,,,,,,,,,**,**
-    ...,,,,,*,,,,,,,,,**,
-     ,,,,,,************.
-       *************/
-            /////
-             &,(
-          , ..*.*...
-      ....//  .  .//...
-       %,,,,,..,,,,,/#
-`
-
 var textAScii string = `
 ░▒▓███████▓▒░░▒▓█▓▒░▒▓███████▓▒░ ░▒▓██████▓▒░ ░▒▓██████▓▒░ ░▒▓██████▓▒░░▒▓█▓▒░       ░▒▓██████▓▒░░▒▓███████▓▒░ ░▒▓██████▓▒░  
 ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░ 
@@ -74,7 +50,6 @@ func main() {
 	}
 	defer f.Close()
 
-	fmt.Println(pinacoladaAscii)
 	fmt.Println(textAScii)
 	fmt.Println("Enter namespace: ")
 	fmt.Println("exit to escape")
@@ -170,7 +145,6 @@ LOOPEND:
 		objects := strings.Split(input, " ")
 		switch objects[0] {
 		case "back":
-			fmt.Println(pinacoladaAscii)
 			fmt.Println(textAScii)
 			fmt.Println("enter namespace: ")
 			fmt.Println("exit to escape")
@@ -262,7 +236,6 @@ LOOPEND:
 			if err != nil {
 				log.Fatal(err)
 			}
-			fmt.Println("jasdkajd")
 			returnedPayload, err := WillowStore.PayloadDriver.Get(encodedValue.Entry.Payload_digest)
 			fmt.Println(returnedPayload)
 			if err != nil {

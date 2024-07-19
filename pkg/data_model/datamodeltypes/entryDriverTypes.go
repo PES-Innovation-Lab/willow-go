@@ -2,6 +2,7 @@ package datamodeltypes
 
 import (
 	"errors"
+	"fmt"
 	"log"
 
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/Kdtree"
@@ -83,8 +84,8 @@ func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Get(Subspace types.Subsp
 	}
 
 	res := Kdtree.Query(k.KDTree, range3d)
+	fmt.Println(res)
 	if len(res) > 1 {
-
 		log.Fatalln("get returned multiple nodes")
 	}
 	switch len(res) {

@@ -220,7 +220,6 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	if err != nil {
 		log.Fatalln(err)
 	}
-
 	// Iterate through all the prunable entries and remove them from storage
 	for _, entry := range prunableEntries {
 		// Remove from storage
@@ -239,7 +238,6 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 		// Append the pruned entry to prunedEntries array
 		prunedEntries = append(prunedEntries, entry.Entry)
 	}
-
 	// Return the pruned entries with no errors
 	return prunedEntries, nil
 }

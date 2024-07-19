@@ -2,7 +2,6 @@ package entrydriver
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"reflect"
 
@@ -67,12 +66,10 @@ func (e *EntryDriver[PreFingerPrint, FingerPrint, K]) Get(Subspace types.Subspac
 	if err != nil {
 		return datamodeltypes.ExtendedEntry{}, err
 	}
-	fmt.Println("encodedKey: ", encodedKey)
 	entryBytes, err := e.Opts.KVDriver.Get(encodedKey)
 	if err != nil {
 		return datamodeltypes.ExtendedEntry{}, err
 	}
-	fmt.Println("entryBytes: ", entryBytes)
 	value := kv_driver.DecodeValues(entryBytes)
 
 	return datamodeltypes.ExtendedEntry{

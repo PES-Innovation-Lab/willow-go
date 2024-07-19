@@ -126,7 +126,7 @@ func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res
 	}
 
 	inRange := utils.IsIncluded3d(utils.OrderSubspace, QueryRange, Position) //PLEASE CHANGE THE ordersubspace Call i have jugaad for now ~Samarth
-	fmt.Println(inRange)
+
 	switch dim % 3 {
 	case 0:
 		if utils.OrderTimestamp(Timestamp, QueryRange.TimeRange.Start) >= 0 {
@@ -138,7 +138,7 @@ func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res
 		}
 		if QueryRange.TimeRange.OpenEnd || utils.OrderTimestamp(Timestamp, QueryRange.TimeRange.End) < 0 {
 			if inRange {
-				fmt.Println("Adding")
+				fmt.Println("case 1 Adding")
 				mu.Lock()
 				*res = append(*res, Node.Value)
 				mu.Unlock()
@@ -159,7 +159,7 @@ func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res
 		}
 		if QueryRange.SubspaceRange.OpenEnd || utils.OrderBytes(Subspace, QueryRange.SubspaceRange.End) < 0 || utils.OrderBytes(QueryRange.SubspaceRange.Start, QueryRange.SubspaceRange.End) == 0 {
 			if inRange {
-				fmt.Println("Adding")
+				fmt.Println("case 2 Adding")
 				mu.Lock()
 				*res = append(*res, Node.Value)
 				mu.Unlock()
@@ -180,7 +180,7 @@ func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res
 		}
 		if QueryRange.PathRange.OpenEnd || utils.OrderPath(Path, QueryRange.PathRange.End) < 0 {
 			if inRange {
-				fmt.Println("Adding")
+				fmt.Println("case 3 Adding")
 				mu.Lock()
 				*res = append(*res, Node.Value)
 				mu.Unlock()
