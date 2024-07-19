@@ -2,6 +2,7 @@ package kv_driver
 
 import (
 	"errors"
+	"fmt"
 	"log"
 
 	"github.com/PES-Innovation-Lab/willow-go/types"
@@ -9,10 +10,10 @@ import (
 )
 
 type KvDriver struct {
-	Db            *pebble.DB
+	Db *pebble.DB
 }
 
-func (k *KvDriver)IsFirstPrefixOfSecond(a, b []byte) (bool, error) {
+func (k *KvDriver) IsFirstPrefixOfSecond(a, b []byte) (bool, error) {
 	if len(a) > len(b) {
 		return false, nil
 	}
@@ -28,8 +29,8 @@ func (k *KvDriver)IsFirstPrefixOfSecond(a, b []byte) (bool, error) {
 	return true, nil
 }
 
-func (k *KvDriver)CompareTwoKeyParts(a, b byte) (types.Rel, error) {
-	if a > b{
+func (k *KvDriver) CompareTwoKeyParts(a, b byte) (types.Rel, error) {
+	if a > b {
 		return 1, nil
 	} else if a < b {
 		return -1, nil
@@ -38,7 +39,7 @@ func (k *KvDriver)CompareTwoKeyParts(a, b byte) (types.Rel, error) {
 	}
 }
 
-func (k *KvDriver)CompareKeys(a, b []byte) (types.Rel, error) {
+func (k *KvDriver) CompareKeys(a, b []byte) (types.Rel, error) {
 	if len(a) > len(b) {
 		return 1, nil
 	} else if len(a) < len(b) {
@@ -57,7 +58,7 @@ func (k *KvDriver)CompareKeys(a, b []byte) (types.Rel, error) {
 	return 0, nil
 }
 
-func (k *KvDriver)Close() error {
+func (k *KvDriver) Close() error {
 	err := k.Db.Close()
 	if err != nil {
 		return err
@@ -65,7 +66,7 @@ func (k *KvDriver)Close() error {
 	return nil
 }
 
-func (k *KvDriver)Get(key []byte) ([]byte, error) {
+func (k *KvDriver) Get(key []byte) ([]byte, error) {
 	value, closer, err := k.Db.Get(key)
 	if err != nil {
 		return []byte{}, err
@@ -74,7 +75,7 @@ func (k *KvDriver)Get(key []byte) ([]byte, error) {
 	return value, nil
 }
 
-func (k *KvDriver)Set(key, value []byte) error {
+func (k *KvDriver) Set(key, value []byte) error {
 	err := k.Db.Set(key, value, pebble.Sync)
 	if err != nil {
 		return err
@@ -82,7 +83,7 @@ func (k *KvDriver)Set(key, value []byte) error {
 	return nil
 }
 
-func (k *KvDriver)Delete(key []byte) error {
+func (k *KvDriver) Delete(key []byte) error {
 	err := k.Db.Delete(key, pebble.Sync)
 	if err != nil {
 		return err
@@ -90,7 +91,7 @@ func (k *KvDriver)Delete(key []byte) error {
 	return nil
 }
 
-func (k *KvDriver)Clear() error {
+func (k *KvDriver) Clear() error {
 	iter, err := k.Db.NewIter(nil)
 	if err != nil {
 		return err
@@ -107,7 +108,7 @@ func (k *KvDriver)Clear() error {
 	return nil
 }
 
-func (k *KvDriver)ListAllValues() ([]struct {
+func (k *KvDriver) ListAllValues() ([]struct {
 	Key   []byte
 	Value []byte
 }, error,
@@ -120,6 +121,7 @@ func (k *KvDriver)ListAllValues() ([]struct {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("ooga booga")
 
 	defer func() {
 		if err := iter.Close(); err != nil {
@@ -141,12 +143,12 @@ func (k *KvDriver)ListAllValues() ([]struct {
 	return values, nil
 }
 
-func (k *KvDriver)Batch() (*pebble.Batch, error) {
+func (k *KvDriver) Batch() (*pebble.Batch, error) {
 	batch := k.Db.NewBatch()
 	return batch, nil
 }
 
-func (k *KvDriver)GetMultipleValues(queryArray [][]byte)([][]byte, error){
+func (k *KvDriver) GetMultipleValues(queryArray [][]byte) ([][]byte, error) {
 	queryValues := make([][]byte, 0, len(queryArray))
 	for _, key := range queryArray {
 		value, err := k.Get(key)
