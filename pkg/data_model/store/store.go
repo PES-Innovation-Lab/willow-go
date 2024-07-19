@@ -377,3 +377,7 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	}
 	return (payload.Bytes())
 }
+
+func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]) List() []Kdtree.KDNodeKey {
+	return Kdtree.ListNodes(s.EntryDriver.Storage.KDTree.Root)
+}
