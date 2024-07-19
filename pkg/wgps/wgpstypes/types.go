@@ -490,7 +490,7 @@ type ReconciliationPrivy struct {
 }
 
 /** The parameter schemes required to instantiate a `WgpsMessenger`. */
-type SyncSchemes[ReadCapability, Receiver, SyncSignature, PsiGroup, PsiScalar, SubspaceCapability, SubspaceReceiver, AuthorisationOpts, PayloadDigest, ReceiverSecretKey, Prefingerprint, Fingerprint constraints.Ordered, K constraints.Unsigned, AuthorisationToken, StaticToken, DynamicToken, SyncSubspaceSignature, SubspaceSecretKey types.OrderableGeneric] struct {
+type SyncSchemes[ReadCapability, Receiver, SyncSignature, PsiGroup, PsiScalar, SubspaceCapability, SubspaceReceiver, ReceiverSecretKey, Prefingerprint, Fingerprint constraints.Ordered, StaticToken, DynamicToken, SyncSubspaceSignature, SubspaceSecretKey types.OrderableGeneric, AuthorisationOpts []byte, AuthorisationToken string, K constraints.Unsigned] struct {
 	AccessControl      AccessControlScheme[SyncSignature, ReadCapability, Receiver, ReceiverSecretKey, K]
 	SubspaceCap        SubspaceCapScheme[SubspaceCapability, SubspaceReceiver, SyncSubspaceSignature, SubspaceSecretKey, K]
 	Pai                PaiScheme[ReadCapability, PsiGroup, PsiScalar, K]
