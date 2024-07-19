@@ -5,6 +5,7 @@ import (
 	"log"
 	"sync"
 
+	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/Kdtree"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
 	entrydriver "github.com/PES-Innovation-Lab/willow-go/pkg/data_model/entry_driver"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/kv_driver"
@@ -20,6 +21,7 @@ func InitStorage(nameSpaceId types.NamespaceId) *store.Store[uint64, uint64, uin
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer payloadRefDb.Close()
 
 	payloadRefKVstore := kv_driver.KvDriver{Db: payloadRefDb}
 	PayloadReferenceCounter := payloadDriver.PayloadReferenceCounter{
@@ -30,6 +32,7 @@ func InitStorage(nameSpaceId types.NamespaceId) *store.Store[uint64, uint64, uin
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer entryDb.Close()
 	entryKvStore := kv_driver.KvDriver{Db: entryDb}
 
 	PayloadLock := &sync.Mutex{}
@@ -63,4 +66,25 @@ func InitStorage(nameSpaceId types.NamespaceId) *store.Store[uint64, uint64, uin
 		IngestionMutexLock: sync.Mutex{},
 		PrefixDriver:       TestPrefixDriver,
 	}
+}
+
+func InitKDTree(WillowStore *store.Store[uint64, uint64, uint8, []byte, string]) {
+
+	encodedKeyValue, _ := WillowStore.EntryDriver.Opts.KVDriver.ListAllValues()
+	var keys []Kdtree.KDNodeKey
+
+	for _, key := range encodedKeyValue {
+		time, sub, path, err := kv_driver.DecodeKey(key.Key, WillowStore.Schemes.PathParams)
+		decodedValue := kv_driver.DecodeValues(key.Value)
+		if err != nil {
+			log.Fatal(err)
+		}
+		keys = append(keys, Kdtree.KDNodeKey{
+			Subspace:    sub,
+			Timestamp:   time,
+			Path:        path,
+			Fingerprint: string(decodedValue.AuthDigest),
+		})
+	}
+	WillowStore.EntryDriver.Storage = WillowStore.EntryDriver.MakeStorage([]byte(WillowStore.NameSpaceId), keys)
 }
