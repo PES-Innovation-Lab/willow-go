@@ -1,194 +1,193 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"strings"
+	"sync"
+	"time"
 
-	PinaGolada "github.com/PES-Innovation-Lab/willow-go/PinaGolada/Store"
+	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
+	entrydriver "github.com/PES-Innovation-Lab/willow-go/pkg/data_model/entry_driver"
+	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/kv_driver"
+	payloadDriver "github.com/PES-Innovation-Lab/willow-go/pkg/data_model/payload_kv_driver"
+	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/store"
 	"github.com/PES-Innovation-Lab/willow-go/types"
+	"github.com/cockroachdb/pebble"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
-var pinacoladaAscii string = `
-    %#&
-      %&&
-        #&&
-     ,,,,............,,
-      ,,,,,,,.........
-      ,,,,,,..........
-      ,,..............
-      ,...............
-      ................,
-     ...................
-    ....................
-    ......,,,....,......,
-    ..,,,,,,,,,,,,,,**,**
-    ...,,,,,*,,,,,,,,,**,
-     ,,,,,,************.
-       *************/
-            /////
-             &,(
-          , ..*.*...
-      ....//  .  .//...
-       %,,,,,..,,,,,/#
-`
+var (
+	rootCmd = &cobra.Command{
+		Use:   "storecli",
+		Short: "A CLI for interacting with the store",
+	}
 
-var textAScii string = `
-░▒▓███████▓▒░░▒▓█▓▒░▒▓███████▓▒░ ░▒▓██████▓▒░ ░▒▓██████▓▒░ ░▒▓██████▓▒░░▒▓█▓▒░       ░▒▓██████▓▒░░▒▓███████▓▒░ ░▒▓██████▓▒░  
-░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░ 
-░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░ 
-░▒▓███████▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓████████▓▒░▒▓█▓▒▒▓███▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓████████▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓████████▓▒░ 
-░▒▓█▓▒░      ░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░ 
-░▒▓█▓▒░      ░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░ 
-░▒▓█▓▒░      ░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░░▒▓██████▓▒░ ░▒▓██████▓▒░░▒▓████████▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓███████▓▒░░▒▓█▓▒░░▒▓█▓▒░ 
-                                                                                                                             `
+	chooseNamespaceCmd = &cobra.Command{
+		Use:   "choose-namespace",
+		Short: "Choose a namespace",
+		Run:   chooseNamespace,
+	}
 
-var setNamespace types.NamespaceId
+	setPayloadCmd = &cobra.Command{
+		Use:   "set-payload",
+		Short: "Set a payload in the store",
+		Run:   setPayload,
+	}
 
-var scanner *bufio.Scanner = bufio.NewScanner(os.Stdin)
+	getPayloadCmd = &cobra.Command{
+		Use:   "get-payload",
+		Short: "Get a payload from the store",
+		Run:   getPayload,
+	}
+
+	namespaces = []string{"namespace1", "namespace2", "namespace3"}
+	Storage    *store.Store[uint64, uint64, uint8, []byte, string]
+	namespace  types.NamespaceId
+)
 
 func main() {
-	// rootCmd := &cobra.Command{
-	// 	Use:   "pinalada",
-	// 	Short: "An instantiation of the WillowGo protocol!",
-	// 	Long:  "Willow is p2p protocol for file storing and sharing. Pinagolada is an instantiation of the protocll with specific parameters",
-	// 	Run: func(cmd *cobra.Command, args []string) {
-	// 		fmt.Println("pina: try 'pina --help' or 'pina - h' for more information")
-	// 	},
-	// }
-	//
-	// setCmd := &cobra.Command{
-	// 	Use:   "set",
-	// 	Short: "Command to enter a new Entry",
-	// 	Long:  "Enter the subspace, time(optional) and path of the file which u want to insert into willow",
-	// 	Run: func(cmd *cobra.Command, args []string) {
-	// 		fmt.Println(subspaceName)
-	// 	},
-	// }
-	//
-	// rootCmd.AddCommand(setCmd)
-	// setCmd.Flags().StringVarP(&subspaceName, "sub", "s", "", "Enter subspace name")
-	// setCmd.MarkFlagRequired("sub")
-	//
-	// err := rootCmd.Execute()
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	fmt.Println("\033[H\033[2J")
-	dir := "willow"
-	f, err := os.Open(dir)
-	nameSpaces := make(map[string]uint8)
-	if err != nil && strings.Compare(err.Error(), "open willow: no such file or directory") != 0 {
+	cobra.OnInitialize(initConfig)
+
+	rootCmd.AddCommand(chooseNamespaceCmd)
+	rootCmd.AddCommand(setPayloadCmd)
+	rootCmd.AddCommand(getPayloadCmd)
+
+	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
-		return
-	} else if err == nil {
-		files, err := f.Readdir(-1)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		for _, file := range files {
-			if file.IsDir() {
-				nameSpaces[file.Name()] = 255
-			}
-		}
-	}
-	defer f.Close()
-
-	NameSpaceInteraction()
-
-	for {
-		fmt.Println(pinacoladaAscii)
-		fmt.Println(textAScii)
-		fmt.Println("Enter namespace: ")
-		fmt.Print("> ")
-
-		var cont bool = false
-		if !scanner.Scan() {
-			break
-		}
-		input := scanner.Text()
-		if strings.ToLower(input) == "exit" {
-			fmt.Println("Exiting...")
-			break
-		} else if strings.Trim(input, "\t\n ") == "" {
-			fmt.Println("Please enter a valid namespace")
-		} else if nameSpaces[input] != 255 {
-			fmt.Printf("Creating new NameSpaceID %s\n", input)
-			fmt.Println("Are sure you want to create a new NameSpaceID (yes/no)")
-			decision := scanner.Text()
-			if decision == "yes" {
-				setNamespace = types.NamespaceId(input)
-				fmt.Printf("Initiating %s", setNamespace)
-				cont = true
-				break
-
-			}
-		} else {
-			setNamespace = types.NamespaceId(input)
-			fmt.Printf("Initiating %s", setNamespace)
-			cont = true
-			break
-		}
-
-		if cont {
-			NameSpaceInteraction()
-
-		}
-		fmt.Println("You entered:", input)
-		fmt.Println("exit to escape")
+		os.Exit(1)
 	}
 }
 
-func NameSpaceInteraction(namespace types.NamespaceId) {
+func initConfig() {
+	viper.AutomaticEnv()
+}
 
-	WillowStore := PinaGolada.InitStorage(namespace)
-	PinaGolada.Init
-	fmt.Println(textAScii)
-	for {
-		fmt.Println()
-		fmt.Println("type 'exit' to quit:")
-		fmt.Print("> ")
-		if !scanner.Scan() {
-			break
-		}
-		input := scanner.Text()
-		if strings.ToLower(input) == "exit" {
-			fmt.Println("Exiting...")
-			break
-		}
-		// Process the input
-		objects := strings.Split(input, " ")
-		switch objects[0] {
-		case "help":
-			fmt.Println("Valid commands:")
-			fmt.Println("set:\t\tUsage: set <subspacename> <file/to/path> [<timestamp>]")
-			fmt.Println("get:\t\tUsage: get <subspacename> <file/to/path> [<timestamp>]")
-			fmt.Println("list:\t\tUsage: list")
-			fmt.Println("query:\t\tUsage: set <subspacename> <file/to/path> [<timestamp>]")
-		case "set":
-			if len(objects) < 2 || len(objects) > 3 {
-				fmt.Println("invalid usage of command\nusage: set <subspacename> <file/to/path> [<timestamp>]")
-			}
-		case "get":
-			if len(objects) < 2 || len(objects) > 3 {
-				fmt.Println("invalid usage of command\nusage: get <subspacename> <file/to/path> [<timestamp>]")
-			}
-		case "list":
-			if len(objects) > 1 {
-				fmt.Println("invalid usage of command\nusage: list")
-			}
-		case "query":
-		case "clear":
-			fmt.Println("\003[H\033[2J")
-			fmt.Println(textAScii)
-		default:
-			fmt.Println("invalid command\nenter help to list commands!")
-		}
+func chooseNamespace(cmd *cobra.Command, args []string) {
+	fmt.Println("Available namespaces:")
+	for i, ns := range namespaces {
+		fmt.Printf("%d: %s\n", i+1, ns)
+	}
 
-		if err := scanner.Err(); err != nil {
-			fmt.Fprintln(os.Stderr, "Error reading input:", err)
-		}
+	var choice int
+	fmt.Print("Choose a namespace (enter number): ")
+	fmt.Scan(&choice)
+
+	if choice < 1 || choice > len(namespaces) {
+		log.Fatal("Invalid choice")
+	}
+
+	namespace = types.NamespaceId(namespaces[choice-1])
+	Storage = InitStorage(namespace)
+	fmt.Printf("Namespace '%s' selected and store initialized.\n", namespaces[choice-1])
+}
+
+func convertToByteSlices(strings []string) types.Path {
+	byteSlices := make([][]byte, len(strings))
+	for i, str := range strings {
+		byteSlices[i] = []byte(str)
+	}
+	return byteSlices
+}
+func setPayload(cmd *cobra.Command, args []string) {
+	if Storage == nil {
+		log.Fatal("Store is not initialized. Please choose a namespace first.")
+	}
+
+	var subspace, payload, path string
+	fmt.Print("Enter subspace: ")
+	fmt.Scan(&subspace)
+	fmt.Print("Enter payload: ")
+	fmt.Scan(&payload)
+	fmt.Print("Enter path (/ separated): ")
+	fmt.Scan(&path)
+	entrypath := convertToByteSlices(strings.Split(path, "/"))
+
+	entryInput := datamodeltypes.EntryInput{
+		Subspace:  []byte(subspace),
+		Payload:   []byte(payload),
+		Timestamp: uint64(time.Now().UnixMicro()),
+		Path:      entrypath,
+	}
+
+	authOpts := []byte(subspace)
+	prunedEntries := Storage.Set(entryInput, authOpts)
+
+	fmt.Println("Payload set in the store.")
+	fmt.Printf("Pruned entries: %v\n", prunedEntries)
+}
+
+func getPayload(cmd *cobra.Command, args []string) {
+	if Storage == nil {
+		log.Fatal("Store is not initialized. Please choose a namespace first.")
+	}
+
+	var subspace, path string
+	fmt.Print("Enter subspace: ")
+	fmt.Scan(&subspace)
+	fmt.Print("Enter path (comma separated): ")
+	fmt.Scan(&path)
+	entrypath := convertToByteSlices(strings.Split(path, "/"))
+
+	position := types.Position3d{
+		Subspace: []byte(subspace),
+		Path:     entrypath,
+	}
+
+	payload := Storage.GetPayload(position)
+	fmt.Printf("Payload: %s\n", payload)
+}
+
+// The InitStorage function remains the same as provided by you earlier
+func InitStorage(nameSpaceId types.NamespaceId) *store.Store[uint64, uint64, uint8, []byte, string] {
+
+	payloadRefDb, err := pebble.Open("willow/payloadrefcounter", &pebble.Options{})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	payloadRefKVstore := kv_driver.KvDriver{Db: payloadRefDb}
+	PayloadReferenceCounter := payloadDriver.PayloadReferenceCounter{
+		Store: payloadRefKVstore,
+	}
+
+	entryDb, err := pebble.Open("willow/entries", &pebble.Options{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	entryKvStore := kv_driver.KvDriver{Db: entryDb}
+
+	PayloadLock := &sync.Mutex{}
+	TestPayloadDriver := payloadDriver.MakePayloadDriver("willow/payload", store.TestPayloadScheme, PayloadLock)
+
+	entryDriver := entrydriver.EntryDriver[uint64, uint64, uint8]{
+		PayloadReferenceCounter: PayloadReferenceCounter,
+		Opts: struct {
+			KVDriver          kv_driver.KvDriver
+			NamespaceScheme   datamodeltypes.NamespaceScheme
+			SubspaceScheme    datamodeltypes.SubspaceScheme
+			PayloadScheme     datamodeltypes.PayloadScheme
+			PathParams        types.PathParams[uint8]
+			FingerprintScheme datamodeltypes.FingerprintScheme[uint64, uint64]
+		}{
+			KVDriver:          entryKvStore,
+			NamespaceScheme:   store.TestNameSpaceScheme,
+			SubspaceScheme:    store.TestSubspaceScheme,
+			PayloadScheme:     store.TestPayloadScheme,
+			PathParams:        store.TestPathParams,
+			FingerprintScheme: store.TestFingerprintScheme,
+		},
+	}
+	TestPrefixDriver := kv_driver.PrefixDriver[uint8]{}
+
+	return &store.Store[uint64, uint64, uint8, []byte, string]{
+		Schemes:            store.StoreSchemes,
+		EntryDriver:        entryDriver,
+		PayloadDriver:      TestPayloadDriver,
+		NameSpaceId:        nameSpaceId,
+		IngestionMutexLock: sync.Mutex{},
+		PrefixDriver:       TestPrefixDriver,
 	}
 }

@@ -19,7 +19,7 @@ type Options[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey constrai
 	}
 }
 
-type CapFinder[ReadCapability, SyncSignature, PayloadDigest, Receiver, ReceiverSecretKey constraints.Ordered, K constraints.Unsigned] struct {
+type CapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey constraints.Ordered, K constraints.Unsigned] struct {
 	NamespaceMap map[string]map[uint64]struct{}
 	Opts         Options[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K]
 }
@@ -41,14 +41,14 @@ func isEmpty[T constraints.Ordered](value T) bool {
 }
 
 // NewCapFinder creates a new instance of CapFinder with initialized NamespaceMap.
-func NewCapFinder[ReadCapability, SyncSignature, PayloadDigest, Receiver, ReceiverSecretKey constraints.Ordered, K constraints.Unsigned](opts Options[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K]) *CapFinder[ReadCapability, SyncSignature, PayloadDigest, Receiver, ReceiverSecretKey, K] {
-	return &CapFinder[ReadCapability, SyncSignature, PayloadDigest, Receiver, ReceiverSecretKey, K]{
+func NewCapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey constraints.Ordered, K constraints.Unsigned](opts Options[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K]) *CapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K] {
+	return &CapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K]{
 		NamespaceMap: make(map[string]map[uint64]struct{}),
 		Opts:         opts,
 	}
 }
 
-func (c *CapFinder[ReadCapability, SyncSignature, PayloadDigest, Receiver, ReceiverSecretKey, K]) GetNamespaceKey(namespace types.NamespaceId) (string, error) {
+func (c *CapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K]) GetNamespaceKey(namespace types.NamespaceId) (string, error) {
 	encoded, err := c.EncodeNamespace(namespace)
 	if err != nil {
 		return "", err
@@ -56,7 +56,7 @@ func (c *CapFinder[ReadCapability, SyncSignature, PayloadDigest, Receiver, Recei
 	return base64.StdEncoding.EncodeToString(encoded), nil
 }
 
-func (c *CapFinder[ReadCapability, SyncSignature, PayloadDigest, Receiver, ReceiverSecretKey, K]) AddCap(handle uint64) {
+func (c *CapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K]) AddCap(handle uint64) {
 	cap, _ := c.Opts.HandleStoreOurs.Get(handle)
 	empty := isEmpty(cap)
 	if empty {
@@ -78,7 +78,7 @@ func (c *CapFinder[ReadCapability, SyncSignature, PayloadDigest, Receiver, Recei
 	c.NamespaceMap[key][handle] = struct{}{}
 }
 
-func (c *CapFinder[ReadCapability, SyncSignature, PayloadDigest, Receiver, ReceiverSecretKey, K]) FindCapHandle(entry types.Entry) uint64 {
+func (c *CapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K]) FindCapHandle(entry types.Entry) uint64 {
 	key, _ := c.GetNamespaceKey(entry.Namespace_id)
 	set := c.NamespaceMap[key]
 	if set == nil {
