@@ -2,7 +2,6 @@ package payloadDriver
 
 import (
 	"encoding/binary"
-	"fmt"
 	"strings"
 
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/kv_driver"
@@ -27,7 +26,6 @@ If it does exist, then it increments the value and updates in database
 */
 func (p *PayloadReferenceCounter) Increment(payloadDigest types.PayloadDigest) (uint64, error) {
 	currCountBytes, err := p.Store.Get([]byte(payloadDigest))
-	fmt.Println("3")
 	var currCount uint64
 	buf := make([]byte, 8)
 	if err != nil && strings.Compare(err.Error(), "pebble: not found") != 0 {

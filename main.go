@@ -57,7 +57,7 @@ func main() {
 	dir := "willow"
 	f, err := os.Open(dir)
 	nameSpaces := make(map[string]uint8)
-	if err != nil && strings.Compare(err.Error(), "open willow: no such file or directory") != 0 && strings.Compare(err.Error(), "open willow: The system cannot find the file specified.") != 0 {
+	if err != nil && strings.Compare(err.Error(), "open willow: no such file or directory") != 0 {
 		fmt.Println(err)
 		return
 	} else if err == nil {
@@ -97,7 +97,7 @@ LOOP:
 		case "new":
 			if nameSpaces[input] != 255 {
 				fmt.Printf("Creating new NameSpaceID %s\n", input)
-				fmt.Printf("Are sure you want to create a new NameSpaceID: %s  (y/n)", objects[1])
+				fmt.Println("Are sure you want to create a new NameSpaceID (y/n)")
 				if !scanner.Scan() {
 					break LOOP
 				}
@@ -111,9 +111,8 @@ LOOP:
 					fmt.Println("Invalid input. Please enter 'y' or 'n'.")
 				}
 			} else {
-				fmt.Println("error: Namespace already exists")
-				fmt.Println("use enter to access existing Namespaces")
-				fmt.Println("\nusage: enter <namespace>")
+				setNamespace = types.NamespaceId(input)
+				NameSpaceInteraction(setNamespace)
 			}
 		case "list":
 			if len(nameSpaces) > 0 {
@@ -259,11 +258,13 @@ LOOPEND:
 				}
 			}
 			encodedValue, err := WillowStore.EntryDriver.Get(subSpaceId, pathBytes)
+			fmt.Println(encodedValue)
 			if err != nil {
 				log.Fatal(err)
 			}
-
+			fmt.Println("jasdkajd")
 			returnedPayload, err := WillowStore.PayloadDriver.Get(encodedValue.Entry.Payload_digest)
+			fmt.Println(returnedPayload)
 			if err != nil {
 				log.Fatal(err)
 			}
