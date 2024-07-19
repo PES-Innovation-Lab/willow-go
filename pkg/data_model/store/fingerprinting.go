@@ -90,10 +90,10 @@ func buildHelper(entries []Kdtree.KDNodeKey, fps []string, index int) string {
 // }
 
 // Placeholder for xorStrings function
-func xorStrings(a, b string) string {
-	// Implement the actual XOR logic for simplicity
-	return a + b
-}
+// func xorStrings(a, b string) string {
+// 	// Implement the actual XOR logic for simplicity
+// 	return a + b
+// }
 
 // ShortenArray shortens the array to include elements up to the last non-empty string.
 func ShortenArray(arr []string) []string {
@@ -114,22 +114,22 @@ func ShortenArray(arr []string) []string {
 	return arr[:lastIndex+1]
 }
 
-// func xorStrings(a, b string) string {
-// 	// ensure both strings have the same length
-// 	// they should always be the same length 🙄
-// 	// if len(a) > len(b) {
-// 	// 	b += string(make([]byte, len(a)-len(b)))
-// 	// } else if len(b) > len(a) {
-// 	// 	a += string(make([]byte, len(b)-len(a)))
-// 	// }
+func xorStrings(a, b string) string {
+	// ensure both strings have the same length
+	// they should always be the same length 🙄
+	// if len(a) > len(b) {
+	// 	b += string(make([]byte, len(a)-len(b)))
+	// } else if len(b) > len(a) {
+	// 	a += string(make([]byte, len(b)-len(a)))
+	// }
 
-// 	if len(a) != len(b) {
-// 		log.Fatal("Hashes of payloads are of different length 😨, fingerprinting.go, line 63")
-// 	}
+	if len(a) != len(b) {
+		log.Fatal("Hashes of payloads are of different length 😨, fingerprinting.go, line 63")
+	}
 
-// 	result := make([]byte, len(a))
-// 	for i := range a {
-// 		result[i] = a[i] ^ b[i]
-// 	}
-// 	return string(result)
-// }
+	result := make([]byte, len(a))
+	for i := range a {
+		result[i] = a[i] ^ b[i]
+	}
+	return string(result)
+}
