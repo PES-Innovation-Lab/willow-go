@@ -197,7 +197,7 @@ LOOPEND:
 				}
 			}
 			pathBytes := pinagoladastore.ConvertToByteSlices(strings.Split(string(path), "/"))
-			prunedEntries := WillowStore.Set(
+			prunedEntries, err := WillowStore.Set(
 				datamodeltypes.EntryInput{
 					Subspace:  subSpaceId,
 					Timestamp: timestamp,
@@ -206,6 +206,10 @@ LOOPEND:
 				},
 				subSpaceId,
 			)
+			if err != nil {
+				fmt.Println("error setting entry:", err)
+				break
+			}
 			if len(prunedEntries) == 0 {
 				fmt.Println("No entries pruned")
 				break
@@ -234,14 +238,12 @@ LOOPEND:
 				}
 			}
 			encodedValue, err := WillowStore.EntryDriver.Get(subSpaceId, pathBytes)
-			fmt.Println(encodedValue)
 			if err != nil {
-				log.Fatal(err)
+				fmt.Println("error getting entry:", err)
 			}
 			returnedPayload, err := WillowStore.PayloadDriver.Get(encodedValue.Entry.Payload_digest)
-			fmt.Println(returnedPayload)
 			if err != nil {
-				log.Fatal(err)
+				fmt.Println("error getting payload", err)
 			}
 
 			fmt.Println(string(returnedPayload.Bytes()))

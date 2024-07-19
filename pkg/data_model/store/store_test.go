@@ -131,12 +131,18 @@ func TestSet(t *testing.T) {
 	for _, cases := range tc {
 
 		// fmt.Println(utils.OrderBytes(first, second))
-		returnedValue := TestStore.Set(cases.input, cases.authOpts)
+		returnedValue, err := TestStore.Set(cases.input, cases.authOpts)
+		if err != nil {
+			fmt.Println(err)
+		}
 		fmt.Println(TestStore.EntryDriver.Storage.KDTree)
 		fmt.Println("\n", TestStore.EntryDriver.Storage.KDTree)
 		fmt.Println("Pruned Entries: ", returnedValue)
 		fmt.Println("============================")
-		entry := TestStore.EntryDriver.Storage.Get(cases.input.Subspace, cases.input.Path)
+		entry, err := TestStore.EntryDriver.Storage.Get(cases.input.Subspace, cases.input.Path)
+		if err != nil {
+			log.Fatal(err)
+		}
 		fmt.Println("============================")
 		fmt.Println("Entry")
 		fmt.Printf("Subspace: %s Path: %v Timestamp: %v\n", entry.Subspace, entry.Path, entry.Time)
