@@ -6,12 +6,14 @@ import (
 	"io"
 	"log"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
 	pinagoladastore "github.com/PES-Innovation-Lab/willow-go/PinaGoladaStore"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
 	"github.com/PES-Innovation-Lab/willow-go/types"
+	"github.com/PES-Innovation-Lab/willow-go/utils"
 )
 
 var pinacoladaAscii string = `
@@ -273,6 +275,19 @@ LOOPEND:
 		case "list":
 			if len(objects) > 1 {
 				fmt.Println("invalid usage of command\nusage: list")
+			}
+			nodes := WillowStore.List()
+			sort.Slice(nodes, func(i, j int) bool {
+				return utils.OrderBytes(nodes[i].Subspace, nodes[j].Subspace) < 0
+			})
+
+			// Print the header of the table
+			fmt.Printf("%-20s %-20s %-20s\n", "Subspace", "Timestamp", "Path")
+			fmt.Println(strings.Repeat("-", 60))
+
+			// Print each node in the sorted list
+			for _, node := range nodes {
+				fmt.Printf("%-20s %-20d %-20s\n", node.Subspace, node.Timestamp, node.Path)
 			}
 
 		// case "query":
