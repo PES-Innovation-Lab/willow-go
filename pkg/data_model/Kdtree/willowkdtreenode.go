@@ -124,8 +124,9 @@ func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res
 		Path:     Path,
 		Time:     Timestamp,
 	}
-	
+
 	inRange := utils.IsIncluded3d(utils.OrderSubspace, QueryRange, Position) //PLEASE CHANGE THE ordersubspace Call i have jugaad for now ~Samarth
+	fmt.Println(inRange)
 	switch dim % 3 {
 	case 0:
 		if utils.OrderTimestamp(Timestamp, QueryRange.TimeRange.Start) >= 0 {
@@ -137,6 +138,7 @@ func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res
 		}
 		if QueryRange.TimeRange.OpenEnd || utils.OrderTimestamp(Timestamp, QueryRange.TimeRange.End) < 0 {
 			if inRange {
+				fmt.Println("Adding")
 				mu.Lock()
 				*res = append(*res, Node.Value)
 				mu.Unlock()
@@ -155,8 +157,9 @@ func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res
 				QueryHelper(Node.Left, QueryRange, dim+1, res, mu, wg)
 			}()
 		}
-		if QueryRange.SubspaceRange.OpenEnd || utils.OrderBytes(Subspace, QueryRange.SubspaceRange.End) < 0 {
+		if QueryRange.SubspaceRange.OpenEnd || utils.OrderBytes(Subspace, QueryRange.SubspaceRange.End) < 0 || utils.OrderBytes(QueryRange.SubspaceRange.Start, QueryRange.SubspaceRange.End) == 0 {
 			if inRange {
+				fmt.Println("Adding")
 				mu.Lock()
 				*res = append(*res, Node.Value)
 				mu.Unlock()
@@ -177,6 +180,7 @@ func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res
 		}
 		if QueryRange.PathRange.OpenEnd || utils.OrderPath(Path, QueryRange.PathRange.End) < 0 {
 			if inRange {
+				fmt.Println("Adding")
 				mu.Lock()
 				*res = append(*res, Node.Value)
 				mu.Unlock()
@@ -188,4 +192,20 @@ func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res
 			}()
 		}
 	}
+}
+
+func ListNodes(r *KdNode[KDNodeKey]) []KDNodeKey {
+	var res []KDNodeKey
+	ListHelper(r, &res)
+	return res
+}
+
+func ListHelper(r *KdNode[KDNodeKey], res *[]KDNodeKey) {
+	if r == nil {
+		return
+	}
+
+	*res = append(*res, r.Value)
+	ListHelper(r.Left, res)
+	ListHelper(r.Right, res)
 }

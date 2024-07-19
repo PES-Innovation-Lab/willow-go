@@ -5,36 +5,49 @@ import (
 	"testing"
 
 	"github.com/PES-Innovation-Lab/willow-go/types"
+	"github.com/PES-Innovation-Lab/willow-go/utils"
 )
 
 // Custom comparison function for KDNodeKey
-// func compareKDNodeKey(a, b KDNodeKey) bool {
-// 	return a.Timestamp == b.Timestamp &&
-// 		utils.OrderSubspace(a.Subspace, b.Subspace) == 0 &&
-// 		reflect.DeepEqual(a.Path, b.Path)
-// }
+//
+//	func compareKDNodeKey(a, b KDNodeKey) bool {
+//		return a.Timestamp == b.Timestamp &&
+//			utils.OrderSubspace(a.Subspace, b.Subspace) == 0 &&
+//			reflect.DeepEqual(a.Path, b.Path)
+//	}
+var TestPathParams types.PathParams[uint8] = types.PathParams[uint8]{
+	MaxComponentCount:  50,
+	MaxComponentLength: 50,
+	MaxPathLength:      50,
+}
 
 func TestQuery(t *testing.T) {
 	// Set up the KDTree with sample values
 	kdtree := NewKDTreeWithValues[KDNodeKey](3, []KDNodeKey{
 		{
-			Subspace:  []byte{1},
-			Timestamp: 100,
-			Path:      types.Path{{0}},
+			Subspace:    []byte("manas"),
+			Timestamp:   140,
+			Path:        types.Path{{0}},
+			Fingerprint: "AHSIDAIWDAWDNAINSDJNAWD",
+		},
+		{
+			Subspace:    []byte("manashh"),
+			Timestamp:   100,
+			Path:        types.Path{{6}},
 			Fingerprint: "AHSIDAIWDAWDNAINSDJNAWD",
 		},
 	})
 
 	// Define the query range
 	subspaceRange := types.Range[types.SubspaceId]{
-		Start:   []byte{0},
-		End:     []byte{0},
+		Start:   []byte("manas"),
+		End:     []byte("manas"),
 		OpenEnd: false,
 	}
 
 	pathRange := types.Range[types.Path]{
 		Start:   types.Path{{0}},
-		End:     types.Path{{1}},
+		End:     utils.SuccessorPath(types.Path{{0}}, TestPathParams),
 		OpenEnd: false,
 	}
 
@@ -50,10 +63,16 @@ func TestQuery(t *testing.T) {
 		TimeRange:     timeRange,
 	}
 
-	// Execute the query
+	// position := types.Position3d{
+	// 	Subspace: []byte("manashh"),
+	// 	Time:     140,
+	// 	Path:     types.Path{{0}},
+	// }
+	// res := utils.IsIncluded3d(utils.OrderSubspace, range3d, position)
 	res := Query(kdtree, range3d)
 
 	fmt.Println(res)
+	// fmt.Println(PreorderTraversal[KDNodeKey](kdtree.Root))
 	// Verify the results
 	// expected := []Kdtree.KDNodeKey[uint64]{
 	// 	{
