@@ -148,7 +148,7 @@ LOOPEND:
 		}
 		input := scanner.Text()
 		if strings.ToLower(input) == "exit" {
-			fmt.Println(White, "Exiting...", Reset)
+			fmt.Println(White, "Exiting Namespace...", Reset)
 			break
 		}
 		objects := strings.Split(input, " ")
