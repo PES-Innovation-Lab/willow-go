@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/Kdtree"
+	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/kdnode"
 	"github.com/PES-Innovation-Lab/willow-go/types"
+	kdtree "github.com/rishitc/go-kd-tree"
 )
 
-// Custom comparison function for KDNodeKey
-// func compareKDNodeKey(a, b Kdtree.KDNodeKey) bool {
+// Custom comparison function for kdnode.Key
+// func compareKey(a, b kdnode.Key) bool {
 // 	return a.Timestamp == b.Timestamp &&
 // 		utils.OrderSubspace(a.Subspace, b.Subspace) == 0 &&
 // 		reflect.DeepEqual(a.Path, b.Path)
@@ -18,7 +19,7 @@ import (
 func TestPrefixesOf(t *testing.T) {
 	pd := PrefixDriver[uint64]{}
 	// Set up the KDTree with sample values
-	kdtree := Kdtree.NewKDTreeWithValues[Kdtree.KDNodeKey](3, []Kdtree.KDNodeKey{
+	kdtree := kdtree.NewKDTreeWithValues[kdnode.Key](3, []kdnode.Key{
 		{Timestamp: 500, Subspace: []byte{0}, Path: types.Path{{0}}},
 		{Timestamp: 600, Subspace: []byte{1}, Path: types.Path{{0}, {1}}},
 		{Timestamp: 700, Subspace: []byte{0}, Path: types.Path{{1}}},
@@ -37,7 +38,7 @@ func TestPrefixesOf(t *testing.T) {
 	res := pd.DriverPrefixesOf([]byte{0}, path, pathParams, kdtree)
 	fmt.Println(res)
 	// Verify the results
-	// expected := []Kdtree.KDNodeKey{
+	// expected := []kdnode.Key{
 	// 	{Timestamp: 500, Subspace: []byte{0}, Path: types.Path{{0}}},
 	// 	// {Timestamp: 600, Subspace: []byte{1}, Path: types.Path{{0}, {1}}},
 	// }
@@ -47,7 +48,7 @@ func TestPrefixesOf(t *testing.T) {
 	// }
 
 	// for i, exp := range expected {
-	// 	if !compareKDNodeKey(res[i], exp) {
+	// 	if !compareKey(res[i], exp) {
 	// 		t.Errorf("expected result %d to be %v, got %v", i, exp, res[i])
 	// 	}
 	// }
@@ -56,7 +57,7 @@ func TestPrefixesOf(t *testing.T) {
 func TestPrefixedBy(t *testing.T) {
 	pd := PrefixDriver[uint64]{}
 	// Set up the KDTree with sample values
-	kdtree := Kdtree.NewKDTreeWithValues[Kdtree.KDNodeKey](3, []Kdtree.KDNodeKey{
+	kdtree := kdtree.NewKDTreeWithValues[kdnode.Key](3, []kdnode.Key{
 		{Timestamp: 1721226604897504, Subspace: []byte{0}, Path: types.Path{{105, 110, 116, 114, 111}, {116, 111}, {109, 97, 110, 97, 115}}},
 		{Timestamp: 700, Subspace: []byte{0}, Path: types.Path{{105, 110, 116, 114, 111}, {116, 111}}},
 	})
@@ -74,7 +75,7 @@ func TestPrefixedBy(t *testing.T) {
 	res := pd.PrefixedBy([]byte{0}, path, pathParams, kdtree)
 	fmt.Println(res)
 	// Verify the results
-	// 	expected := []Kdtree.KDNodeKey{
+	// 	expected := []kdnode.Key{
 	// 		{Timestamp: 500, Subspace: []byte{0}, Path: types.Path{{0}}},
 	// 		{Timestamp: 700, Subspace: []byte{0}, Path: types.Path{{0}, {2}}},
 	// 	}
@@ -84,7 +85,7 @@ func TestPrefixedBy(t *testing.T) {
 	// 	}
 
 	// 	for i, exp := range expected {
-	// 		if !compareKDNodeKey(res[i], exp) {
+	// 		if !compareKey(res[i], exp) {
 	// 			t.Errorf("expected result %d to be %v, got %v", i, exp, res[i])
 	// 		}
 	// 	}

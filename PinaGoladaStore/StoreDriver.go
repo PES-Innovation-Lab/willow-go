@@ -5,9 +5,9 @@ import (
 	"log"
 	"sync"
 
-	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/Kdtree"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
 	entrydriver "github.com/PES-Innovation-Lab/willow-go/pkg/data_model/entry_driver"
+	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/kdnode"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/kv_driver"
 	payloadDriver "github.com/PES-Innovation-Lab/willow-go/pkg/data_model/payload_kv_driver"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/store"
@@ -69,7 +69,7 @@ func InitStorage(nameSpaceId types.NamespaceId) *store.Store[uint64, uint64, uin
 func InitKDTree(WillowStore *store.Store[uint64, uint64, uint8, []byte, string]) {
 
 	encodedKeyValue, _ := WillowStore.EntryDriver.Opts.KVDriver.ListAllValues()
-	var keys []Kdtree.KDNodeKey
+	var keys []kdnode.Key
 
 	for _, key := range encodedKeyValue {
 		time, sub, path, err := kv_driver.DecodeKey(key.Key, WillowStore.Schemes.PathParams)
@@ -77,7 +77,7 @@ func InitKDTree(WillowStore *store.Store[uint64, uint64, uint8, []byte, string])
 		if err != nil {
 			log.Fatal(err)
 		}
-		keys = append(keys, Kdtree.KDNodeKey{
+		keys = append(keys, kdnode.Key{
 			Subspace:    sub,
 			Timestamp:   time,
 			Path:        path,

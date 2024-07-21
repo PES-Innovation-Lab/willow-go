@@ -3,18 +3,18 @@ package store
 import (
 	"testing"
 
-	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/Kdtree"
+	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/kdnode"
 )
 
 func TestBuildFingerprints(t *testing.T) {
 	tests := []struct {
 		name     string
-		entries  []Kdtree.KDNodeKey
+		entries  []kdnode.Key
 		expected []string
 	}{
 		{
 			name: "Even number of entries",
-			entries: []Kdtree.KDNodeKey{
+			entries: []kdnode.Key{
 				{Fingerprint: "a"},
 				{Fingerprint: "b"},
 				{Fingerprint: "c"},
@@ -24,7 +24,7 @@ func TestBuildFingerprints(t *testing.T) {
 		},
 		{
 			name: "Odd number of entries",
-			entries: []Kdtree.KDNodeKey{
+			entries: []kdnode.Key{
 				{Fingerprint: "a"},
 				{Fingerprint: "b"},
 				{Fingerprint: "c"},
@@ -33,7 +33,7 @@ func TestBuildFingerprints(t *testing.T) {
 		},
 		{
 			name: "5 entries",
-			entries: []Kdtree.KDNodeKey{
+			entries: []kdnode.Key{
 				{Fingerprint: "a"},
 				{Fingerprint: "b"},
 				{Fingerprint: "c"},
@@ -44,14 +44,14 @@ func TestBuildFingerprints(t *testing.T) {
 		},
 		{
 			name: "Single entry",
-			entries: []Kdtree.KDNodeKey{
+			entries: []kdnode.Key{
 				{Fingerprint: "a"},
 			},
 			expected: []string{"a"},
 		},
 		{
 			name:     "Empty entries",
-			entries:  []Kdtree.KDNodeKey{},
+			entries:  []kdnode.Key{},
 			expected: []string{""},
 		},
 	}
