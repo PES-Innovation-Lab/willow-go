@@ -96,24 +96,24 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	// the protocol specifies to decide which of them is newer.
 	// If the current inserting entry is found to be older, do not insert, otherwise
 	// remove the other entry from all storages
-	retEntry, err := s.EntryDriver.Get(entry.Subspace_id, entry.Path)
-	otherEntry := retEntry.Entry
-	authDigest := retEntry.AuthTokenHash
+	otherEntry, err := s.EntryDriver.Get(entry.Subspace_id, entry.Path)
+	// otherEntry := retEntry.Entry
+	// authDigest := retEntry.AuthDigest
 	if err != nil && strings.Compare(err.Error(), "entry does not exist") != 0 {
 		log.Fatal(err)
 	}
-	if !reflect.DeepEqual(otherEntry, types.Position3d{}) {
+	if !reflect.DeepEqual(otherEntry.Entry, types.Position3d{}) {
 		// Checking if path matches
-		if utils.OrderPath(otherEntry.Path, entry.Path) == 0 {
-			if otherEntry.Timestamp >= entry.Timestamp {
+		if utils.OrderPath(otherEntry.Entry.Path, entry.Path) == 0 {
+			if otherEntry.Entry.Timestamp >= entry.Timestamp {
 				// Check timestamps for newer entry
 				s.IngestionMutexLock.Unlock()
 				log.Fatal("failed to ingest entry\nnewer entry already exists in store")
-			} else if entry.Timestamp == otherEntry.Timestamp && otherEntry.Payload_digest >= entry.Payload_digest {
+			} else if entry.Timestamp == otherEntry.Entry.Timestamp && otherEntry.Entry.Payload_digest >= entry.Payload_digest {
 				// Check payload digests for newer entry
 				s.IngestionMutexLock.Unlock()
 				log.Fatal("failed to ingest entry\nnewer entry already exists in store")
-			} else if entry.Timestamp == otherEntry.Timestamp && otherEntry.Payload_digest == entry.Payload_digest && otherEntry.Payload_length == entry.Payload_length {
+			} else if entry.Timestamp == otherEntry.Entry.Timestamp && otherEntry.Entry.Payload_digest == entry.Payload_digest && otherEntry.Entry.Payload_length >= entry.Payload_length {
 				// Check payload lengths for newer entry
 				s.IngestionMutexLock.Unlock()
 				log.Fatal("failed to ingest entry\nnewer entry already exists in store")
@@ -129,18 +129,20 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 
 			// s.EntryDriver.Opts.KVDriver.Delete(encodedKey)
 
-			s.EntryDriver.Delete(otherEntry)
-			s.PayloadDriver.Erase(authDigest)
+			s.EntryDriver.Delete(otherEntry.Entry)
+			s.PayloadDriver.Erase(otherEntry.AuthDigest)
 
 			// Decrement payload ref counter of the other entry, if the count is 0, which means no entry is pointing to it
 			// remove the payload itself from the payload driver
-			if otherEntry.Payload_digest != entry.Payload_digest {
-				count, err := s.EntryDriver.PayloadReferenceCounter.Decrement(otherEntry.Payload_digest)
+			//if otherEntry.Payload_digest != entry.Payload_digest {
+			//	count, err := s.EntryDriver.PayloadReferenceCounter.Decrement(otherEntry.Payload_digest)
+			if otherEntry.Entry.Payload_digest != entry.Payload_digest {
+				count, err := s.EntryDriver.PayloadReferenceCounter.Decrement(otherEntry.Entry.Payload_digest)
 				if err != nil {
 					log.Fatal(err)
 				}
 				if count == 0 {
-					s.PayloadDriver.Erase(otherEntry.Payload_digest)
+					s.PayloadDriver.Erase(otherEntry.Entry.Payload_digest)
 				}
 			}
 		}
@@ -245,20 +247,14 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	kdt *Kdtree.KDTree[Kdtree.KDNodeKey],
 	entry types.Position3d,
 	pathParams types.PathParams[K],
-) ([]struct {
-	Entry         types.Entry
-	AuthTokenHash types.PayloadDigest
-}, error,
+) ([]datamodeltypes.ExtendedEntry, error,
 ) {
 	// converting the 3D position to a 3D RANGE OMG SO COOL. this is done inside prefixedby func
 	// prefixedby func basically does all the work, this is just a wrapper
 
 	prunableEntries := s.PrefixDriver.PrefixedBy(entry.Subspace, entry.Path, pathParams, kdt)
 
-	final_prunables := make([]struct {
-		Entry         types.Entry
-		AuthTokenHash types.PayloadDigest
-	}, 0, len(prunableEntries))
+	final_prunables := make([]datamodeltypes.ExtendedEntry, 0, len(prunableEntries))
 	for _, prune_candidate := range prunableEntries {
 		if prune_candidate.Timestamp < entry.Time {
 			// encodedEntry, _ := kv_driver.EncodeKey(types.Position3d{
@@ -362,4 +358,23 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	areaOfInterest types.AreaOfInterest,
 ) types.Range3d {
 	return s.EntryDriver.Storage.GetInterestRange(areaOfInterest)
+}
+
+func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]) GetPayload(position types.Position3d) []byte {
+	encodedkey, err := kv_driver.EncodeKey(position, s.Schemes.PathParams)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	encodedValue, err := s.EntryDriver.Opts.KVDriver.Get(encodedkey)
+	if err != nil {
+		log.Fatal(err)
+	}
+	Entry := kv_driver.DecodeValues(encodedValue)
+
+	payload, err := s.PayloadDriver.Get(Entry.PayloadDigest)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return (payload.Bytes())
 }

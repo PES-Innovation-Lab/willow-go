@@ -1,12 +1,10 @@
-package wgps
+package handlestore
 
 import (
 	"fmt"
-
-	"golang.org/x/exp/constraints"
 )
 
-func NewMap[ValueType constraints.Ordered]() *map[uint64]HandleStoreTriple[ValueType] {
+func NewMap[ValueType any]() *map[uint64]HandleStoreTriple[ValueType] {
 
 	var data = make(map[uint64]HandleStoreTriple[ValueType])
 	return &data
@@ -14,13 +12,13 @@ func NewMap[ValueType constraints.Ordered]() *map[uint64]HandleStoreTriple[Value
 
 // Assuming ValueType is a generic type that is ordered, as per your file excerpt.
 
-type HandleStoreTriple[ValueType constraints.Ordered] struct {
+type HandleStoreTriple[ValueType any] struct {
 	Value           ValueType
 	AskedToFree     bool
 	MessageRefCount int
 }
 
-type HandleStore[ValueType constraints.Ordered] struct {
+type HandleStore[ValueType any] struct {
 	LeastUnassignedHandle uint64
 	/** A map of handles (numeric IDs) to a triple made up of:
 	 * - The bound data

@@ -1,4 +1,4 @@
-package store
+package PinaGoladaStore
 
 import (
 	"crypto/sha256"

@@ -55,7 +55,7 @@ type FragmentKit interface {
 func (FragmentKitComplete) IsFragmentKit()  {}
 func (FragmentKitSelective) IsFragmentKit() {}
 
-type PaiScheme[ReadCapability, PsiGroup, PsiScalar constraints.Ordered, K constraints.Unsigned] struct {
+type PaiScheme[ReadCapability, PsiGroup any, PsiScalar int, K constraints.Unsigned] struct {
 	FragmentToGroup     func(Fragment) PsiGroup
 	GetScalar           func() PsiScalar
 	ScalarMult          func(group PsiGroup, scalar PsiScalar) PsiGroup
@@ -64,7 +64,7 @@ type PaiScheme[ReadCapability, PsiGroup, PsiScalar constraints.Ordered, K constr
 	GroupMemberEncoding utils.EncodingScheme[PsiGroup]
 }
 
-type Intersection[PsiGroup constraints.Ordered] struct {
+type Intersection[PsiGroup any] struct {
 	Group       PsiGroup
 	IsComplete  bool
 	IsSecondary bool
