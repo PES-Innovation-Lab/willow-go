@@ -112,50 +112,50 @@ const (
 // 1. Control messages
 
 /** Make a binding promise of available buffer capacity to the other peer. */
-type ControlIssueGuaranteeData struct {
+type MsgControlIssueGuaranteeData struct {
 	Amount  uint64
 	Channel LogicalChannel
 }
 type MsgControlIssueGuarantee struct {
 	Kind MsgKind
-	Data ControlIssueGuaranteeData
+	Data MsgControlIssueGuaranteeData
 }
 
 /** Allow the other peer to reduce its total buffer capacity by amount. */
-type ControlAbsolveData struct {
+type MsgControlAbsolveData struct {
 	Amount  uint64
 	Channel LogicalChannel
 }
 type MsgControlAbsolve struct {
 	Kind MsgKind
-	Data ControlAbsolveData
+	Data MsgControlAbsolveData
 }
 
 /** Ask the other peer to send an ControlAbsolve message such that the receiver remaining guarantees will be target. */
-type ControlPleadData struct {
+type MsgControlPleadData struct {
 	Target  uint64
 	Channel LogicalChannel
 }
 type MsgControlPlead struct {
 	Kind MsgKind
-	Data ControlPleadData
+	Data MsgControlPleadData
 }
 
-type ControlAnnounceDroppingData struct {
+type MsgControlAnnounceDroppingData struct {
 	Channel LogicalChannel
 }
 type MsgControlAnnounceDropping struct {
 	Kind MsgKind
-	Data ControlAnnounceDroppingData
+	Data MsgControlAnnounceDroppingData
 }
 
 /** Notify the other peer that it can stop dropping messages of this logical channel. */
-type ControlApologiseData struct {
+type MsgControlApologiseData struct {
 	Channel LogicalChannel
 }
 type MsgControlApologise struct {
 	Kind MsgKind
-	Data ControlApologiseData
+	Data MsgControlApologiseData
 }
 
 type MsgControlFreeData struct {
