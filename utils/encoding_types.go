@@ -9,6 +9,8 @@ import (
 // Define Growing Bytes here
 // figure out the promise type thing
 
+type StreamDecoder[ValueType any] func(value *GrowingBytes) ValueType
+
 type EncodingScheme[ValueType types.OrderableGeneric] struct {
 	Encode        func(value ValueType) []byte
 	Decode        func(encoded []byte) (ValueType, error)

@@ -135,6 +135,8 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 
 			// Decrement payload ref counter of the other entry, if the count is 0, which means no entry is pointing to it
 			// remove the payload itself from the payload driver
+			//if otherEntry.Payload_digest != entry.Payload_digest {
+			//	count, err := s.EntryDriver.PayloadReferenceCounter.Decrement(otherEntry.Payload_digest)
 			if otherEntry.Entry.Payload_digest != entry.Payload_digest {
 				count, err := s.EntryDriver.PayloadReferenceCounter.Decrement(otherEntry.Entry.Payload_digest)
 				if err != nil {
@@ -191,17 +193,14 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	authDigest, _, _ := s.PayloadDriver.Set(encodedToken)
 
 	// Insert the entry into the storage
-	err := s.EntryDriver.Insert(datamodeltypes.ExtendedEntry{
-		Entry: types.Entry{
-			Timestamp:      entry.Timestamp,
-			Path:           entry.Path,
-			Payload_digest: entry.PayloadDigest,
-			Payload_length: entry.PayloadLength,
-			Subspace_id:    entry.Subspace,
-			Namespace_id:   s.NameSpaceId,
-		},
-		AuthDigest: authDigest,
-	})
+	err := s.EntryDriver.Insert(types.Entry{
+		Subspace_id:    entry.Subspace,
+		Payload_digest: entry.PayloadDigest,
+		Payload_length: entry.PayloadLength,
+		Path:           entry.Path,
+		Timestamp:      entry.Timestamp,
+		Namespace_id:   s.NameSpaceId,
+	}, authDigest)
 	if err != nil {
 		return nil, errors.New(err.Error())
 	}

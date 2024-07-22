@@ -2,7 +2,7 @@ package data
 
 import (
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
-	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps"
+	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/handlestore"
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"golang.org/x/exp/constraints"
 )
@@ -31,7 +31,7 @@ type PayloadRequest struct {
 }
 
 type DataSenderOpts[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, AuthorisationOpts constraints.Ordered] struct {
-	HandlesPayloadRequestsTheirs wgps.HandleStore[PayloadRequest]
+	HandlesPayloadRequestsTheirs handlestore.HandleStore[PayloadRequest]
 	GetStore                     GetStoreFn[Prefingerprint, Fingerprint, AuthorisationToken, AuthorisationOpts]
 	TransformPayload             func(chunk []byte) []byte
 }
