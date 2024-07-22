@@ -5,11 +5,12 @@ import (
 	"log"
 	"reflect"
 
-	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/Kdtree"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
+	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/kdnode"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/kv_driver"
 	payloadDriver "github.com/PES-Innovation-Lab/willow-go/pkg/data_model/payload_kv_driver"
 	"github.com/PES-Innovation-Lab/willow-go/types"
+	kdtree "github.com/rishitc/go-kd-tree"
 	"golang.org/x/exp/constraints"
 )
 
@@ -32,9 +33,9 @@ type EntryDriver[PreFingerPrint, FingerPrint constraints.Ordered, K constraints.
 Instantiates a new KD tree and then returns the KD tree
 Thos function will be used when we want to instantiate a new KD tree at the start of the application
 */
-func (e *EntryDriver[PreFingerPrint, FingerPrint, K]) MakeStorage(nameSpaceId types.NamespaceId, dbValues []Kdtree.KDNodeKey) datamodeltypes.KDTreeStorage[PreFingerPrint, FingerPrint, K] {
+func (e *EntryDriver[PreFingerPrint, FingerPrint, K]) MakeStorage(nameSpaceId types.NamespaceId, dbValues []kdnode.Key) datamodeltypes.KDTreeStorage[PreFingerPrint, FingerPrint, K] {
 	storage := datamodeltypes.KDTreeStorage[PreFingerPrint, FingerPrint, K]{
-		KDTree: Kdtree.NewKDTreeWithValues[Kdtree.KDNodeKey](3, dbValues),
+		KDTree: kdtree.NewKDTreeWithValues[kdnode.Key](3, dbValues),
 		Opts: struct {
 			Namespace         types.NamespaceId
 			SubspaceScheme    datamodeltypes.SubspaceScheme

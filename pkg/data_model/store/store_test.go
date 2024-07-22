@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/Kdtree"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
 	entrydriver "github.com/PES-Innovation-Lab/willow-go/pkg/data_model/entry_driver"
+	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/kdnode"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/kv_driver"
 	payloadDriver "github.com/PES-Innovation-Lab/willow-go/pkg/data_model/payload_kv_driver"
 	"github.com/PES-Innovation-Lab/willow-go/types"
@@ -112,7 +112,7 @@ func TestSet(t *testing.T) {
 		// },
 	}
 	encodedKeyValue, _ := TestStore.EntryDriver.Opts.KVDriver.ListAllValues()
-	var keys []Kdtree.KDNodeKey
+	var keys []kdnode.Key
 
 	for _, key := range encodedKeyValue {
 		time, sub, path, err := kv_driver.DecodeKey(key.Key, TestStore.Schemes.PathParams)
@@ -120,7 +120,7 @@ func TestSet(t *testing.T) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		keys = append(keys, Kdtree.KDNodeKey{
+		keys = append(keys, kdnode.Key{
 			Subspace:    sub,
 			Timestamp:   time,
 			Path:        path,

@@ -8,13 +8,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/Kdtree"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
 	entrydriver "github.com/PES-Innovation-Lab/willow-go/pkg/data_model/entry_driver"
+	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/kdnode"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/kv_driver"
 	payloadDriver "github.com/PES-Innovation-Lab/willow-go/pkg/data_model/payload_kv_driver"
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/PES-Innovation-Lab/willow-go/utils"
+	kdtree "github.com/rishitc/go-kd-tree"
 	"golang.org/x/exp/constraints"
 )
 
@@ -242,7 +243,7 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 }
 
 func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]) PrunableEntries(
-	kdt *Kdtree.KDTree[Kdtree.KDNodeKey],
+	kdt *kdtree.KDTree[kdnode.Key],
 	entry types.Position3d,
 	pathParams types.PathParams[K],
 ) ([]datamodeltypes.ExtendedEntry, error,
@@ -377,6 +378,6 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	return (payload.Bytes()), nil
 }
 
-func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]) List() []Kdtree.KDNodeKey {
-	return Kdtree.ListNodes(s.EntryDriver.Storage.KDTree.Root)
+func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]) List() []kdnode.Key {
+	return s.EntryDriver.Storage.KDTree.Values()
 }
