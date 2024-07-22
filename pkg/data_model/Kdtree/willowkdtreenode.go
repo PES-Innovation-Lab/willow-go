@@ -124,8 +124,9 @@ func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res
 		Path:     Path,
 		Time:     Timestamp,
 	}
-	
+
 	inRange := utils.IsIncluded3d(utils.OrderSubspace, QueryRange, Position) //PLEASE CHANGE THE ordersubspace Call i have jugaad for now ~Samarth
+
 	switch dim % 3 {
 	case 0:
 		if utils.OrderTimestamp(Timestamp, QueryRange.TimeRange.Start) >= 0 {
@@ -188,4 +189,20 @@ func QueryHelper(Node *KdNode[KDNodeKey], QueryRange types.Range3d, dim int, res
 			}()
 		}
 	}
+}
+
+func ListNodes(r *KdNode[KDNodeKey]) []KDNodeKey {
+	var res []KDNodeKey
+	ListHelper(r, &res)
+	return res
+}
+
+func ListHelper(r *KdNode[KDNodeKey], res *[]KDNodeKey) {
+	if r == nil {
+		return
+	}
+
+	*res = append(*res, r.Value)
+	ListHelper(r.Left, res)
+	ListHelper(r.Right, res)
 }

@@ -42,7 +42,6 @@ type ReadAuthorisation[ReadCapability, SubspaceReadCapability any] struct {
 
 // Transport defines the interface for communication channels
 type Transport interface {
-	Role() SyncRole
 	Send(data []byte) error     // Use byte slice instead of Uint8Array
 	Recv() (chan []byte, error) // Returns a receive channel and potential error (PLEASE CHECK IF THIS IS RIGHT)
 	Close() error

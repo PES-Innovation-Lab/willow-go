@@ -35,7 +35,7 @@ func InitStorage(nameSpaceId types.NamespaceId) *Store[uint64, uint64, uint8, []
 	entryKvStore := kv_driver.KvDriver{Db: entryDb}
 
 	PayloadLock := &sync.Mutex{}
-	TestPayloadDriver := payloadDriver.MakePayloadDriver("willow/payload", TestPayloadScheme,PayloadLock)
+	TestPayloadDriver := payloadDriver.MakePayloadDriver("willow/payload", TestPayloadScheme, PayloadLock)
 
 	entryDriver := entrydriver.EntryDriver[uint64, uint64, uint8]{
 		PayloadReferenceCounter: PayloadReferenceCounter,
@@ -111,30 +111,38 @@ func TestSet(t *testing.T) {
 		// 	authOpts: []byte("Manas"),
 		// },
 	}
-	encodedKeys, _ := TestStore.EntryDriver.Opts.KVDriver.ListAllValues()
+	encodedKeyValue, _ := TestStore.EntryDriver.Opts.KVDriver.ListAllValues()
 	var keys []Kdtree.KDNodeKey
 
-	for _, key := range encodedKeys {
+	for _, key := range encodedKeyValue {
 		time, sub, path, err := kv_driver.DecodeKey(key.Key, TestStore.Schemes.PathParams)
+		decodedValue := kv_driver.DecodeValues(key.Value)
 		if err != nil {
 			log.Fatal(err)
 		}
 		keys = append(keys, Kdtree.KDNodeKey{
-			Subspace:  sub,
-			Timestamp: time,
-			Path: 	path,
+			Subspace:    sub,
+			Timestamp:   time,
+			Path:        path,
+			Fingerprint: string(decodedValue.AuthDigest),
 		})
 	}
 	TestStore.EntryDriver.Storage = TestStore.EntryDriver.MakeStorage([]byte("Test"), keys)
 	for _, cases := range tc {
 
 		// fmt.Println(utils.OrderBytes(first, second))
-		returnedValue := TestStore.Set(cases.input, cases.authOpts)
+		returnedValue, err := TestStore.Set(cases.input, cases.authOpts)
+		if err != nil {
+			fmt.Println(err)
+		}
 		fmt.Println(TestStore.EntryDriver.Storage.KDTree)
 		fmt.Println("\n", TestStore.EntryDriver.Storage.KDTree)
 		fmt.Println("Pruned Entries: ", returnedValue)
 		fmt.Println("============================")
-		entry := TestStore.EntryDriver.Storage.Get(cases.input.Subspace, cases.input.Path)
+		entry, err := TestStore.EntryDriver.Storage.Get(cases.input.Subspace, cases.input.Path)
+		if err != nil {
+			log.Fatal(err)
+		}
 		fmt.Println("============================")
 		fmt.Println("Entry")
 		fmt.Printf("Subspace: %s Path: %v Timestamp: %v\n", entry.Subspace, entry.Path, entry.Time)
@@ -142,7 +150,7 @@ func TestSet(t *testing.T) {
 		encodedKey, err := kv_driver.EncodeKey(types.Position3d{
 			Time:     entry.Time,
 			Subspace: entry.Subspace,
-			Path:    entry.Path,
+			Path:     entry.Path,
 		}, TestStore.Schemes.PathParams)
 		if err != nil {
 			log.Fatal(err)

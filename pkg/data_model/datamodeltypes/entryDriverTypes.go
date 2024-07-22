@@ -2,7 +2,6 @@ package datamodeltypes
 
 import (
 	"errors"
-	"fmt"
 	"log"
 
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/Kdtree"
@@ -58,11 +57,10 @@ type KDTreeStorage[PreFingerPrint, FingerPrint constraints.Ordered, K constraint
 	// }
 }
 
-func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Get(Subspace types.SubspaceId, Path types.Path) types.Position3d {
-	fmt.Println(k.Opts.PathParams)
+func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Get(Subspace types.SubspaceId, Path types.Path) (types.Position3d, error) {
 	subspaceRange := types.Range[types.SubspaceId]{
 		Start:   Subspace,
-		End:     Subspace,
+		End:     utils.SuccessorSubspaceId(Subspace),
 		OpenEnd: false,
 	}
 
@@ -91,15 +89,15 @@ func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Get(Subspace types.Subsp
 	}
 	switch len(res) {
 	case 0:
-		return types.Position3d{}
+		return types.Position3d{}, nil
 	case 1:
 		return types.Position3d{
 			Subspace: res[0].Subspace,
 			Time:     res[0].Timestamp,
-			Path:     res[0].Path}
+			Path:     res[0].Path}, nil
 	default:
 		log.Fatalln("get returned multiple nodes")
-		return types.Position3d{}
+		return types.Position3d{}, errors.New("get returned multiple nodes")
 	}
 }
 

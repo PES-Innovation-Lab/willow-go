@@ -30,9 +30,9 @@ func (p *PayloadReferenceCounter) Increment(payloadDigest types.PayloadDigest) (
 	buf := make([]byte, 8)
 	if err != nil && strings.Compare(err.Error(), "pebble: not found") != 0 {
 		return 0, err
-		} else if err != nil && strings.Compare(err.Error(), "pebble: not found") == 0 {
+	} else if err != nil && strings.Compare(err.Error(), "pebble: not found") == 0 {
 		currCount = 1
-		} else {
+	} else {
 		currCount = binary.BigEndian.Uint64(currCountBytes) + 1
 	}
 	binary.BigEndian.PutUint64(buf, currCount)

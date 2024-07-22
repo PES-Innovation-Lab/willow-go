@@ -1,8 +1,8 @@
 package store
 
 import (
+	"errors"
 	"fmt"
-	"log"
 	"reflect"
 	"strings"
 	"sync"
@@ -30,7 +30,7 @@ type Store[PreFingerPrint, FingerPrint constraints.Ordered, K constraints.Unsign
 func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]) Set(
 	input datamodeltypes.EntryInput,
 	authorisation AuthorisationOpts,
-) []types.Entry {
+) ([]types.Entry, error) {
 	timestamp := input.Timestamp
 	if timestamp == 0 {
 		timestamp = uint64(time.Now().UnixMicro())
@@ -47,20 +47,20 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	}
 	authToken, err := s.Schemes.AuthorisationScheme.Authorise(entry, authorisation)
 	if err != nil {
-		log.Fatal(err)
+		return nil, errors.New(err.Error())
 	}
 	prunedEntries, err := s.IngestEntry(entry, authToken)
 	if err != nil {
-		log.Fatal(err)
+		return nil, errors.New(err.Error())
 	}
 	count, err := s.EntryDriver.PayloadReferenceCounter.Count(digest)
 	if err != nil {
-		log.Fatal(err)
+		return nil, errors.New(err.Error())
 	}
 	if count == 0 {
 		s.PayloadDriver.Erase(digest)
 	}
-	return prunedEntries
+	return prunedEntries, nil
 }
 
 func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]) IngestEntry(
@@ -72,13 +72,13 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	// Check if the namespace id of the entry and the current namespace match!
 	if !(s.Schemes.NamespaceScheme.IsEqual(s.NameSpaceId, entry.Namespace_id)) {
 		s.IngestionMutexLock.Unlock()
-		log.Fatal("failed to ingest entry\nnamespace does not match store namespace")
+		return nil, errors.New("failed to ingest entry\nnamespace does not match store namespace")
 	}
 
 	// Check if the authorisation token is valid
 	if !(s.Schemes.AuthorisationScheme.IsAuthoriseWrite(entry, authorisation)) {
 		s.IngestionMutexLock.Unlock()
-		log.Fatal("failed to ingest entry\nauthorisation failed")
+		return nil, errors.New("failed to ingest entry\nauthorisation failed")
 	}
 
 	// Get all the prefixes of the entry path to be inserted, iterate through them
@@ -88,7 +88,7 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	for _, prefix := range prefixes {
 		if prefix.Timestamp >= entry.Timestamp {
 			s.IngestionMutexLock.Unlock()
-			log.Fatal("failed to ingest entry\nnewer prefix already exists in store")
+			return nil, errors.New("failed to ingest entry\nnewer prefix already exists in store")
 		}
 	}
 
@@ -100,7 +100,7 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	// otherEntry := retEntry.Entry
 	// authDigest := retEntry.AuthDigest
 	if err != nil && strings.Compare(err.Error(), "entry does not exist") != 0 {
-		log.Fatal(err)
+		return nil, errors.New(err.Error())
 	}
 	if !reflect.DeepEqual(otherEntry.Entry, types.Position3d{}) {
 		// Checking if path matches
@@ -108,15 +108,15 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 			if otherEntry.Entry.Timestamp >= entry.Timestamp {
 				// Check timestamps for newer entry
 				s.IngestionMutexLock.Unlock()
-				log.Fatal("failed to ingest entry\nnewer entry already exists in store")
+				return nil, errors.New("failed to ingest entry\nnewer entry already exists in store")
 			} else if entry.Timestamp == otherEntry.Entry.Timestamp && otherEntry.Entry.Payload_digest >= entry.Payload_digest {
 				// Check payload digests for newer entry
 				s.IngestionMutexLock.Unlock()
-				log.Fatal("failed to ingest entry\nnewer entry already exists in store")
+				return nil, errors.New("failed to ingest entry\nnewer entry already exists in store")
 			} else if entry.Timestamp == otherEntry.Entry.Timestamp && otherEntry.Entry.Payload_digest == entry.Payload_digest && otherEntry.Entry.Payload_length >= entry.Payload_length {
 				// Check payload lengths for newer entry
 				s.IngestionMutexLock.Unlock()
-				log.Fatal("failed to ingest entry\nnewer entry already exists in store")
+				return nil, errors.New("failed to ingest entry\nnewer entry already exists in store")
 			}
 			// If the three conditions does not satisgy, it means the entry to be inserted is newer
 			// and the other entry should be removed
@@ -139,7 +139,7 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 			if otherEntry.Entry.Payload_digest != entry.Payload_digest {
 				count, err := s.EntryDriver.PayloadReferenceCounter.Decrement(otherEntry.Entry.Payload_digest)
 				if err != nil {
-					log.Fatal(err)
+					return nil, errors.New(err.Error())
 				}
 				if count == 0 {
 					s.PayloadDriver.Erase(otherEntry.Entry.Payload_digest)
@@ -167,7 +167,7 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	})
 	// If there is an error in inserting the entry, print it and exit
 	if err != nil {
-		log.Fatal(err)
+		return nil, errors.New(err.Error())
 	}
 
 	// Unlock the mutex lock
@@ -201,7 +201,7 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 		Namespace_id:   s.NameSpaceId,
 	}, authDigest)
 	if err != nil {
-		log.Fatal(err)
+		return nil, errors.New(err.Error())
 	}
 
 	// Increment the payload reference counter of the entry
@@ -217,9 +217,8 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 		Time:     entry.Timestamp,
 	}, s.Schemes.PathParams)
 	if err != nil {
-		log.Fatalln(err)
+		return nil, errors.New(err.Error())
 	}
-
 	// Iterate through all the prunable entries and remove them from storage
 	for _, entry := range prunableEntries {
 		// Remove from storage
@@ -229,7 +228,7 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 
 		count, err := s.EntryDriver.PayloadReferenceCounter.Decrement(entry.Entry.Payload_digest)
 		if err != nil {
-			log.Fatal(err)
+			return nil, errors.New(err.Error())
 		}
 		// If the count is 0, which means no entry is pointing to it, remove the payload itself from the payload driver
 		if count == 0 {
@@ -238,7 +237,6 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 		// Append the pruned entry to prunedEntries array
 		prunedEntries = append(prunedEntries, entry.Entry)
 	}
-
 	// Return the pruned entries with no errors
 	return prunedEntries, nil
 }
@@ -298,14 +296,14 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 		Path:     entryDetails.Path,
 	}, s.Schemes.PathParams)
 	if err != nil {
-		log.Fatal(err)
+		return 0, errors.New(err.Error())
 	}
 	getEntry, err := s.EntryDriver.Opts.KVDriver.Get(encodedKey)
 	if err != nil {
-		log.Fatal(err)
+		return 0, errors.New(err.Error())
 	}
 	if getEntry != nil {
-		return Failure, fmt.Errorf("entry does not exist")
+		return Failure, errors.New("entry does not exist")
 	}
 
 	// Samar needs to make a DecodeValue Function that returns payloadDigest
@@ -314,20 +312,20 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 
 	existingPayload, err := s.PayloadDriver.Get(decodedValue.PayloadDigest)
 	if err != nil {
-		log.Fatal("Unable to Get")
+		return 0, errors.New("unable to Get")
 	}
 
 	if !reflect.DeepEqual(existingPayload, datamodeltypes.Payload{}) {
-		return No_Op, fmt.Errorf("file already exists")
+		return No_Op, errors.New("file already exists")
 	}
 	// Result after fully ingesting the paylaod
 	resDigest, resLen, resCommit, resReject, err := s.PayloadDriver.Receive(payload, offset, decodedValue.PayloadLength, decodedValue.PayloadDigest)
 	if err != nil {
-		log.Fatal("Unable to receive")
+		return 0, errors.New("unable to receive")
 	}
 	if resLen > decodedValue.PayloadLength || (!allowPartial && decodedValue.PayloadLength != resLen) || (resLen == decodedValue.PayloadLength && s.Schemes.PayloadScheme.Order(resDigest, decodedValue.PayloadDigest) != 0) {
 		resReject()
-		return Failure, fmt.Errorf("data mismatch")
+		return Failure, errors.New("data mismatch")
 	}
 
 	resCommit(resLen == decodedValue.PayloadLength)
@@ -335,18 +333,18 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	if resLen == decodedValue.PayloadLength && (s.Schemes.PayloadScheme.Order(resDigest, decodedValue.PayloadDigest) == 0) {
 		complete, err := s.PayloadDriver.Get(decodedValue.PayloadDigest)
 		if err != nil {
-			log.Fatal(err)
+			return 0, errors.New(err.Error())
 		}
 
 		if reflect.DeepEqual(complete, datamodeltypes.Payload{}) {
-			log.Fatalln("Could not get payload for a payload that was just ingested", err)
+			return 0, fmt.Errorf("could not get payload for a payload that was just ingested")
 		}
 		authToken, err := s.PayloadDriver.Get(decodedValue.AuthDigest)
 		if err != nil {
-			log.Fatal(err)
+			return 0, fmt.Errorf("could not get payload for a payload that was just ingested: %s", err.Error())
 		}
 		if reflect.DeepEqual(authToken, datamodeltypes.Payload{}) {
-			log.Fatalln("Could not get authorisation token for a stored entry.", err)
+			return 0, fmt.Errorf("could not get payload for a payload that was just ingested")
 		}
 
 	}
@@ -356,25 +354,29 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 
 func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]) AreaOfInterestToRange(
 	areaOfInterest types.AreaOfInterest,
-) types.Range3d {
-	return s.EntryDriver.Storage.GetInterestRange(areaOfInterest)
+) (types.Range3d, error) {
+	return s.EntryDriver.Storage.GetInterestRange(areaOfInterest), nil
 }
 
-func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]) GetPayload(position types.Position3d) []byte {
+func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]) GetPayload(position types.Position3d) ([]byte, error) {
 	encodedkey, err := kv_driver.EncodeKey(position, s.Schemes.PathParams)
 	if err != nil {
-		log.Fatal(err)
+		return nil, errors.New(err.Error())
 	}
 
 	encodedValue, err := s.EntryDriver.Opts.KVDriver.Get(encodedkey)
 	if err != nil {
-		log.Fatal(err)
+		return nil, errors.New(err.Error())
 	}
 	Entry := kv_driver.DecodeValues(encodedValue)
 
 	payload, err := s.PayloadDriver.Get(Entry.PayloadDigest)
 	if err != nil {
-		log.Fatal(err)
+		return nil, errors.New(err.Error())
 	}
-	return (payload.Bytes())
+	return (payload.Bytes()), nil
+}
+
+func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]) List() []Kdtree.KDNodeKey {
+	return Kdtree.ListNodes(s.EntryDriver.Storage.KDTree.Root)
 }
