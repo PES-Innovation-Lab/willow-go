@@ -57,7 +57,7 @@ type KDTreeStorage[PreFingerPrint, FingerPrint constraints.Ordered, K constraint
 	// }
 }
 
-func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Get(Subspace types.SubspaceId, Path types.Path) types.Position3d {
+func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Get(Subspace types.SubspaceId, Path types.Path) (types.Position3d, error) {
 	subspaceRange := types.Range[types.SubspaceId]{
 		Start:   Subspace,
 		End:     utils.SuccessorSubspaceId(Subspace),
@@ -89,15 +89,15 @@ func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Get(Subspace types.Subsp
 	}
 	switch len(res) {
 	case 0:
-		return types.Position3d{}
+		return types.Position3d{}, nil
 	case 1:
 		return types.Position3d{
 			Subspace: res[0].Subspace,
 			Time:     res[0].Timestamp,
-			Path:     res[0].Path}
+			Path:     res[0].Path}, nil
 	default:
 		log.Fatalln("get returned multiple nodes")
-		return types.Position3d{}
+		return types.Position3d{}, errors.New("get returned multiple nodes")
 	}
 }
 
@@ -128,6 +128,7 @@ func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Remove(entry types.Posit
 	return k.KDTree.Delete(NodeToDelete)
 }
 
+// TODO :- Not Fullproof, check triplestorage.ts implementation for further additions
 func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) GetInterestRange(areaOfInterest types.AreaOfInterest) types.Range3d {
 	newRange := utils.AreaTo3dRange[K](
 		utils.Options[K]{

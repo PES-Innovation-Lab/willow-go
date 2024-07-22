@@ -57,15 +57,15 @@ var TestSubspaceScheme datamodeltypes.SubspaceScheme = datamodeltypes.SubspaceSc
 	Order:               utils.OrderSubspace,
 	MinimalSubspaceId:   types.SubspaceId(""),
 }
-var TestFingerprintScheme datamodeltypes.FingerprintScheme[uint64,uint64] = datamodeltypes.FingerprintScheme[uint64,uint64]{} //Dummy scheme
+var TestFingerprintScheme datamodeltypes.FingerprintScheme[uint64, uint64] = datamodeltypes.FingerprintScheme[uint64, uint64]{} //Dummy scheme
 
 var TestAuthorisationScheme datamodeltypes.AuthorisationScheme[[]byte, string] = datamodeltypes.AuthorisationScheme[[]byte, string]{
 	Authorise: func(entry types.Entry, opts []byte) (string, error) {
-		if strings.Compare(string(entry.Subspace_id),string(opts)) == 0{
-			return string(entry.Subspace_id) , nil
+		if strings.Compare(string(entry.Subspace_id), string(opts)) == 0 {
+			return string(entry.Subspace_id), nil
 		}
-		
-		return string(""),fmt.Errorf("user not authorised")
+
+		return string(""), fmt.Errorf("user not authorised")
 	},
 	IsAuthoriseWrite: func(entry types.Entry, token string) bool {
 		return utils.OrderBytes(entry.Subspace_id, types.SubspaceId(token)) == 0

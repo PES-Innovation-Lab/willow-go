@@ -3,7 +3,6 @@ package utils
 import (
 	"fmt"
 	"math"
-	"reflect"
 
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"golang.org/x/exp/constraints"
@@ -137,9 +136,6 @@ func IsValidRange3d(OrderSubspace types.TotalOrder[types.SubspaceId], r types.Ra
 }
 
 func IsIncluded3d(orderSubspace types.TotalOrder[types.SubspaceId], r types.Range3d, position types.Position3d) bool {
-	if reflect.DeepEqual(position.Subspace, r.SubspaceRange.Start) && (reflect.DeepEqual(position.Subspace, r.SubspaceRange.End)) {
-		return true
-	}
 
 	if !IsIncludedRange(OrderTimestamp, r.TimeRange, position.Time) {
 		return false

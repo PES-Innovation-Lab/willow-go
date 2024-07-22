@@ -5,7 +5,7 @@ import "golang.org/x/exp/constraints"
 type Rel int
 
 type OrderableGeneric interface {
-	NamespaceId | SubspaceId | Path | constraints.Ordered
+	NamespaceId | SubspaceId | Path | constraints.Ordered | any
 }
 
 const (

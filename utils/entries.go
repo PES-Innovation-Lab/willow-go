@@ -512,7 +512,7 @@ func DecodeStreamEntryRelativeRange3d[ValueType constraints.Unsigned](
 
 }
 
-func DefaultEntry[ValueType constraints.Unsigned](
+func DefaultEntry(
 	defaultNamespace types.NamespaceId,
 	defaultSubspace types.SubspaceId,
 	defaultPayloadDigest types.PayloadDigest,

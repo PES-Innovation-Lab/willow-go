@@ -1,23 +1,21 @@
 package reconciliation
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/store"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/wgpstypes"
 	"github.com/PES-Innovation-Lab/willow-go/types"
+	"github.com/PES-Innovation-Lab/willow-go/utils"
 	"golang.org/x/exp/constraints"
 )
 
 type ReconcilerOpts[
 	PreFingerPrint, FingerPrint constraints.Ordered,
-	AuthorisationToken string,
-	NamespaceId types.NamespaceId,
-	SubspaceId types.SubspaceId,
-	PayloadDigest types.PayloadDigest,
-	AuthorisationOpts []byte,
-	K constraints.Unsigned] struct {
+	K constraints.Unsigned,
+	AuthorisationOpts []byte, AuthorisationToken string] struct {
 	Role              wgpstypes.SyncRole
 	SubspaceScheme    datamodeltypes.SubspaceScheme
 	FingerPrintScheme datamodeltypes.FingerprintScheme[PreFingerPrint, FingerPrint]
@@ -29,13 +27,9 @@ type ReconcilerOpts[
 
 const SEND_ENTRIES_THRESHOLD = 8
 
-type Reconciler[NamespaceId types.NamespaceId,
-	SubspaceId types.SubspaceId,
-	PayloadDigest types.PayloadDigest,
+type Reconciler[
 	K constraints.Unsigned,
-	AuthorisationOpts []byte,
-	AuthorisationToken string,
-	PreFingerprint, Fingerprint constraints.Ordered] struct {
+	PreFingerprint, Fingerprint constraints.Ordered, AuthorisationOpts []byte, AuthorisationToken string] struct {
 	SubspaceScheme    datamodeltypes.SubspaceScheme
 	FingerprintScheme datamodeltypes.FingerprintScheme[PreFingerprint, Fingerprint]
 	Store             *store.Store[PreFingerprint, Fingerprint, K, AuthorisationOpts, AuthorisationToken]
@@ -54,15 +48,10 @@ type Reconciler[NamespaceId types.NamespaceId,
 }
 
 func NewReconciler[PreFingerPrint, FingerPrint constraints.Ordered,
-	AuthorisationToken string,
-	NamespaceId types.NamespaceId,
-	SubspaceId types.SubspaceId,
-	PayloadDigest types.PayloadDigest,
-	AuthorisationOpts []byte,
-	K constraints.Unsigned](opts *ReconcilerOpts[PreFingerPrint, FingerPrint, AuthorisationToken, NamespaceId, SubspaceId, PayloadDigest, AuthorisationOpts, K],
-) *Reconciler[NamespaceId, SubspaceId, PayloadDigest, K, AuthorisationOpts, AuthorisationToken, PreFingerPrint, FingerPrint] {
+	K constraints.Unsigned, AuthorisationOpts []byte, AuthorisationToken string](opts *ReconcilerOpts[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken],
+) *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, AuthorisationToken] {
 
-	newReconciler := &Reconciler[NamespaceId, SubspaceId, PayloadDigest, K, AuthorisationOpts, AuthorisationToken, PreFingerPrint, FingerPrint]{
+	newReconciler := &Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, AuthorisationToken]{
 		SubspaceScheme:    opts.SubspaceScheme,
 		FingerprintScheme: opts.FingerPrintScheme,
 		Store:             opts.Store,
@@ -84,7 +73,7 @@ func NewReconciler[PreFingerPrint, FingerPrint constraints.Ordered,
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		newReconciler.DetermineRange(opts.AoiOurs, opts.AoiTheirs)
+		newReconciler.DetermineRange(opts.AoiOurs, opts.AoiTheirs, opts.Role)
 	}()
 	if wgpstypes.IsAlfie(opts.Role) {
 		wg.Add(1)
@@ -97,9 +86,102 @@ func NewReconciler[PreFingerPrint, FingerPrint constraints.Ordered,
 	return newReconciler
 }
 
-func (r *Reconciler[NamespaceId, SubspaceId, PayloadDigest, K, AuthorisationOpts, AuthorisationToken, PreFingerPrint, FingerPrint]) DetermineRange(
-	aoi1, aoi2 types.AreaOfInterest,
+func (r Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, AuthorisationToken]) DetermineRange(
+	aoi1, aoi2 types.AreaOfInterest, role wgpstypes.SyncRole,
 ) error {
-	range1 := r.Store.AreaOfInterestToRange(aoi1)
+	// Remove the interest from both.
+	range1 := (*r.Store).AreaOfInterestToRange(aoi1)
 	range2 := r.Store.AreaOfInterestToRange(aoi2)
+
+	isIntersecting, intersection := utils.IntersectRange3d(
+		r.SubspaceScheme.Order,
+		range1,
+		range2,
+	)
+
+	if !isIntersecting {
+		return fmt.Errorf("There was no intersection between two range-ified AOIs. That shouldn't happen...")
+	}
+	if wgpstypes.IsAlfie(role) {
+		r.Ranges <- intersection
+	}
+	return nil
+}
+
+func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, AuthorisationToken]) Initiate() {
+	// Initialize the reconciliation process.
+	intersection := <-r.Ranges
+	// TODO : Implement Summarise function in store
+	preFingerprint := r.Store.Summarise(intersection)
+	finalised := r.FingerprintScheme.FingerPrintFinalise(preFingerprint)
+	r.FingerPrintQueue <- struct {
+		Range       types.Range3d
+		FingerPrint FingerPrint
+		Covers      uint64
+	}{
+		Range:       intersection,
+		FingerPrint: finalised,
+	}
+}
+
+func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, AuthorisationToken]) Respond(
+	yourRange types.Range3d,
+	fingerprint FingerPrint,
+	yourRangeCounter int,
+
+) {
+	// TODO Implement Summarise function in store
+	ourFingerprint, size := r.Store.Summarise(yourRange)
+
+	fingerprintOursFinal := r.FingerprintScheme.FingerPrintFinalise(ourFingerprint)
+	if r.FingerprintScheme.IsEqual(fingerprint, fingerprintOursFinal) {
+		r.AnnounceQueue <- struct {
+			Range        types.Range3d
+			Count        int
+			WantResponse bool
+			Covers       uint64
+		}{
+			Range:        yourRange,
+			Count:        0,
+			WantResponse: false,
+			Covers:       uint64(yourRangeCounter),
+		}
+	} else if size <= SEND_ENTRIES_THRESHOLD {
+		r.AnnounceQueue <- struct {
+			Range        types.Range3d
+			Count        int
+			WantResponse bool
+			Covers       uint64
+		}{
+			Range:        yourRange,
+			Count:        size,
+			WantResponse: true,
+			Covers:       uint64(yourRangeCounter),
+		}
+		return
+	} else {
+		// TODO: Implement Store Split Range
+		left, right := r.Store.SplitRange(yourRange, size)
+		fingerprintLeftFinal := r.FingerprintScheme.FingerPrintFinalise(r.Store.Summarise(left))
+		fingerprintRightFinal := r.FingerprintScheme.FingerPrintFinalise(r.Store.Summarise(right))
+		r.FingerPrintQueue <- struct {
+			Range       types.Range3d
+			FingerPrint FingerPrint
+			Covers      uint64
+		}{
+			Range:       left,
+			FingerPrint: fingerprintLeftFinal,
+		}
+		r.FingerPrintQueue <- struct {
+			Range       types.Range3d
+			FingerPrint FingerPrint
+			Covers      uint64
+		}{
+			Range:       right,
+			FingerPrint: fingerprintRightFinal,
+			Covers:      uint64(yourRangeCounter),
+		}
+
+	}
+
 }

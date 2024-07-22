@@ -1,4 +1,4 @@
-package wgps
+package handlestore
 
 import (
 	"fmt"

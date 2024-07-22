@@ -26,7 +26,12 @@ func IsBetty(role SyncRole) bool {
 	return role == SyncRoleBetty
 }
 
-type ReadAuthorisation[ReadCapability, SubspaceReadCapability constraints.Ordered] struct {
+type GetStoreFn[Prefingerprint,
+	Fingerprint constraints.Ordered,
+	AuthorisationToken string,
+	AuthorisationOpts []byte] func(namespace types.NamespaceId)
+
+type ReadAuthorisation[ReadCapability, SubspaceReadCapability any] struct {
 	Capability ReadCapability
 	// SubspaceCapability is optional here
 	SubspaceCapability    SubspaceReadCapability
@@ -37,7 +42,6 @@ type ReadAuthorisation[ReadCapability, SubspaceReadCapability constraints.Ordere
 
 // Transport defines the interface for communication channels
 type Transport interface {
-	Role() SyncRole
 	Send(data []byte) error     // Use byte slice instead of Uint8Array
 	Recv() (chan []byte, error) // Returns a receive channel and potential error (PLEASE CHECK IF THIS IS RIGHT)
 	Close() error
@@ -243,12 +247,12 @@ type MsgSetupBindAreaOfinterest struct {
 	Data MsgSetupBindAreaOfInterestData
 }
 
-type MsgSetupBindStaticTokenData[StaticToken any] struct {
+type MsgSetupBindStaticTokenData[StaticToken constraints.Ordered] struct {
 	StaticToken StaticToken
 }
-type MsgSetupBindStaticToken[StaicToken any] struct {
+type MsgSetupBindStaticToken[StaticToken constraints.Ordered] struct {
 	Kind MsgKind
-	Data MsgSetupBindStaticTokenData[StaicToken]
+	Data MsgSetupBindStaticTokenData[StaticToken]
 }
 
 /** Send a Fingerprint as part of 3d range-based set reconciliation. */
@@ -473,7 +477,7 @@ type PrivyEncodingScheme[ReadCapability any, Privy any] struct {
 }
 
 // Define the ReadCapEncodingScheme type alias
-type ReadCapEncodingScheme[ReadCapability constraints.Ordered] struct {
+type ReadCapEncodingScheme[ReadCapability any] struct {
 	PrivyEncodingScheme[ReadCapability, ReadCapPrivy]
 }
 
@@ -490,19 +494,35 @@ type ReconciliationPrivy struct {
 }
 
 /** The parameter schemes required to instantiate a `WgpsMessenger`. */
-type SyncSchemes[ReadCapability, Receiver, SyncSignature, PsiGroup, PsiScalar, SubspaceCapability, SubspaceReceiver, ReceiverSecretKey, Prefingerprint, Fingerprint constraints.Ordered, StaticToken, DynamicToken, SyncSubspaceSignature, SubspaceSecretKey types.OrderableGeneric, AuthorisationOpts []byte, AuthorisationToken string, K constraints.Unsigned] struct {
+type SyncSchemes[ReadCapability any,
+	Receiver types.SubspaceId,
+	SyncSignature,
+	ReceiverSecretKey,
+	PsiGroup any,
+	PsiScalar int,
+	SubspaceCapability any,
+	SubspaceReceiver types.SubspaceId,
+	SyncSubspaceSignature,
+	SubspaceSecretKey any,
+	Prefingerprint,
+	Fingerprint constraints.Ordered,
+	AuthorisationToken,
+	StaticToken,
+	DynamicToken string,
+	AuthorisationOpts []byte,
+	K constraints.Unsigned] struct {
 	AccessControl      AccessControlScheme[SyncSignature, ReadCapability, Receiver, ReceiverSecretKey, K]
-	SubspaceCap        SubspaceCapScheme[SubspaceCapability, SubspaceReceiver, SyncSubspaceSignature, SubspaceSecretKey, K]
+	SubspaceCap        SubspaceCapScheme[SubspaceReceiver, SubspaceSecretKey, SubspaceCapability, SyncSubspaceSignature, K]
 	Pai                PaiScheme[ReadCapability, PsiGroup, PsiScalar, K]
-	Namespace          datamodeltypes.NamespaceScheme
-	Subspace           datamodeltypes.SubspaceScheme
-	Path               types.PathParams[K]
-	AuhtorisationToken AuthorisationTokenScheme[AuthorisationToken, StaticToken, DynamicToken, K]
+	NamespaceScheme    datamodeltypes.NamespaceScheme
+	SubspaceScheme     datamodeltypes.SubspaceScheme
+	PathParams         types.PathParams[K]
+	AuhtorisationToken AuthorisationTokenScheme[AuthorisationToken, StaticToken, DynamicToken]
 	Payload            datamodeltypes.PayloadScheme
 	Fingerprint        datamodeltypes.FingerprintScheme[Prefingerprint, Fingerprint]
 }
 
-type AccessControlScheme[SyncSignature, ReadCapability, Receiver, ReceiverSecretKey constraints.Ordered, K constraints.Unsigned] struct {
+type AccessControlScheme[SyncSignature, ReadCapability, Receiver, ReceiverSecretKey any, K constraints.Unsigned] struct {
 	GetReceiver         func(cap ReadCapability) Receiver
 	GetSecretKey        func(receiver Receiver) ReceiverSecretKey
 	GetGrantedArea      func(cap ReadCapability) types.Area
@@ -515,19 +535,19 @@ type AccessControlScheme[SyncSignature, ReadCapability, Receiver, ReceiverSecret
 	}
 }
 
-type SubspaceCapScheme[SubspaceReceiver, SubspaceSecretKey constraints.Ordered, SubspaceCapability, SyncSubspaceSignature types.OrderableGeneric, K constraints.Unsigned] struct {
+type SubspaceCapScheme[SubspaceReceiver types.SubspaceId, SubspaceSecretKey, SubspaceCapability, SyncSubspaceSignature any, K constraints.Unsigned] struct {
 	GetSecretKey func(receiver SubspaceReceiver) SubspaceSecretKey
 	GetNamespace func(cap SubspaceCapability) types.NamespaceId
 	GetReceiver  func(cap SubspaceCapability) SubspaceReceiver
 	IsValidCap   func(cap SubspaceCapability) bool
 	Signatures   types.SignatureScheme[SubspaceReceiver, SubspaceSecretKey, SyncSubspaceSignature]
 	Encodings    struct {
-		SubspaceCapability    utils.EncodingScheme[SyncSubspaceSignature]
+		SubspaceCapability    utils.EncodingScheme[SubspaceCapability]
 		SyncSubspaceSignature utils.EncodingScheme[SyncSubspaceSignature]
 	}
 }
 
-type AuthorisationTokenScheme[AuthorisationToken, StaticToken, DynamicToken types.OrderableGeneric, K constraints.Unsigned] struct {
+type AuthorisationTokenScheme[AuthorisationToken, StaticToken, DynamicToken string] struct {
 	RecomposeAuthToken func(staticToken StaticToken, dynamicToken DynamicToken) AuthorisationToken
 	DecomposeAuthToken func(authToken AuthorisationToken) (StaticToken, DynamicToken)
 	Encodings          struct {

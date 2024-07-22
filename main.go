@@ -16,15 +16,23 @@ import (
 	"github.com/PES-Innovation-Lab/willow-go/utils"
 )
 
-var textAScii string = `
-░▒▓███████▓▒░░▒▓█▓▒░▒▓███████▓▒░ ░▒▓██████▓▒░ ░▒▓██████▓▒░ ░▒▓██████▓▒░░▒▓█▓▒░       ░▒▓██████▓▒░░▒▓███████▓▒░ ░▒▓██████▓▒░  
-░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░ 
-░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░ 
-░▒▓███████▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓████████▓▒░▒▓█▓▒▒▓███▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓████████▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓████████▓▒░ 
-░▒▓█▓▒░      ░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░ 
-░▒▓█▓▒░      ░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░ 
-░▒▓█▓▒░      ░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░░▒▓██████▓▒░ ░▒▓██████▓▒░░▒▓████████▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓███████▓▒░░▒▓█▓▒░░▒▓█▓▒░ 
-                                                                                                                             `
+var textAScii string = ` 
+  ___ ___ _  _   _   ___  ___  _      _   ___   _   
+ | _ \_ _| \| | /_\ / __|/ _ \| |    /_\ |   \ /_\  
+ |  _/| || .' |/ _ \ (_ | (_) | |__ / _ \| |) / _ \ 
+ |_| |___|_|\_/_/ \_\___|\___/|____/_/ \_\___/_/ \_\
+`
+
+const (
+	Reset   = "\033[0m"
+	Red     = "\033[31m"
+	Green   = "\033[32m"
+	Yellow  = "\033[33m"
+	Blue    = "\033[34m"
+	Magenta = "\033[35m"
+	Cyan    = "\033[36m"
+	White   = "\033[37m"
+)
 
 var setNamespace types.NamespaceId
 
@@ -52,9 +60,9 @@ func main() {
 	}
 	defer f.Close()
 
-	fmt.Println(textAScii)
-	fmt.Println("Enter namespace: ")
-	fmt.Println("exit to escape")
+	fmt.Println(Blue, textAScii)
+	fmt.Println(White, "Type", Yellow, "exit", White, "to escape")
+	fmt.Println(" Enter namespace: ", Reset)
 LOOP:
 	for {
 		fmt.Print("> ")
@@ -66,15 +74,16 @@ LOOP:
 		objects := strings.Split(input, " ")
 		switch objects[0] {
 		case "help":
-			fmt.Print("Valid commands:\n\n")
+			fmt.Print(White, "Valid commands:\n\n")
 			fmt.Print("new:\t\tUsage: new <namespace>\n\t\tdesc: creates a new namespace\n\n")
 			fmt.Print("list:\t\tUsage: list\n\t\tdesc: lists all available namespaces\n\n")
+			fmt.Print("enter:\t\tUsage: list\n\t\tdesc: enter into an existing namespace\n\n")
 			fmt.Print("help:\t\tUsage: help\n\n")
-			fmt.Print("exit:\t\tUsage: exit\n\n")
+			fmt.Print("exit:\t\tUsage: exit\n\n", Reset)
 		case "new":
 			if nameSpaces[input] != 255 {
-				fmt.Printf("Creating new NameSpaceID %s\n", input)
-				fmt.Println("Are sure you want to create a new NameSpaceID (y/n)")
+				fmt.Printf("%sCreating new NameSpaceID %s\n", White, input)
+				fmt.Println("Are sure you want to create a new NameSpaceID (y/n)", Reset)
 				if !scanner.Scan() {
 					break LOOP
 				}
@@ -83,9 +92,9 @@ LOOP:
 					setNamespace = types.NamespaceId(strings.Split(input, " ")[1])
 					NameSpaceInteraction(setNamespace)
 				} else if decision == "n" {
-					fmt.Println("Namespace creation canceled. Please enter a valid namespace.")
+					fmt.Println(Red, "Namespace creation canceled. Please enter a valid namespace.", Reset)
 				} else {
-					fmt.Println("Invalid input. Please enter 'y' or 'n'.")
+					fmt.Println(Red, "Invalid input. Please enter 'y' or 'n'.", Reset)
 				}
 			} else {
 				setNamespace = types.NamespaceId(input)
@@ -93,35 +102,35 @@ LOOP:
 			}
 		case "list":
 			if len(nameSpaces) > 0 {
-				fmt.Println("available NameSpaces:")
+				fmt.Println(White, "available NameSpaces:", Reset)
 				for nameSpace := range nameSpaces {
 					fmt.Println(nameSpace)
 				}
 			} else {
-				fmt.Println("no namespaces available")
+				fmt.Println(White, "no namespaces available")
 				fmt.Print("use the new command to create a new namespace\n\n")
-				fmt.Println("usage: new <namespace>")
+				fmt.Println("usage: new <namespace>", Reset)
 
 			}
 		case "exit":
-			fmt.Println("Exiting...")
+			fmt.Println(White, "Exiting...", Reset)
 			break LOOP
 		case "enter":
 			if len(objects) != 2 {
-				fmt.Println("invalid usage of command\nusage: enter <namespace>")
+				fmt.Println(Red, "invalid usage of command\nusage: enter <namespace>", Reset)
 				break
 			}
 			if nameSpaces[objects[1]] == 255 {
 				setNamespace = types.NamespaceId(objects[1])
 				NameSpaceInteraction(setNamespace)
 			} else {
-				fmt.Println("error: namespace does not exist")
+				fmt.Println(Red, "error: namespace does not exist")
 				fmt.Print("use the list command to view available namespaces\n\n")
-				fmt.Println("usage: list")
+				fmt.Println("usage: list", Reset)
 			}
 		default:
-			fmt.Println("invalid command")
-			fmt.Println("enter help to list commands!")
+			fmt.Println(Red, "invalid command")
+			fmt.Println("enter help to list commands!", Reset)
 		}
 
 	}
@@ -130,36 +139,34 @@ LOOP:
 func NameSpaceInteraction(namespace types.NamespaceId) {
 	WillowStore := pinagoladastore.InitStorage(namespace)
 	pinagoladastore.InitKDTree(WillowStore)
-	fmt.Println("\003[H\033[2J")
-	fmt.Println(textAScii)
+
 LOOPEND:
 	for {
-		fmt.Println("type 'exit' to quit:")
 		fmt.Print("> ")
 		if !scanner.Scan() {
 			break
 		}
 		input := scanner.Text()
 		if strings.ToLower(input) == "exit" {
-			fmt.Println("Exiting...")
+			fmt.Println(White, "Exiting Namespace...", Reset)
 			break
 		}
 		objects := strings.Split(input, " ")
 		switch objects[0] {
 		case "back":
 			fmt.Println(textAScii)
-			fmt.Println("enter namespace: ")
-			fmt.Println("exit to escape")
+			fmt.Println(White, "Type exit to escape")
+			fmt.Println("Enter namespace: ", Reset)
 			break LOOPEND
 		case "help":
-			fmt.Println("valid commands:")
+			fmt.Println(White, "valid commands:")
 			fmt.Println("set:\t\tUsage: set <subspacename> <file/to/path> [<timestamp>]")
 			fmt.Println("get:\t\tUsage: get <subspacename> <file/to/path> [<timestamp>]")
-			fmt.Println("list:\t\tUsage: list")
+			fmt.Println("list:\t\tUsage: list", Reset)
 			// fmt.Println("query:\t\tUsage: set <subspacename> <file/to/path> [<timestamp>]")
 		case "set":
 			if len(objects) < 4 || len(objects) > 5 {
-				fmt.Println("invalid usage of command\nusage: set <subspacename> <path/in/willow> <path/to/file> [<timestamp>]")
+				fmt.Println(Red, "invalid usage of command\nusage: set <subspacename> <path/in/willow> <path/to/file> [<timestamp>]", Reset)
 				break
 			}
 			subSpaceId := []byte(objects[1])
@@ -168,11 +175,11 @@ LOOPEND:
 
 			file, err := os.Open(string(insertionFile))
 			if err != nil && err.Error() == "open "+string(insertionFile)+": no such file or directory" {
-				fmt.Println("error: file does not exist")
-				fmt.Println("please enter a valid path to the file you want to store", err)
+				fmt.Println(Red, "error: file does not exist")
+				fmt.Println("please enter a valid path to the file you want to store", err, Reset)
 				break
 			} else if err != nil {
-				fmt.Println("error opening file:", err)
+				fmt.Println(Red, "error opening file:", err, Reset)
 				break
 			}
 			defer file.Close()
@@ -184,7 +191,7 @@ LOOPEND:
 			payloadBytes := make([]byte, fileSize)
 			_, err = io.ReadFull(file, payloadBytes)
 			if err != nil {
-				fmt.Println("error reading file:", err)
+				fmt.Println(Red, "error reading file:", err, Reset)
 				return
 			}
 
@@ -192,12 +199,12 @@ LOOPEND:
 			if len(objects) == 5 {
 				timestamp = parseTimeStampToMicroSeconds(objects[4])
 				if timestamp == 0 {
-					fmt.Println("invalid timestamp: please enter a valid time")
+					fmt.Println(Red, "invalid timestamp: please enter a valid time", Reset)
 					return
 				}
 			}
 			pathBytes := pinagoladastore.ConvertToByteSlices(strings.Split(string(path), "/"))
-			prunedEntries := WillowStore.Set(
+			prunedEntries, err := WillowStore.Set(
 				datamodeltypes.EntryInput{
 					Subspace:  subSpaceId,
 					Timestamp: timestamp,
@@ -206,18 +213,22 @@ LOOPEND:
 				},
 				subSpaceId,
 			)
+			if err != nil {
+				fmt.Println(Red, "error setting entry:", err, Reset)
+				break
+			}
 			if len(prunedEntries) == 0 {
-				fmt.Println("No entries pruned")
+				fmt.Println(White, "No entries pruned", Reset)
 				break
 			}
 			fmt.Println("Pruned Entries: ")
 			for _, entry := range prunedEntries {
-				fmt.Printf("Subspace: %s, Path: %s, Timestamp: %d\n", entry.Subspace_id, entry.Path, entry.Timestamp)
+				fmt.Printf("%sSubspace: %s, Path: [%s], Timestamp: %d%s\n", White, entry.Subspace_id, makePath(entry.Path), entry.Timestamp, Reset)
 			}
 
 		case "get":
 			if len(objects) != 3 {
-				fmt.Println("invalid usage of command\nusage: get <subspacename> <file/to/path> [<timestamp>]")
+				fmt.Println(Red, "invalid usage of command\nusage: get <subspacename> <file/to/path> [<timestamp>]", Reset)
 				break
 			}
 
@@ -229,26 +240,24 @@ LOOPEND:
 			if len(objects) == 4 {
 				timestamp = parseTimeStampToMicroSeconds(objects[3])
 				if timestamp == 0 {
-					fmt.Println("invalid timestamp")
+					fmt.Println(Red, "invalid timestamp", Reset)
 					return
 				}
 			}
 			encodedValue, err := WillowStore.EntryDriver.Get(subSpaceId, pathBytes)
-			fmt.Println(encodedValue)
 			if err != nil {
-				log.Fatal(err)
+				fmt.Println(Red, "error getting entry:", err, Reset)
 			}
 			returnedPayload, err := WillowStore.PayloadDriver.Get(encodedValue.Entry.Payload_digest)
-			fmt.Println(returnedPayload)
 			if err != nil {
-				log.Fatal(err)
+				fmt.Println(Red, "error getting payload", err, Reset)
 			}
 
 			fmt.Println(string(returnedPayload.Bytes()))
 
 		case "list":
 			if len(objects) > 1 {
-				fmt.Println("invalid usage of command\nusage: list")
+				fmt.Println(Red, "invalid usage of command\nusage: list", Reset)
 			}
 			nodes := WillowStore.List()
 			sort.Slice(nodes, func(i, j int) bool {
@@ -256,20 +265,20 @@ LOOPEND:
 			})
 
 			// Print the header of the table
-			fmt.Printf("%-20s %-20s %-20s\n", "Subspace", "Timestamp", "Path")
-			fmt.Println(strings.Repeat("-", 60))
+			fmt.Printf("%s %-20s %-20s %-20s\n", White, "Subspace", "Timestamp", "Path")
+			fmt.Println(strings.Repeat("-", 60), Reset)
 
 			// Print each node in the sorted list
 			for _, node := range nodes {
-				fmt.Printf("%-20s %-20d %-20s\n", node.Subspace, node.Timestamp, node.Path)
+				fmt.Printf("%s%-20s %-20d %-20s%s\n", White, node.Subspace, node.Timestamp, makePath(node.Path), Reset)
 			}
 
 		// case "query":
 		case "clear":
 			fmt.Println("\003[H\033[2J")
-			fmt.Println(textAScii)
+			fmt.Println(Blue, textAScii, Reset)
 		default:
-			fmt.Println("invalid command\nenter help to list commands!")
+			fmt.Println(Red, "invalid command\nenter help to list commands!", Reset)
 		}
 
 		if err := scanner.Err(); err != nil {
@@ -294,4 +303,12 @@ func parseTimeStampToMicroSeconds(timestamp string) uint64 {
 		return 0
 	}
 	return (hours * 60 * 60 * 1000000) + (minutes * 60 * 1000000)
+}
+
+func makePath(path types.Path) string {
+	pathStr := string(path[0])
+	for i := 1; i < len(path); i++ {
+		pathStr += "/" + string(path[i])
+	}
+	return pathStr
 }

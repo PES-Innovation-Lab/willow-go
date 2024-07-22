@@ -53,7 +53,12 @@ func (e *EntryDriver[PreFingerPrint, FingerPrint, K]) MakeStorage(nameSpaceId ty
 }
 
 func (e *EntryDriver[PreFingerPrint, FingerPrint, K]) Get(Subspace types.SubspaceId, Path types.Path) (datamodeltypes.ExtendedEntry, error) {
-	entryExists := e.Storage.Get(Subspace, Path)
+
+	entryExists, err := e.Storage.Get(Subspace, Path)
+	if err != nil {
+		return datamodeltypes.ExtendedEntry{}, err
+	}
+
 	if reflect.DeepEqual(entryExists, types.Position3d{}) {
 		return datamodeltypes.ExtendedEntry{}, errors.New("entry does not exist")
 	}
