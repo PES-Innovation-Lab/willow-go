@@ -217,3 +217,14 @@ func DecodeReconciliationAnnounceEntries(bytes *utils.GrowingBytes, opts Announc
 		},
 	}
 }
+
+type EntryOpts[DynamicToken any] struct {
+	DecodeNamespaceId   func(bytes *utils.GrowingBytes) types.NamespaceId
+	DecodeSubspaceId    func(bytes *utils.GrowingBytes) types.SubspaceId
+	DecodeDynamicToken  func(bytes *utils.GrowingBytes) DynamicToken
+	DecodePayloadDigest func(bytes *utils.GrowingBytes) types.PayloadDigest
+	PathScheme          types.PathParams[uint64]
+	GetPrivy            func() wgpstypes.ReconciliationPrivy
+}
+
+func DecodeReconciliationSendEntry[DynamicToken any](bytes *utils.GrowingBytes, opts EntryOpts[DynamicToken])
