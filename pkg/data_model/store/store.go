@@ -99,8 +99,6 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	// If the current inserting entry is found to be older, do not insert, otherwise
 	// remove the other entry from all storages
 	otherEntry, err := s.EntryDriver.Get(entry.Subspace_id, entry.Path)
-	// otherEntry := retEntry.Entry
-	// authDigest := retEntry.AuthDigest
 	if err != nil && strings.Compare(err.Error(), "entry does not exist") != 0 {
 		return nil, errors.New(err.Error())
 	}
@@ -258,18 +256,11 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	final_prunables := make([]datamodeltypes.ExtendedEntry, 0, len(prunableEntries))
 	for _, prune_candidate := range prunableEntries {
 		if prune_candidate.Timestamp < entry.Time {
-			// encodedEntry, _ := kv_driver.EncodeKey(types.Position3d{
-			// 	Time:     prune_candidate.Timestamp,
-			// 	Subspace: prune_candidate.Subspace,
-			// 	Path:   prune_candidate.Path,
-			// }, pathParams)
-			// encodedValue, err := s.EntryDriver.Opts.KVDriver.Get(encodedEntry)
 			retEntry, err := s.EntryDriver.Get(prune_candidate.Subspace, prune_candidate.Path)
 
 			if err != nil {
 				return nil, err
 			}
-			// decodedValue := kv_driver.DecodeValues(encodedValue)
 
 			// Get the authorisation token hash of the entry
 			final_prunables = append(final_prunables, retEntry)
@@ -355,12 +346,15 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	return Success, nil
 }
 
+// Returns range of the passed areaOfInterest
 func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]) AreaOfInterestToRange(
 	areaOfInterest types.AreaOfInterest,
 ) (types.Range3d, error) {
 	return s.EntryDriver.Storage.GetInterestRange(areaOfInterest), nil
 }
 
+// Function which returns the payload if we pass in the entry details
+// it takes subaspace path and time, gets the payloadDigest from KVStore and returns payload from filesystem.
 func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]) GetPayload(position types.Position3d) ([]byte, error) {
 	encodedkey, err := kv_driver.EncodeKey(position, s.Schemes.PathParams)
 	if err != nil {
@@ -380,6 +374,7 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 	return (payload.Bytes()), nil
 }
 
+// function to return all values present in the tree
 func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]) List() []kdnode.Key {
 	return s.EntryDriver.Storage.KDTree.Values()
 }
