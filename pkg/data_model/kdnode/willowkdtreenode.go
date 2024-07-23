@@ -97,3 +97,19 @@ func (lhs Key) Encode() []byte {
 func (lhs Key) String() string {
 	return fmt.Sprintf("[%v,%v,%v]", lhs.Timestamp, lhs.Subspace, lhs.Path)
 }
+
+// func ListNodes(r *kdtree.KdNode[key]) []Key {
+// 	var res []Key
+// 	ListHelper(r, &res)
+// 	return res
+// }
+
+// func ListHelper(r *kdtree.KdNode[Key], res *[]Key) {
+// 	if r == nil {
+// 		return
+// 	}
+
+// 	*res = append(*res, r.Value)
+// 	ListHelper(r.Left, res)
+// 	ListHelper(r.Right, res)
+// }
