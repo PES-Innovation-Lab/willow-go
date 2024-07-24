@@ -144,11 +144,11 @@ type WgpsMessenger[
 	//HandleCapsOurs   handlestore.HandleStore[ReadCapability]
 	//HandleCapsTheirs handlestore.HandleStore[ReadCapability]
 
-	HandlesAoisOurs   handlestore.HandleStore
-	HandlesAoisTheirs handlestore.HandleStore
+	HandlesAoisOurs   handlestore.HandleStore[types.AreaOfInterest]
+	HandlesAoisTheirs handlestore.HandleStore[types.AreaOfInterest]
 
-	HandlesStaticTokenOurs   handlestore.HandleStore
-	HandlesStaticTokenTheirs handlestore.HandleStore
+	HandlesStaticTokenOurs   handlestore.HandleStore[StaticToken]
+	HandlesStaticTokenTheirs handlestore.HandleStore[StaticToken]
 
 	//Reconciliation
 	YourRangeCounter int
@@ -170,8 +170,8 @@ type WgpsMessenger[
 	CurrentlyReceivedEntry  types.Entry
 	CurrentlyReceivedOffset uint64
 
-	HandlesPayloadRequestsOurs   handlestore.HandleStore
-	HandlesPayloadRequestsTheirs handlestore.HandleStore
+	HandlesPayloadRequestsOurs   handlestore.HandleStore[data.PayloadRequest]
+	HandlesPayloadRequestsTheirs handlestore.HandleStore[data.PayloadRequest]
 
 	DataSender data.DataSender[Prefingerprint, Fingerprint, K, AuthorisationToken, DynamicToken, AuthorisationOpts]
 
@@ -297,11 +297,11 @@ func NewWgpsMessenger[
 		newWgpsMessenger.Schemes.Payload.DefaultPayloadDigest,
 	)
 
-	newWgpsMessenger.HandlesPayloadRequestsOurs = handlestore.HandleStore{
-		Map: handlestore.NewMap(),
+	newWgpsMessenger.HandlesPayloadRequestsOurs = handlestore.HandleStore[data.PayloadRequest]{
+		Map: handlestore.NewMap[data.PayloadRequest](),
 	}
-	newWgpsMessenger.HandlesPayloadRequestsTheirs = handlestore.HandleStore{
-		Map: handlestore.NewMap(),
+	newWgpsMessenger.HandlesPayloadRequestsTheirs = handlestore.HandleStore[data.PayloadRequest]{
+		Map: handlestore.NewMap[data.PayloadRequest](),
 	}
 	newWgpsMessenger.DataSender = data.NewDataSender[
 		Prefingerprint,

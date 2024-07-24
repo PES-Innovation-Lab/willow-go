@@ -217,12 +217,12 @@ type MsgPaiRequestSubspaceCapability struct {
 }
 
 /** Send a previously requested SubspaceCapability. */
-type MsgPaiReplySubspaceCapabilityData[SubspaceCapability, SyncSubspaceSignature constraints.Ordered] struct {
+type MsgPaiReplySubspaceCapabilityData[SubspaceCapability, SyncSubspaceSignature any] struct {
 	Handle     uint64
 	Capability SubspaceCapability
 	Signature  SyncSubspaceSignature
 }
-type MsgPaiReplySubspaceCapability[SubspaceCapability, SyncSubspaceSignature constraints.Ordered] struct {
+type MsgPaiReplySubspaceCapability[SubspaceCapability, SyncSubspaceSignature any] struct {
 	Kind MsgKind
 	Data MsgPaiReplySubspaceCapabilityData[SubspaceCapability, SyncSubspaceSignature]
 }
@@ -230,12 +230,12 @@ type MsgPaiReplySubspaceCapability[SubspaceCapability, SyncSubspaceSignature con
 // 3. Setup messages
 
 /** Bind a ReadCapability to a CapabilityHandle. */
-type MsgSetupBindReadCapabilityData[ReadCapability, SyncSignature constraints.Ordered] struct {
+type MsgSetupBindReadCapabilityData[ReadCapability, SyncSignature any] struct {
 	Capability ReadCapability
 	Handle     uint64
 	Signature  SyncSignature
 }
-type MsgSetupBindReadCapability[ReadCapability, SyncSignature constraints.Ordered] struct {
+type MsgSetupBindReadCapability[ReadCapability, SyncSignature any] struct {
 	Kind MsgKind
 	Data MsgSetupBindReadCapabilityData[ReadCapability, SyncSignature]
 }
@@ -250,10 +250,10 @@ type MsgSetupBindAreaOfinterest struct {
 	Data MsgSetupBindAreaOfInterestData
 }
 
-type MsgSetupBindStaticTokenData[StaticToken constraints.Ordered] struct {
+type MsgSetupBindStaticTokenData[StaticToken string] struct {
 	StaticToken StaticToken
 }
-type MsgSetupBindStaticToken[StaticToken constraints.Ordered] struct {
+type MsgSetupBindStaticToken[StaticToken string] struct {
 	Kind MsgKind
 	Data MsgSetupBindStaticTokenData[StaticToken]
 }
@@ -289,12 +289,12 @@ type MsgReconciliationAnnounceEntries struct {
 }
 
 /** Transmit a LengthyEntry as part of 3d range-based set reconciliation. */
-type MsgReconciliationSendEntryData[DynamicToken constraints.Ordered] struct {
+type MsgReconciliationSendEntryData[DynamicToken string] struct {
 	Entry             datamodeltypes.LengthyEntry
 	StaticTokenHandle uint64
 	DynamicToken      DynamicToken
 }
-type MsgReconciliationSendEntry[DynamicToken constraints.Ordered] struct {
+type MsgReconciliationSendEntry[DynamicToken string] struct {
 	Kind MsgKind
 	Data MsgReconciliationSendEntryData[DynamicToken]
 }
@@ -317,13 +317,13 @@ type MsgReconciliationTerminatePayload struct {
 // 4. Data messages
 
 /** Transmit an AuthorisedEntry to the other peer, and optionally prepare transmission of its Payload. */
-type MsgDataSendEntryData[DynamicToken constraints.Ordered] struct {
+type MsgDataSendEntryData[DynamicToken string] struct {
 	Entry             types.Entry
 	StaticTokenHandle uint64
 	DynamicToken      DynamicToken
 	Offset            uint64
 }
-type MsgDataSendEntry[DynamicToken constraints.Ordered] struct {
+type MsgDataSendEntry[DynamicToken string] struct {
 	Kind MsgKind
 	Data MsgDataSendEntryData[DynamicToken]
 }
