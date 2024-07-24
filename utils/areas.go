@@ -20,9 +20,9 @@ type Options[K constraints.Unsigned] struct {
 }
 
 type EntryOpts[K constraints.Unsigned] struct {
-	DecodeStreamSubspace      func(bytes *GrowingBytes) types.SubspaceId
-	DecodeStreamPayloadDigest func(bytes *GrowingBytes) types.PayloadDigest
-	pathScheme                types.PathParams[K]
+	DecodeStreamSubspace      func(bytes *GrowingBytes) chan types.SubspaceId
+	DecodeStreamPayloadDigest func(bytes *GrowingBytes) chan types.PayloadDigest
+	PathScheme                types.PathParams[K]
 }
 
 type EncodeAreaOpts[Params constraints.Unsigned] struct {
@@ -461,8 +461,8 @@ func DecodeStreamAreaInArea[Params constraints.Unsigned](
 		path := DecodeRelPathStream(opts.PathScheme, bytes, outer.Path)
 		if includeInnerSybspaceId {
 			var err error
-			subSpaceId, err = opts.DecodeStreamSubspace.DecodeStream(bytes)
-			if err != nil {
+			subSpaceId = <-opts.DecodeStreamSubspace.DecodeStream(bytes)
+			if subSpaceId == nil {
 				return types.Area{}, fmt.Errorf("error decoding subspace: %v", err)
 			}
 		} else {
@@ -501,8 +501,8 @@ func DecodeStreamAreaInArea[Params constraints.Unsigned](
 
 	path := DecodeRelPathStream(opts.PathScheme, bytes, outer.Path)
 	if includeInnerSybspaceId {
-		subSpaceId, err = opts.DecodeStreamSubspace.DecodeStream(bytes)
-		if err != nil {
+		subSpaceId = <-opts.DecodeStreamSubspace.DecodeStream(bytes)
+		if subSpaceId == nil {
 			return types.Area{}, fmt.Errorf("error decoding subspace: %v", err)
 		}
 	} else {
@@ -617,14 +617,14 @@ func DecodeStreamEntryInNamespaceArea[T constraints.Unsigned](opts EntryOpts[T],
 	var subspaceId types.SubspaceId
 
 	if isSubspaceEncoded {
-		subspaceId = opts.DecodeStreamSubspace(bytes)
+		subspaceId = <-opts.DecodeStreamSubspace(bytes)
 	} else if !outer.Any_subspace {
 		subspaceId = outer.Subspace_id
 	} else {
 		return types.Entry{}, fmt.Errorf("entry was encoded relative to area")
 	}
 
-	path := DecodeRelPathStream(opts.pathScheme, bytes, outer.Path)
+	path := DecodeRelPathStream(opts.PathScheme, bytes, outer.Path)
 	accumulatedBytes = bytes.NextAbsolute(int(compactWidthTimeDiff))
 
 	timeDiff, err := DecodeIntMax64(accumulatedBytes[0:int(compactWidthTimeDiff)])
@@ -652,7 +652,7 @@ func DecodeStreamEntryInNamespaceArea[T constraints.Unsigned](opts EntryOpts[T],
 		Namespace_id:   nameSpaceId,
 		Subspace_id:    subspaceId,
 		Path:           path,
-		Payload_digest: payloadDigest,
+		Payload_digest: <-payloadDigest,
 		Payload_length: payloadLength,
 		Timestamp:      timeStamp,
 	}, nil

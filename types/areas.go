@@ -8,7 +8,7 @@ type Area struct {
 }
 
 type AreaOfInterest struct {
-	Area      Area
-	Max_count uint64
-	Max_size  uint64
+	Area     Area
+	MaxCount uint64
+	MaxSize  uint64
 }

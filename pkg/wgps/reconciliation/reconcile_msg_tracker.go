@@ -7,7 +7,7 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-type ReconcicleMsgTrackeropts struct {
+type ReconcileMsgTrackerOpts struct {
 	DefaultNamespaceId   types.NamespaceId
 	DefaultSubspaceId    types.SubspaceId
 	DefaultPayloadDigest types.PayloadDigest
@@ -16,7 +16,7 @@ type ReconcicleMsgTrackeropts struct {
 	AoiHandlesToRange3d func(senderAoiHandle, receiverAoiHandle uint64) types.Range3d
 }
 
-type ReconcileMsgTracker[FingerPrint, DynamicToken constraints.Ordered] struct {
+type ReconcileMsgTracker[FingerPrint constraints.Ordered, DynamicToken string] struct {
 	PrevRange                 types.Range3d
 	PrevSenderHandle          uint64
 	PrevReceiverHandle        uint64
@@ -29,8 +29,8 @@ type ReconcileMsgTracker[FingerPrint, DynamicToken constraints.Ordered] struct {
 	IsAwaitingTermination     bool
 }
 
-func NewReconcileMsgTracker[FingerPrint, DynamicToken constraints.Ordered](
-	opts ReconcicleMsgTrackeropts,
+func NewReconcileMsgTracker[FingerPrint constraints.Ordered, DynamicToken string](
+	opts ReconcileMsgTrackerOpts,
 ) *ReconcileMsgTracker[FingerPrint, DynamicToken] {
 	return &ReconcileMsgTracker[FingerPrint, DynamicToken]{
 		PrevRange:           utils.DefaultRange3d(opts.DefaultSubspaceId),
