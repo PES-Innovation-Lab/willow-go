@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
+	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/handlestore"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/wgpstypes"
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/PES-Innovation-Lab/willow-go/utils"
@@ -11,7 +12,7 @@ import (
 )
 
 type Options[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey constraints.Ordered, K constraints.Unsigned] struct {
-	HandleStoreOurs HandleStore[ReadCapability]
+	HandleStoreOurs handlestore.HandleStore[ReadCapability]
 	Schemes         struct {
 		Namespace     datamodeltypes.NamespaceScheme
 		Subspace      datamodeltypes.SubspaceScheme
@@ -49,10 +50,7 @@ func NewCapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey con
 }
 
 func (c *CapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K]) GetNamespaceKey(namespace types.NamespaceId) (string, error) {
-	encoded, err := c.EncodeNamespace(namespace)
-	if err != nil {
-		return "", err
-	}
+	encoded := c.Opts.Schemes.Namespace.EncodingScheme.Encode(namespace)
 	return base64.StdEncoding.EncodeToString(encoded), nil
 }
 

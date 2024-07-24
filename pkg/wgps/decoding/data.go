@@ -8,17 +8,17 @@ import (
 )
 
 type Opts[DynamicToken constraints.Ordered, ValueType constraints.Unsigned] struct {
-	DecodeNamespaceId      func(bytes utils.GrowingBytes) types.NamespaceId
-	DecodeSubspaceId       func(bytes utils.GrowingBytes) types.SubspaceId
-	DecodeDynamicToken     func(bytes utils.GrowingBytes) DynamicToken
-	DecodePayloadDigest    func(bytes utils.GrowingBytes) types.PayloadDigest
+	DecodeNamespaceId      func(bytes *utils.GrowingBytes) chan types.NamespaceId
+	DecodeSubspaceId       func(bytes *utils.GrowingBytes) chan types.SubspaceId
+	DecodeDynamicToken     func(bytes *utils.GrowingBytes) DynamicToken
+	DecodePayloadDigest    func(bytes *utils.GrowingBytes) chan types.PayloadDigest
 	PathScheme             types.PathParams[ValueType]
-	CurrentlyReceiverEntry types.Entry
+	CurrentlyReceivedEntry types.Entry
 	AoiHandlesToArea       func(senderHandle uint64, receiverHandle uint64) types.Area
 	AoiHandlesToNamespace  func(senderHandle uint64, receiverHandle uint64) types.NamespaceId
 }
 
-func DecodeDataSendEntry[DynamicToken constraints.Ordered, ValueType constraints.Unsigned](bytes *utils.GrowingBytes, opts Opts[DynamicToken, ValueType]) wgpstypes.MsgDataSendEntry[DynamicToken] {
+func DecodeDataSendEntry[DynamicToken string, ValueType constraints.Unsigned](bytes *utils.GrowingBytes, opts Opts[DynamicToken, ValueType]) wgpstypes.MsgDataSendEntry[DynamicToken] {
 	bytes.NextAbsolute(2)
 
 	FirstByte := bytes.Array[0]
@@ -38,11 +38,11 @@ func DecodeDataSendEntry[DynamicToken constraints.Ordered, ValueType constraints
 		OffsetCompactWidth = 0
 	}
 
-	IsEntryEncodedRealative := (SecondByte & 0x10) == 0x10
+	IsEntryEncodedRelative := (SecondByte & 0x10) == 0x10
 
 	var SenderHandleCompactWidth int
 
-	if IsEntryEncodedRealative {
+	if IsEntryEncodedRelative {
 		SenderHandleCompactWidth = 0
 	} else {
 		SenderHandleCompactWidth = CompactWidthFromEndOfByte(int(SecondByte & 0xc >> 2))
@@ -50,7 +50,7 @@ func DecodeDataSendEntry[DynamicToken constraints.Ordered, ValueType constraints
 
 	var ReceiverHandleCompactWidth int
 
-	if IsEntryEncodedRealative {
+	if IsEntryEncodedRelative {
 		ReceiverHandleCompactWidth = 0
 	} else {
 		ReceiverHandleCompactWidth = CompactWidthFromEndOfByte(int(SecondByte))
@@ -60,7 +60,7 @@ func DecodeDataSendEntry[DynamicToken constraints.Ordered, ValueType constraints
 
 	bytes.NextAbsolute(StaticTokenCompactWidth)
 
-	StaticTokenHandle := uint64(DecodeCompactWidth(bytes.Array[:StaticTokenCompactWidth]))
+	StaticTokenHandle, _ := utils.DecodeIntMax64(bytes.Array[:StaticTokenCompactWidth])
 
 	bytes.Prune(StaticTokenCompactWidth)
 
@@ -71,23 +71,43 @@ func DecodeDataSendEntry[DynamicToken constraints.Ordered, ValueType constraints
 	if IsOffsetEncoded {
 		bytes.NextAbsolute(OffsetCompactWidth)
 
-		Offset = uint64(DecodeCompactWidth(bytes.Array[:OffsetCompactWidth]))
+		Offset, _ = utils.DecodeIntMax64(bytes.Array[:OffsetCompactWidth])
 
 		bytes.Prune(OffsetCompactWidth)
 	} else {
 		Offset = 0
 	}
 
+	var decodeResultChan chan utils.DecodeResult
 	var Entry types.Entry
 
-	if IsEntryEncodedRealative {
-		Entry = utils.DecodeStreamEntryRelativeEntry() //gotta check this out
-	} else if !IsntryEncodedRelative && SenderHandleCompactWidth > 0 && ReceiverHandleCompactWidth > 0 {
+	if IsEntryEncodedRelative {
+		decodeResultChan = utils.DecodeStreamEntryRelativeEntry[ValueType](
+			struct {
+				DecodeStreamNamespace     func(bytes *utils.GrowingBytes) chan types.NamespaceId
+				DecodeStreamSubspace      func(bytes *utils.GrowingBytes) chan types.SubspaceId
+				DecodeStreamPayloadDigest func(bytes *utils.GrowingBytes) chan types.PayloadDigest
+				PathScheme                types.PathParams[ValueType]
+			}{
+				DecodeStreamNamespace:     opts.DecodeNamespaceId,
+				DecodeStreamSubspace:      opts.DecodeSubspaceId,
+				DecodeStreamPayloadDigest: opts.DecodePayloadDigest,
+				PathScheme:                opts.PathScheme,
+			}, bytes, opts.CurrentlyReceivedEntry)
+		result := <-decodeResultChan
+		Entry = result.Entry
+	} else if !IsEntryEncodedRelative && SenderHandleCompactWidth > 0 && ReceiverHandleCompactWidth > 0 {
 		bytes.NextAbsolute(SenderHandleCompactWidth + ReceiverHandleCompactWidth)
-		SenderHandle := uint64(DecodeCompactWidth(bytes.Array[:SenderHandleCompactWidth]))
-		ReceiverHandle := uint64(DecodeCompactWidth(bytes.Array[SenderHandleCompactWidth : SenderHandleCompactWidth+ReceiverHandleCompactWidth]))
+		SenderHandle, _ := utils.DecodeIntMax64(bytes.Array[:SenderHandleCompactWidth])
+		ReceiverHandle, _ := utils.DecodeIntMax64(bytes.Array[SenderHandleCompactWidth : SenderHandleCompactWidth+ReceiverHandleCompactWidth])
 		bytes.Prune(SenderHandleCompactWidth + ReceiverHandleCompactWidth)
-		Entry = utils.DecodeStreamEntryRelativeEntry() //gotta check this out
+		Entry, _ = utils.DecodeStreamEntryInNamespaceArea[ValueType](
+			utils.EntryOpts[ValueType]{
+				DecodeStreamSubspace:      opts.DecodeSubspaceId,
+				DecodeStreamPayloadDigest: opts.DecodePayloadDigest,
+				PathScheme:                opts.PathScheme,
+			}, bytes, opts.AoiHandlesToArea(SenderHandle, ReceiverHandle), opts.AoiHandlesToNamespace(SenderHandle, ReceiverHandle),
+		) //gotta check this out
 	} else {
 		//throw an error
 	}
@@ -120,13 +140,13 @@ func DecodeDataSendPayload(bytes *utils.GrowingBytes) wgpstypes.MsgDataSendPaylo
 
 	bytes.NextAbsolute(1 + CompactWidthAmount)
 
-	Amount := int(DecodeCompactWidth(bytes.Array[1 : 1+CompactWidthAmount]))
+	Amount, _ := utils.DecodeIntMax64(bytes.Array[1 : 1+CompactWidthAmount])
 
-	bytes.Prune(1 + CompactWidthAmount + Amount)
+	bytes.Prune(1 + CompactWidthAmount + int(Amount))
 
-	MsgBytes := bytes.Array[1+CompactWidthAmount : 1+CompactWidthAmount+Amount]
+	MsgBytes := bytes.Array[1+CompactWidthAmount : 1+CompactWidthAmount+int(Amount)]
 
-	bytes.Prune(1 + CompactWidthAmount + Amount)
+	bytes.Prune(1 + CompactWidthAmount + int(Amount))
 
 	return wgpstypes.MsgDataSendPayload{
 		Kind: wgpstypes.DataSendPayload,
@@ -151,9 +171,9 @@ func DecodeDataSetEagerness(bytes *utils.GrowingBytes) wgpstypes.MsgDataSetMetad
 
 	bytes.NextAbsolute(2 + CompactWidthSenderHandle + CompactWidthReceiverHandle)
 
-	SenderHandle := uint64(DecodeCompactWidth(bytes.Array[2 : 2+CompactWidthSenderHandle]))
+	SenderHandle, _ := utils.DecodeIntMax64(bytes.Array[2 : 2+CompactWidthSenderHandle])
 
-	ReceiverHandle := uint64(DecodeCompactWidth(bytes.Array[2+CompactWidthSenderHandle : 2+CompactWidthSenderHandle+CompactWidthReceiverHandle]))
+	ReceiverHandle, _ := utils.DecodeIntMax64(bytes.Array[2+CompactWidthSenderHandle : 2+CompactWidthSenderHandle+CompactWidthReceiverHandle])
 
 	bytes.Prune(2 + CompactWidthSenderHandle + CompactWidthReceiverHandle)
 
@@ -167,16 +187,17 @@ func DecodeDataSetEagerness(bytes *utils.GrowingBytes) wgpstypes.MsgDataSetMetad
 	}
 }
 
-type DecodeOpts struct {
-	DecodeNamespaceId      func(bytes *utils.GrowingBytes) types.NamespaceId
-	DecodeSubspaceId       func(bytes *utils.GrowingBytes) types.SubspaceId
-	PathScheme             types.PathParams[uint64] //need to check this out
-	CurrentlyReceiverEntry func() types.Entry
-	AoiHandlesToArea       func(senderHandle uint64, receiverHandle uint64) types.Area
-	AoiHandlesToNamespace  func(senderHandle uint64, receiverHandle uint64) types.NamespaceId
+type DecodeOpts[ValueType constraints.Unsigned] struct {
+	DecodeNamespaceId         func(bytes *utils.GrowingBytes) chan types.NamespaceId
+	DecodeSubspaceId          func(bytes *utils.GrowingBytes) chan types.SubspaceId
+	DecodePayloadDigest       func(bytes *utils.GrowingBytes) chan types.PayloadDigest
+	PathScheme                types.PathParams[ValueType] //need to check this out
+	GetCurrentlyReceivedEntry types.Entry
+	AoiHandlesToArea          func(senderHandle uint64, receiverHandle uint64) types.Area
+	AoiHandlesToNamespace     func(senderHandle uint64, receiverHandle uint64) types.NamespaceId
 }
 
-func DecodeDataPayloadRequest(bytes *utils.GrowingBytes, opts DecodeOpts) wgpstypes.MsgDataBindPayloadRequest {
+func DecodeDataBindPayloadRequest[ValueType constraints.Unsigned](bytes *utils.GrowingBytes, opts DecodeOpts[ValueType]) wgpstypes.MsgDataBindPayloadRequest {
 	bytes.NextAbsolute(2)
 
 	FirstByte := bytes.Array[0]
@@ -211,28 +232,48 @@ func DecodeDataPayloadRequest(bytes *utils.GrowingBytes, opts DecodeOpts) wgpsty
 
 	bytes.NextAbsolute(CompactWidthCapability + 2)
 
-	Capability := uint64(DecodeCompactWidth(bytes.Array[2 : 2+CompactWidthCapability]))
+	Capability, _ := utils.DecodeIntMax64(bytes.Array[2 : 2+CompactWidthCapability])
 
 	var Offset uint64
 
 	if IsOffsetEncoded {
-		Offset = uint64(DecodeCompactWidth(bytes.Array[2+CompactWidthCapability : 2+CompactWidthCapability+CompactWidthOffset]))
+		Offset, _ = utils.DecodeIntMax64(bytes.Array[2+CompactWidthCapability : 2+CompactWidthCapability+CompactWidthOffset])
 		bytes.Prune(2 + CompactWidthCapability + CompactWidthOffset)
 	} else {
 		Offset = 0
 		bytes.Prune(2 + CompactWidthCapability)
 	}
 
+	var decodeResultChan chan utils.DecodeResult
 	var Entry types.Entry
 
 	if IsEncodedRelativeToCurrEntry {
-		Entry = utils.DecodeStreamEntryRelativeEntry() //gotta check this out
+		decodeResultChan = utils.DecodeStreamEntryRelativeEntry[ValueType](
+			struct {
+				DecodeStreamNamespace     func(bytes *utils.GrowingBytes) chan types.NamespaceId
+				DecodeStreamSubspace      func(bytes *utils.GrowingBytes) chan types.SubspaceId
+				DecodeStreamPayloadDigest func(bytes *utils.GrowingBytes) chan types.PayloadDigest
+				PathScheme                types.PathParams[ValueType]
+			}{
+				DecodeStreamNamespace:     opts.DecodeNamespaceId,
+				DecodeStreamSubspace:      opts.DecodeSubspaceId,
+				DecodeStreamPayloadDigest: opts.DecodePayloadDigest,
+				PathScheme:                opts.PathScheme,
+			}, bytes, opts.GetCurrentlyReceivedEntry)
+		result := <-decodeResultChan
+		Entry = result.Entry //gotta check this out
 	} else if !IsEncodedRelativeToCurrEntry && CompactWidthSenderHandle > 0 && CompactWidthReceiverHandle > 0 {
 		bytes.NextAbsolute(CompactWidthSenderHandle + CompactWidthReceiverHandle)
-		SenderHandle := uint64(DecodeCompactWidth(bytes.Array[:CompactWidthSenderHandle]))
-		ReceiverHandle := uint64(DecodeCompactWidth(bytes.Array[CompactWidthSenderHandle : CompactWidthSenderHandle+CompactWidthReceiverHandle]))
+		SenderHandle, _ := utils.DecodeIntMax64(bytes.Array[:CompactWidthSenderHandle])
+		ReceiverHandle, _ := utils.DecodeIntMax64(bytes.Array[CompactWidthSenderHandle : CompactWidthSenderHandle+CompactWidthReceiverHandle])
 		bytes.Prune(CompactWidthSenderHandle + CompactWidthReceiverHandle)
-		Entry = utils.DecodeStreamEntryRelativeEntry() //gotta check this out
+		Entry, _ = utils.DecodeStreamEntryInNamespaceArea[ValueType](
+			utils.EntryOpts[ValueType]{
+				DecodeStreamSubspace:      opts.DecodeSubspaceId,
+				DecodeStreamPayloadDigest: opts.DecodePayloadDigest,
+				PathScheme:                opts.PathScheme,
+			}, bytes, opts.AoiHandlesToArea(SenderHandle, ReceiverHandle), opts.AoiHandlesToNamespace(SenderHandle, ReceiverHandle),
+		)
 	} else {
 		//throw an error
 	}
@@ -253,7 +294,7 @@ func DecodeDataReplyPayload(bytes *utils.GrowingBytes) wgpstypes.MsgDataReplyPay
 
 	bytes.NextAbsolute(1 + CompactWidthHandle)
 
-	Handle := uint64(DecodeCompactWidth(bytes.Array[1 : 1+CompactWidthHandle]))
+	Handle, _ := utils.DecodeIntMax64(bytes.Array[1 : 1+CompactWidthHandle])
 
 	bytes.Prune(1 + CompactWidthHandle)
 

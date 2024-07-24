@@ -2,7 +2,6 @@ package decoding
 
 import (
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/wgpstypes"
-	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/PES-Innovation-Lab/willow-go/utils"
 )
 
@@ -64,7 +63,7 @@ func DecodeControlIssueGuarantee(bytes *utils.GrowingBytes) wgpstypes.MsgControl
 	Channel := DecodeChannelFromBeginningOfByte(int(bytes.Array[1]))
 
 	bytes.NextAbsolute(2 + CompactWidth)
-	Amount := types.DecodeCompactWidth(bytes.Array[2 : 2+CompactWidth]) //TODO: Need to see why this is not defined anywhere
+	Amount, _ := utils.DecodeIntMax64(bytes.Array[2 : 2+CompactWidth]) //TODO: Need to see why this is not defined anywhere
 	bytes.Prune(2 + CompactWidth)
 
 	return wgpstypes.MsgControlIssueGuarantee{
@@ -84,7 +83,7 @@ func DecodeControlAbsolve(bytes *utils.GrowingBytes) wgpstypes.MsgControlAbsolve
 	Channel := DecodeChannelFromBeginningOfByte(int(bytes.Array[1]))
 
 	bytes.NextAbsolute(2 + CompactWidth)
-	Amount := types.DecodeCompactWidth(bytes.Array[2 : 2+CompactWidth]) //TODO: Need to see why this is not defined anywhere
+	Amount, _ := utils.DecodeIntMax64(bytes.Array[2 : 2+CompactWidth]) //TODO: Need to see why this is not defined anywhere
 	bytes.Prune(2 + CompactWidth)
 
 	return wgpstypes.MsgControlAbsolve{
@@ -104,7 +103,7 @@ func DecodeControlPlead(bytes *utils.GrowingBytes) wgpstypes.MsgControlPlead {
 	Channel := DecodeChannelFromBeginningOfByte(int(bytes.Array[1]))
 
 	bytes.NextAbsolute(2 + CompactWidth)
-	Target := types.DecodeCompactWidth(bytes.Array[2 : 2+CompactWidth]) //TODO: Need to see why this is not defined anywhere
+	Target, _ := utils.DecodeIntMax64(bytes.Array[2 : 2+CompactWidth]) //TODO: Need to see why this is not defined anywhere
 	bytes.Prune(2 + CompactWidth)
 
 	return wgpstypes.MsgControlPlead{
@@ -157,7 +156,7 @@ func DecodeControlFree(bytes *utils.GrowingBytes) wgpstypes.MsgControlFree {
 
 	bytes.NextAbsolute(2 + CompactWidth)
 
-	Handle := types.DecodeCompactWidth(bytes.Array[2 : 2+CompactWidth])
+	Handle, _ := utils.DecodeIntMax64(bytes.Array[2 : 2+CompactWidth])
 
 	bytes.Prune(2 + CompactWidth)
 

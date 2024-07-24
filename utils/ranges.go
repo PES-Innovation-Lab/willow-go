@@ -206,10 +206,11 @@ func AbsDiffuint64(a uint64, b uint64) uint64 {
 	}
 }
 
-func EncodeRange3dRelative[T constraints.Unsigned](
-	orderSubspace types.TotalOrder[types.SubspaceId],
-	encodeSubspaceId func(subspace types.SubspaceId) []byte,
-	pathScheme types.PathParams[T],
+func EncodeRange3dRelative[T constraints.Unsigned](opts struct {
+	OrderSubspace    types.TotalOrder[types.SubspaceId]
+	EncodeSubspaceId func(subspace types.SubspaceId) []byte
+	PathScheme       types.PathParams[T]
+},
 	r types.Range3d,
 	ref types.Range3d,
 ) []byte {
@@ -240,25 +241,25 @@ func EncodeRange3dRelative[T constraints.Unsigned](
 	// Encode byte 1
 
 	// encoding bits 0, 1
-	if IsEqualRangeValue(orderSubspace, r.SubspaceRange, true, ref.SubspaceRange, true) {
+	if IsEqualRangeValue(opts.OrderSubspace, r.SubspaceRange, true, ref.SubspaceRange, true) {
 		encoding1 = encoding1 | 0x40
-	} else if IsEqualRangeValue(orderSubspace, r.SubspaceRange, true, ref.SubspaceRange, false) {
+	} else if IsEqualRangeValue(opts.OrderSubspace, r.SubspaceRange, true, ref.SubspaceRange, false) {
 		encoding1 = encoding1 | 0x80
 	} else {
 		encoding1 = encoding1 | 0xC0
-		subspaceIdEncodingStart = encodeSubspaceId(r.SubspaceRange.Start)
+		subspaceIdEncodingStart = opts.EncodeSubspaceId(r.SubspaceRange.Start)
 	}
 
 	// eoncoding bits at 2, 3
 	if r.SubspaceRange.OpenEnd {
 		// do nothing
-	} else if IsEqualRangeValue(orderSubspace, r.SubspaceRange, false, ref.SubspaceRange, true) {
+	} else if IsEqualRangeValue(opts.OrderSubspace, r.SubspaceRange, false, ref.SubspaceRange, true) {
 		encoding1 = encoding2 | 0x10
-	} else if IsEqualRangeValue(orderSubspace, r.SubspaceRange, false, ref.SubspaceRange, false) {
+	} else if IsEqualRangeValue(opts.OrderSubspace, r.SubspaceRange, false, ref.SubspaceRange, false) {
 		encoding1 = encoding1 | 0x20
 	} else {
 		encoding1 = encoding1 | 0x30
-		subspaceIdEncodingEnd = encodeSubspaceId(r.SubspaceRange.End)
+		subspaceIdEncodingEnd = opts.EncodeSubspaceId(r.SubspaceRange.End)
 	}
 
 	// encoding bit 4
@@ -267,9 +268,9 @@ func EncodeRange3dRelative[T constraints.Unsigned](
 
 	if len(prefixStartStart) >= len(prefixStartEnd) {
 		encoding1 = encoding1 | 0x08
-		pathEncodingStart = EncodeRelativePath(pathScheme, r.PathRange.Start, ref.PathRange.Start)
+		pathEncodingStart = EncodeRelativePath(opts.PathScheme, r.PathRange.Start, ref.PathRange.Start)
 	} else {
-		pathEncodingStart = EncodeRelativePath(pathScheme, r.PathRange.Start, ref.PathRange.End)
+		pathEncodingStart = EncodeRelativePath(opts.PathScheme, r.PathRange.Start, ref.PathRange.End)
 	}
 
 	// encoding bit 5
@@ -282,9 +283,9 @@ func EncodeRange3dRelative[T constraints.Unsigned](
 	prefixEndEnd, _ := CommonPrefix(r.PathRange.End, ref.PathRange.End)
 	if len(prefixEndStart) >= len(prefixEndEnd) {
 		encoding1 = encoding1 | 0x02
-		pathEncodingEnd = EncodeRelativePath(pathScheme, r.PathRange.End, ref.PathRange.Start)
+		pathEncodingEnd = EncodeRelativePath(opts.PathScheme, r.PathRange.End, ref.PathRange.Start)
 	} else {
-		pathEncodingEnd = EncodeRelativePath(pathScheme, r.PathRange.End, ref.PathRange.End)
+		pathEncodingEnd = EncodeRelativePath(opts.PathScheme, r.PathRange.End, ref.PathRange.End)
 	}
 	if r.PathRange.OpenEnd {
 		encoding1 = encoding1 & 0xFD
@@ -372,7 +373,7 @@ func EncodeRange3dRelative[T constraints.Unsigned](
 }
 
 func DecodeStreamRange3dRelative[K constraints.Unsigned](
-	DecodeStreamSubspaceId func(bytes *GrowingBytes) types.SubspaceId,
+	DecodeStreamSubspaceId func(bytes *GrowingBytes) chan types.SubspaceId,
 	pathScheme types.PathParams[K],
 	bytes *GrowingBytes,
 	ref types.Range3d,
@@ -443,7 +444,7 @@ func DecodeStreamRange3dRelative[K constraints.Unsigned](
 			return types.Range3d{}, fmt.Errorf("start value cannot be open ended")
 		}
 	case "yes":
-		subspaceStart = DecodeStreamSubspaceId(bytes)
+		subspaceStart = <-DecodeStreamSubspaceId(bytes)
 	}
 
 	var subspaceEnd types.SubspaceId
@@ -460,7 +461,7 @@ func DecodeStreamRange3dRelative[K constraints.Unsigned](
 		subspaceEnd = ref.SubspaceRange.End
 		subspaceOpenEnd = false
 	case "yes":
-		subspaceEnd = DecodeStreamSubspaceId(bytes)
+		subspaceEnd = <-DecodeStreamSubspaceId(bytes)
 		subspaceOpenEnd = false
 	}
 
