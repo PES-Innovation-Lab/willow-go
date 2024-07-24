@@ -2,6 +2,7 @@ package pai
 
 import (
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
+	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/handlestore"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/wgpstypes"
 	"github.com/PES-Innovation-Lab/willow-go/types"
@@ -27,7 +28,7 @@ type SubspaceOrAny interface{}
 
 const ANY_SUBSPACE = -1
 
-type LocalFragmentInfo[ReadCapability, SubspaceReadCapability constraints.Ordered] struct {
+type LocalFragmentInfo[ReadCapability, SubspaceReadCapability any] struct {
 	ID             int //set this to 1 if defined, otherwise 0 (default value)
 	OnIntersection int
 	Authorisation  wgpstypes.ReadAuthorisation[ReadCapability, SubspaceReadCapability]
@@ -37,25 +38,25 @@ type LocalFragmentInfo[ReadCapability, SubspaceReadCapability constraints.Ordere
 }
 
 /** Given `ReadAuthorisation`s, emits the intersected ones  */
-type Intersection[ReadCapability, SubspaceReadCapability constraints.Ordered] struct {
+type Intersection[ReadCapability, SubspaceReadCapability any] struct {
 	NamespaceId       types.NamespaceId
 	ReadAuthorisation wgpstypes.ReadAuthorisation[ReadCapability, SubspaceReadCapability]
 	Uint64            uint64
 }
-type BindFragment[PsiGroup constraints.Ordered] struct {
+type BindFragment[PsiGroup any] struct {
 	PsiGroup    PsiGroup
 	IsSecondary bool
 }
-type ReplyFragment[PsiGroup constraints.Ordered] struct {
+type ReplyFragment[PsiGroup any] struct {
 	FragmentGrp uint64
 	PsiGroup    PsiGroup
 }
-type SubspaceCapReply[SubspaceReadCapability constraints.Ordered] struct {
+type SubspaceCapReply[SubspaceReadCapability any] struct {
 	Handle                 uint64
 	SubspaceReadCapability SubspaceReadCapability
 }
 
-type PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability constraints.Ordered, K constraints.Unsigned] struct {
+type PaiFinder[ReadCapability any, PsiGroup any, PsiScalar int, SubspaceReadCapability any, K constraints.Unsigned] struct {
 	IntersectionHandlesOurs   handlestore.HandleStore[wgpstypes.Intersection[PsiGroup]]
 	IntersectionHandlesTheirs handlestore.HandleStore[wgpstypes.Intersection[PsiGroup]]
 
@@ -80,7 +81,7 @@ type PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability const
 	RequestedSubspaceCapHandles map[uint64]bool
 }
 
-func NewPaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability constraints.Ordered, K constraints.Unsigned](opts PaiFinderOpts[ReadCapability, PsiGroup, PsiScalar, K]) *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, K] {
+func NewPaiFinder[ReadCapability, PsiGroup any, PsiScalar int, SubspaceReadCapability any, K constraints.Unsigned](opts PaiFinderOpts[ReadCapability, PsiGroup, PsiScalar, K]) *PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, K] {
 	return &PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceReadCapability, K]{
 		NamespaceScheme:             opts.NamespaceScheme,
 		PaiScheme:                   opts.PaiScheme,
