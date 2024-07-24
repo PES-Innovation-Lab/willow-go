@@ -37,7 +37,7 @@ type PayloadRequest struct {
 }
 
 type DataSenderOpts[Prefingerprint, Fingerprint constraints.Ordered, K constraints.Unsigned, AuthorisationToken, DynamicToken string, AuthorisationOpts []byte] struct {
-	HandlesPayloadRequestsTheirs handlestore.HandleStore
+	HandlesPayloadRequestsTheirs handlestore.HandleStore[PayloadRequest]
 	GetStore                     wgpstypes.GetStoreFn[Prefingerprint, Fingerprint, K, AuthorisationToken, AuthorisationOpts]
 	TransformPayload             func(chunk []byte) []byte
 }
