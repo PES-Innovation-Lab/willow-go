@@ -13,8 +13,8 @@ import (
 type PaiFinderOpts[ReadCapability, PsiGroup, SubspaceReadCapability any, PsiScalar int, K constraints.Unsigned] struct {
 	NamespaceScheme           datamodeltypes.NamespaceScheme
 	PaiScheme                 wgpstypes.PaiScheme[ReadCapability, PsiGroup, PsiScalar, K]
-	IntersectionHandlesOurs   handlestore.HandleStore[wgpstypes.Intersection[PsiGroup]]
-	IntersectionHandlesTheirs handlestore.HandleStore[wgpstypes.Intersection[PsiGroup]]
+	IntersectionHandlesOurs   handlestore.HandleStore
+	IntersectionHandlesTheirs handlestore.HandleStore
 }
 
 const (
@@ -397,13 +397,13 @@ func (p *PaiFinder[ReadCapability, PsiGroup, SubspaceReadCapability, PsiScalar, 
 }
 
 func (p *PaiFinder[ReadCapability, PsiGroup, SubspaceReadCapability, PsiScalar, K]) GetIntersectionPrivy(handle uint64, ours bool) wgpstypes.ReadCapPrivy {
-	var storeToGetHandleFrom handlestore.HandleStore[wgpstypes.Intersection[PsiGroup]]
+	var storeToGetHandleFrom handlestore.HandleStore
 	if ours {
 		storeToGetHandleFrom = p.IntersectionHandlesOurs
 	} else {
 		storeToGetHandleFrom = p.IntersectionHandlesTheirs
 	}
-	var storeToCheckAgainst handlestore.HandleStore[wgpstypes.Intersection[PsiGroup]]
+	var storeToCheckAgainst handlestore.HandleStore
 	if ours {
 		storeToCheckAgainst = p.IntersectionHandlesTheirs
 	} else {

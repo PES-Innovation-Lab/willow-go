@@ -11,8 +11,8 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-type Options[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey constraints.Ordered, K constraints.Unsigned] struct {
-	HandleStoreOurs handlestore.HandleStore[ReadCapability]
+type Options[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey any, K constraints.Unsigned] struct {
+	HandleStoreOurs handlestore.HandleStore
 	Schemes         struct {
 		Namespace     datamodeltypes.NamespaceScheme
 		Subspace      datamodeltypes.SubspaceScheme
@@ -20,12 +20,12 @@ type Options[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey constrai
 	}
 }
 
-type CapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey constraints.Ordered, K constraints.Unsigned] struct {
+type CapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey any, K constraints.Unsigned] struct {
 	NamespaceMap map[string]map[uint64]struct{}
 	Opts         Options[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K]
 }
 
-func isEmpty[T constraints.Ordered](value T) bool {
+func isEmpty[T any](value T) bool {
 	switch v := any(value).(type) {
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, uintptr:
 		return v == 0
@@ -42,7 +42,7 @@ func isEmpty[T constraints.Ordered](value T) bool {
 }
 
 // NewCapFinder creates a new instance of CapFinder with initialized NamespaceMap.
-func NewCapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey constraints.Ordered, K constraints.Unsigned](opts Options[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K]) *CapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K] {
+func NewCapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey any, K constraints.Unsigned](opts Options[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K]) *CapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K] {
 	return &CapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K]{
 		NamespaceMap: make(map[string]map[uint64]struct{}),
 		Opts:         opts,
@@ -61,7 +61,7 @@ func (c *CapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K
 		//WillowError (TODO)
 	}
 
-	namespace := c.Opts.Schemes.AccessControl.GetGrantedNamespace(cap)
+	namespace := c.Opts.Schemes.AccessControl.GetGrantedNamespace(cap.(ReadCapability))
 	key, _ := c.GetNamespaceKey(namespace)
 	res := c.NamespaceMap[key]
 	if _, ok := res[handle]; !ok {
@@ -91,7 +91,7 @@ func (c *CapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K
 			//WillowError (TODO)
 		}
 
-		grantedArea := c.Opts.Schemes.AccessControl.GetGrantedArea(cap)
+		grantedArea := c.Opts.Schemes.AccessControl.GetGrantedArea(cap.(ReadCapability))
 
 		isInArea := utils.IsIncludedArea(c.Opts.Schemes.Subspace.Order, grantedArea, entryPos)
 
