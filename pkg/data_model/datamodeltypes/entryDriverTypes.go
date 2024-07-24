@@ -4,14 +4,15 @@ import (
 	"errors"
 	"log"
 
-	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/Kdtree"
+	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/kdnode"
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/PES-Innovation-Lab/willow-go/utils"
+	kdtree "github.com/rishitc/go-kd-tree"
 	"golang.org/x/exp/constraints"
 )
 
 type KDTreeStorage[PreFingerPrint, FingerPrint constraints.Ordered, K constraints.Unsigned] struct {
-	KDTree *Kdtree.KDTree[Kdtree.KDNodeKey]
+	KDTree *kdtree.KDTree[kdnode.Key]
 
 	Opts struct {
 		Namespace         types.NamespaceId
@@ -82,7 +83,7 @@ func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Get(Subspace types.Subsp
 		TimeRange:     timeRange,
 	}
 
-	res := Kdtree.Query(k.KDTree, range3d)
+	res := kdnode.Query(k.KDTree, range3d)
 	if len(res) > 1 {
 
 		log.Fatalln("get returned multiple nodes")
@@ -102,7 +103,7 @@ func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Get(Subspace types.Subsp
 }
 
 func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Insert(Subspace types.SubspaceId, Path types.Path, Timestamp uint64) error {
-	newVal := Kdtree.KDNodeKey{
+	newVal := kdnode.Key{
 		Subspace:  Subspace,
 		Path:      Path,
 		Timestamp: Timestamp,
@@ -113,13 +114,13 @@ func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Insert(Subspace types.Su
 	return nil
 }
 
-func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Query(QueryRange types.Range3d) []Kdtree.KDNodeKey {
-	return Kdtree.Query(k.KDTree, QueryRange)
+func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Query(QueryRange types.Range3d) []kdnode.Key {
+	return kdnode.Query(k.KDTree, QueryRange)
 }
 
 func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Remove(entry types.Position3d) bool {
 
-	NodeToDelete := Kdtree.KDNodeKey{
+	NodeToDelete := kdnode.Key{
 		Subspace:  entry.Subspace,
 		Timestamp: entry.Time,
 		Path:      entry.Path,

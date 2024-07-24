@@ -148,9 +148,10 @@ LOOPEND:
 		}
 		input := scanner.Text()
 		if strings.ToLower(input) == "exit" {
-			fmt.Println(White, "Exiting Namespace...", Reset)
+			fmt.Println(White, "Exiting...", Reset)
 			break
 		}
+		input = strings.TrimSpace(input)
 		objects := strings.Split(input, " ")
 		switch objects[0] {
 		case "back":

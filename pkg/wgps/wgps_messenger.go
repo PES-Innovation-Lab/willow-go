@@ -1,15 +1,13 @@
 package wgps
 
 import (
-	"fmt"
-
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/data"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/handlestore"
+	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/transport"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/wgpstypes"
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/PES-Innovation-Lab/willow-go/utils"
 	"golang.org/x/exp/constraints"
-	"crypto/rand"
 )
 
 type WgpsMessengerOpts[
@@ -31,18 +29,18 @@ type WgpsMessengerOpts[
 	AuthorisationOpts []byte,
 	K constraints.Unsigned,
 ] struct {
-	//Transport transport.Transport
+	//Transport *wgpstypes.Transport
 	/** Sets the [`maximum payload size`](https://willowprotocol.org/specs/sync/index.html#peer_max_payload_size) for this peer, which is 2 to the power of the given number.
 	 *
 	 * The given power must be a natural number lesser than or equal to 64. */
-	MaxPayloadSizePower int
+	//MaxPayloadSizePower int
 
-	/** Sets the [`challeng_length`](https://willowprotocol.org/specs/sync/index.html#challenge_length) for the [Willow General Purpose Sync Protocol](https://willowprotocol.org/specs/sync/index.html#sync).*/
-	ChallengeLength int
-	/** Sets the [`challeng_hash_length`](https://willowprotocol.org/specs/sync/index.html#challenge_hash_length) for the [Willow General Purpose Sync Protocol](https://willowprotocol.org/specs/sync/index.html#sync).*/
-	ChallengeHashLength int
+	/** Sets the [`challenge_length`](https://willowprotocol.org/specs/sync/index.html#challenge_length) for the [Willow General Purpose Sync Protocol](https://willowprotocol.org/specs/sync/index.html#sync).*/
+	//ChallengeLength int
+	/** Sets the [`challenge_hash_length`](https://willowprotocol.org/specs/sync/index.html#challenge_hash_length) for the [Willow General Purpose Sync Protocol](https://willowprotocol.org/specs/sync/index.html#sync).*/
+	//ChallengeHashLength int
 	/** Sets the [`challeng_hash`](https://willowprotocol.org/specs/sync/index.html#challenge_hash) for the [Willow General Purpose Sync Protocol](https://willowprotocol.org/specs/sync/index.html#sync).*/
-	ChallengeHash func(bytes []byte) []byte
+	//ChallengeHash func(bytes []byte) []byte
 	/** The parameter schemes used to configure the `WgpsMessenger` for sync. */
 
 	Schemes wgpstypes.SyncSchemes[
@@ -64,12 +62,15 @@ type WgpsMessengerOpts[
 		AuthorisationOpts,
 		K,
 	]
-	Interests map[*wgpstypes.ReadAuthorisation[ReadCapability, SubspaceCapability]][]types.AreaOfInterest
+	//Interests map[*wgpstypes.ReadAuthorisation[ReadCapability, SubspaceCapability]][]types.AreaOfInterest
 
-	GetStore               wgpstypes.GetStoreFn[Prefingerprint, Fingerprint, AuthorisationToken, AuthorsationOpts]
+	GetStore               wgpstypes.GetStoreFn[Prefingerprint, Fingerprint, K, AuthorisationToken, AuthorisationOpts]
 	TransformPayload       func(chunk []byte) []byte
 	ProcessReceivedPayload func(chunk []byte, entryLength uint64) []byte
 }
+
+/** Coordinates an open-ended synchronisation session between two peers using the [Willow General Purpose Sync Protocol](https://willowprotocol.org/specs/sync/index.html#sync).
+ */
 type WgpsMessenger[
 	ReadCapability any,
 	Receiver types.SubspaceId,
@@ -90,11 +91,9 @@ type WgpsMessenger[
 	K constraints.Unsigned,
 ] struct {
 	Closed bool
-	//Interests    [][]types.AreaOfInterest
-	Interests map[*wgpstypes.ReadAuthorisation[ReadCapability, SubspaceCapability]][]types.AreaOfInterest
-	//Capabilities []wgpstypes.ReadAuthorisation[ReadCapability, SubspaceCapability]
-	//Transport    transport.ReadyTransport
-	//Encoder                  Encoder //TODO: has to be changed to MessageEncoder
+	//Interests map[*wgpstypes.ReadAuthorisation[ReadCapability, SubspaceCapability]][]types.AreaOfInterest
+	Transport *transport.QuicTransport
+	//Encoder                  encoding.MessageEncoder //TODO: has to be changed to MessageEncoder
 	OutChannelReconciliation GuaranteedQueue
 	OutChannelData           GuaranteedQueue
 	OutChannelIntersection   GuaranteedQueue
@@ -104,49 +103,66 @@ type WgpsMessenger[
 	OutChannelStaticToken    GuaranteedQueue
 	InChannelReconciliation  []wgpstypes.ReconciliationChannelMsg
 	InChannelData            []wgpstypes.DataChannelMsg
-	InChannelIntersection    []wgpstypes.IntersectionChannelMsg
-	InChannelCapability      []wgpstypes.CapabilityChannelMsg
-	InChannelAreaOfInterest  []wgpstypes.AreaOfInterestChannelMsg
-	InChannelPayloadRequest  []wgpstypes.PayloadRequestChannelMsg
-	InChannelStaticToken     []wgpstypes.StaticTokenChannelMsg
-	InChannelNone            []wgpstypes.NoChannelMsg
+	//InChannelIntersection    []wgpstypes.IntersectionChannelMsg
+	//InChannelCapability      []wgpstypes.CapabilityChannelMsg
+	//InChannelAreaOfInterest  []wgpstypes.AreaOfInterestChannelMsg
+	InChannelPayloadRequest []wgpstypes.PayloadRequestChannelMsg
+	InChannelStaticToken    []wgpstypes.StaticTokenChannelMsg
+	InChannelNone           []wgpstypes.NoChannelMsg
 
 	// Commitment scheme
-	MaxPayloadSizePower int
-	ChallengeHash       func(bytes []byte) []byte
-	Nonce               []byte
-	OurChallenge        []byte //Supposed to be async, need to see how this will affect it
-	TheirChallenge      []byte //Supposed to be async, need to see how this will affect it
-	Schemes             wgpstypes.SyncSchemes[ReadCapability, Receiver, SyncSignature, ReceiverSecretKey, PsiGroup, PsiScalar, SubspaceCapability, SubsapceReceiver, Prefingerprint, Fingerprint, StaticToken, DynamicToken, SyncSubspaceSignature, SubspaceSecretKey, AuthorisationOpts, AuthorisationToken, K]
-
+	//MaxPayloadSizePower int
+	//ChallengeHash            func(bytes []byte) []byte
+	//Nonce                    []byte
+	//OurChallenge             []byte //Supposed to be async, need to see how this will affect it
+	//TheirChallenge           []byte //Supposed to be async, need to see how this will affect it
+	Schemes wgpstypes.SyncSchemes[
+		ReadCapability,
+		Receiver,
+		SyncSignature,
+		ReceiverSecretKey,
+		PsiGroup,
+		PsiScalar,
+		SubspaceCapability,
+		SubspaceReceiver,
+		SyncSubspaceSignature,
+		SubspaceSecretKey,
+		Prefingerprint,
+		Fingerprint,
+		AuthorisationToken,
+		StaticToken,
+		DynamicToken,
+		AuthorisationOpts,
+		K,
+	]
 	// Private area intersection
-	/*HandleIntersectionOurs   handlestore.HandleStore[wgpstypes.Intersection[PsiGroup]]
-	HandleIntersectionTheirs handlestore.HandleStore[wgpstypes.Intersection[PsiGroup]]
-	PaiFinder                pai.PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceCapability, K]
-	*/
+	//HandleIntersectionOurs   handlestore.HandleStore[wgpstypes.Intersection[PsiGroup]]
+	//HandleIntersectionTheirs handlestore.HandleStore[wgpstypes.Intersection[PsiGroup]]
+	//PaiFinder                pai.PaiFinder[ReadCapability, PsiGroup, PsiScalar, SubspaceCapability, K]
+
 	//Setup
-	HandleCapsOurs   handlestore.HandleStore[ReadCapability]
-	HandleCapsTheirs handlestore.HandleStore[ReadCapability]
+	//HandleCapsOurs   handlestore.HandleStore[ReadCapability]
+	//HandleCapsTheirs handlestore.HandleStore[ReadCapability]
 
-	HandlesAoisOurs   handlestore.HandleStore[types.AreaOfInterest]
-	HandlesAoisTheirs handlestore.HandleStore[types.AreaOfInterest]
+	HandlesAoisOurs   handlestore.HandleStore
+	HandlesAoisTheirs handlestore.HandleStore
 
-	HandlesStaticTokenOurs   handlestore.HandleStore[StaticToken]
-	HandlesStaticTokenTheirs handlestore.HandleStore[StaticToken]
+	HandlesStaticTokenOurs   handlestore.HandleStore
+	HandlesStaticTokenTheirs handlestore.HandleStore
 
 	//Reconciliation
 	YourRangeCounter int
-	GetStore         wgpstypes.GetStoreFn[Prefingerprint, Fingerprint, AuthorisationToken, AuthorsationOpts]
+	GetStore         wgpstypes.GetStoreFn[Prefingerprint, Fingerprint, K, AuthorisationToken, AuthorisationOpts]
 	//ReconcilerMap             reconciliation.ReconcilerMap //TODO: has to be changed to ReconcilerMap
 	//AoiIntersectionFinder     reconciliation.AoiIntersectionFinder
 	//Announcer                 reconciliation.Announcer
 	CurrentlyReceivingEntries struct {
-		Namespace   types.NamespaceId
-		Range       types.Range3d
-		Remaining   uint64
-		IsReceiving bool
+		Namespace types.NamespaceId
+		Range     types.Range3d
+		Remaining uint64
+		//IsReceiving bool
 	}
-	ReconciliationPayloadIngester data.PayloadIngester[Prefingerprint, Fingerprint, AuthorisationToken, AuthorsationOpts] //will have to change the type definition
+	//ReconciliationPayloadIngester data.PayloadIngester[Prefingerprint, Fingerprint, K, AuthorisationToken, AuthorsationOpts] //will have to change the type definition
 
 	//Data
 	//CapFinder               CapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K]
@@ -154,12 +170,12 @@ type WgpsMessenger[
 	CurrentlyReceivedEntry  types.Entry
 	CurrentlyReceivedOffset uint64
 
-	HandlesPayloadRequestsOurs   handlestore.HandleStore[handlestore.HandleStore[types.AreaOfInterest]] //types.AreaOfInterest is just placehoder
-	HandlesPayloadRequestsTheirs handlestore.HandleStore[handlestore.HandleStore[types.AreaOfInterest]] //types.AreaOfInterest is just placehoder
+	HandlesPayloadRequestsOurs   handlestore.HandleStore
+	HandlesPayloadRequestsTheirs handlestore.HandleStore
 
-	DataSender data.DataSender[Prefingerprint, Fingerprint, AuthorisationToken, DynamicToken, AuthorisationOpts] //Need to change the type definition
+	DataSender data.DataSender[Prefingerprint, Fingerprint, K, AuthorisationToken, DynamicToken, AuthorisationOpts]
 
-	DataPayloadIngester data.PayloadIngester[Prefingerprint, Fingerprint, AuthorisationToken, AuthorsationOpts] //will have to change the type definition
+	//DataPayloadIngester data.PayloadIngester[Prefingerprint, Fingerprint, AuthorisationToken, AuthorsationOpts] //will have to change the type definition
 
 }
 
@@ -240,39 +256,69 @@ func NewWgpsMessenger[
 		AuthorisationOpts,
 		K,
 	]
+	var err error
 
-	if opts.MaxPayloadSizePower < 0 || opts.MaxPayloadSizePower > 64 {
-		return newWgpsMessenger, fmt.Errorf("MaxPayloadSizePower must be a natural number lesser than or equal to 64")
+	newWgpsMessenger.GetStore = opts.GetStore
+	newWgpsMessenger.Schemes = opts.Schemes
+	newWgpsMessenger.Transport, err = transport.NewQuicTransport("localhost:4242")
+	if err != nil {
+		return newWgpsMessenger, err
+
+	}
+	newWgpsMessenger.OutChannelData = GuaranteedQueue{
+		Queue:         make(chan []byte, 32),
+		ReceivedBytes: make([]byte, 1),
+		OutGoingBytes: make([]byte, 1),
+	}
+	newWgpsMessenger.OutChannelReconciliation = GuaranteedQueue{
+		Queue:         make(chan []byte, 32),
+		ReceivedBytes: make([]byte, 1),
+		OutGoingBytes: make([]byte, 1),
+	}
+	newWgpsMessenger.OutChannelPayloadRequest = GuaranteedQueue{
+		Queue:         make(chan []byte, 32),
+		ReceivedBytes: make([]byte, 1),
+		OutGoingBytes: make([]byte, 1),
 	}
 
-	for authorisation, areas := range opts.Interests {
-		if len(areas) == 0 {
-			return newWgpsMessenger, fmt.Errorf("No Area of Interest given")
-		}
+	newWgpsMessenger.InChannelData = make([]wgpstypes.DataChannelMsg, 1)
+	newWgpsMessenger.InChannelReconciliation = make([]wgpstypes.ReconciliationChannelMsg, 1)
+	newWgpsMessenger.InChannelPayloadRequest = make([]wgpstypes.PayloadRequestChannelMsg, 1)
+	newWgpsMessenger.InChannelNone = make([]wgpstypes.NoChannelMsg, 1)
 
-		// Get granted area of authorisation
-		grantedArea := opts.Schemes.AccessControl.GetGrantedArea(
-			(*authorisation).Capability,
-		)
-		for _, aoi := range areas {
-			isWithin := utils.AreaIsIncluded(
-				opts.Schemes.SubspaceScheme.Order,
-				aoi.Area,
-				grantedArea,
-			)
-			if !isWithin {
-				return newWgpsMessenger, fmt.Errorf("Given authorisation is not within authorisation's granted area")
-			}
-		}
+	newWgpsMessenger.CurrentlySentEntry = utils.DefaultEntry(
+		newWgpsMessenger.Schemes.NamespaceScheme.DefaultNamespaceId,
+		newWgpsMessenger.Schemes.SubspaceScheme.MinimalSubspaceId,
+		newWgpsMessenger.Schemes.Payload.DefaultPayloadDigest,
+	)
+	newWgpsMessenger.CurrentlyReceivedEntry = utils.DefaultEntry(
+		newWgpsMessenger.Schemes.NamespaceScheme.DefaultNamespaceId,
+		newWgpsMessenger.Schemes.SubspaceScheme.MinimalSubspaceId,
+		newWgpsMessenger.Schemes.Payload.DefaultPayloadDigest,
+	)
+
+	newWgpsMessenger.HandlesPayloadRequestsOurs = handlestore.HandleStore{
+		Map: handlestore.NewMap(),
 	}
-
- newWgpsMessenger{
-	GetStore : opts.GetStore,
-	Interests: opts.Interests,
-	Schemes : opts.Schemes,
-	Nonce: rand.Read(make([]byte, opts.ChallengeLength)),
-    	
-
-
+	newWgpsMessenger.HandlesPayloadRequestsTheirs = handlestore.HandleStore{
+		Map: handlestore.NewMap(),
+	}
+	newWgpsMessenger.DataSender = data.NewDataSender[
+		Prefingerprint,
+		Fingerprint,
+		K,
+		AuthorisationToken,
+		DynamicToken,
+		AuthorisationOpts,
+	](data.DataSenderOpts[
+		Prefingerprint,
+		Fingerprint,
+		K,
+		AuthorisationToken,
+		DynamicToken,
+		AuthorisationOpts,
+	]{
+		HandlesPayloadRequestsTheirs: newWgpsMessenger.HandlesPayloadRequestsTheirs,
+	})
+	return newWgpsMessenger, nil
 }
-

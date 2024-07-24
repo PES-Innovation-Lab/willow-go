@@ -1,4 +1,4 @@
-package Kdtree
+package kdnode
 
 import (
 	"fmt"
@@ -8,15 +8,16 @@ import (
 
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/PES-Innovation-Lab/willow-go/utils"
+	kdtree "github.com/rishitc/go-kd-tree"
 )
 
-func compareKDNodeKey(a, b KDNodeKey) bool {
+func compareKey(a, b Key) bool {
 	return a.Timestamp == b.Timestamp &&
 		utils.OrderSubspace(a.Subspace, b.Subspace) == 0 &&
 		reflect.DeepEqual(a.Path, b.Path)
 }
 
-func sortKDNodeKeys(keys []KDNodeKey) {
+func sortKeys(keys []Key) {
 	sort.Slice(keys, func(i, j int) bool {
 		if keys[i].Timestamp != keys[j].Timestamp {
 			return keys[i].Timestamp < keys[j].Timestamp
@@ -34,8 +35,8 @@ var TestPathParams types.PathParams[uint8] = types.PathParams[uint8]{
 	MaxPathLength:      50,
 }
 
-func setupKDTree() *KDTree[KDNodeKey] {
-	return NewKDTreeWithValues[KDNodeKey](3, []KDNodeKey{
+func setupKDTree() *kdtree.KDTree[Key] {
+	return kdtree.NewKDTreeWithValues[Key](3, []Key{
 		{
 			Subspace:    []byte("david"),
 			Timestamp:   140,
@@ -105,7 +106,7 @@ func TestQuery(t *testing.T) {
 	tests := []struct {
 		name     string
 		range3d  types.Range3d
-		expected []KDNodeKey
+		expected []Key
 	}{
 		{
 			name: "Whole range",
@@ -126,7 +127,7 @@ func TestQuery(t *testing.T) {
 					OpenEnd: true,
 				},
 			},
-			expected: ListNodes(kdtree.Root),
+			expected: kdtree.Values(),
 		},
 		{
 			name: "Single Subspace",
@@ -147,7 +148,7 @@ func TestQuery(t *testing.T) {
 					OpenEnd: true,
 				},
 			},
-			expected: []KDNodeKey{
+			expected: []Key{
 				{
 					Subspace:    []byte("david"),
 					Timestamp:   140,
@@ -175,7 +176,7 @@ func TestQuery(t *testing.T) {
 					OpenEnd: false,
 				},
 			},
-			expected: []KDNodeKey{},
+			expected: []Key{},
 		},
 		{
 			name: "Open end range - open subspace",
@@ -196,7 +197,7 @@ func TestQuery(t *testing.T) {
 					OpenEnd: false,
 				},
 			},
-			expected: []KDNodeKey{
+			expected: []Key{
 				{
 					Subspace:    []byte("alpha"),
 					Timestamp:   500,
@@ -273,7 +274,7 @@ func TestQuery(t *testing.T) {
 					OpenEnd: false,
 				},
 			},
-			expected: []KDNodeKey{
+			expected: []Key{
 				{
 					Subspace:    []byte("alpha"),
 					Timestamp:   500,
@@ -331,7 +332,7 @@ func TestQuery(t *testing.T) {
 					OpenEnd: true,
 				},
 			},
-			expected: []KDNodeKey{
+			expected: []Key{
 				{
 					Subspace:    []byte("alpha"),
 					Timestamp:   500,
@@ -383,7 +384,7 @@ func TestQuery(t *testing.T) {
 					OpenEnd: true,
 				},
 			},
-			expected: []KDNodeKey{},
+			expected: []Key{},
 		},
 		{
 			name: "Same Path",
@@ -404,7 +405,7 @@ func TestQuery(t *testing.T) {
 					OpenEnd: true,
 				},
 			},
-			expected: []KDNodeKey{},
+			expected: []Key{},
 		},
 		{
 			name: "Same Time",
@@ -425,7 +426,7 @@ func TestQuery(t *testing.T) {
 					OpenEnd: false,
 				},
 			},
-			expected: []KDNodeKey{},
+			expected: []Key{},
 		},
 	}
 
@@ -437,11 +438,11 @@ func TestQuery(t *testing.T) {
 				t.Fatalf("expected %d results, got %d", len(tt.expected), len(res))
 			}
 
-			sortKDNodeKeys(res)
-			sortKDNodeKeys(tt.expected)
+			sortKeys(res)
+			sortKeys(tt.expected)
 
 			for i, exp := range tt.expected {
-				if !compareKDNodeKey(res[i], exp) {
+				if !compareKey(res[i], exp) {
 					t.Errorf("expected result %d to be %v, got %v", i, exp, res[i])
 				}
 			}

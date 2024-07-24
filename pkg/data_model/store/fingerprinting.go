@@ -4,7 +4,7 @@ import (
 	"log"
 	"math"
 
-	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/Kdtree"
+	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/kdnode"
 )
 
 // "fmt"
@@ -15,7 +15,7 @@ import (
 // absolutelty beautiful code
 // TO DO : add routines??
 
-func BuildFingerprints(entries []Kdtree.KDNodeKey) []string {
+func BuildFingerprints(entries []kdnode.Key) []string {
 	// check for empty entries
 	if len(entries) == 0 {
 		log.Fatal(`Empty entry list, line 21, fingerprinting.go`)
@@ -35,7 +35,7 @@ func BuildFingerprints(entries []Kdtree.KDNodeKey) []string {
 	return fptree
 }
 
-func buildHelper(entries []Kdtree.KDNodeKey, fps []string, index int) string {
+func buildHelper(entries []kdnode.Key, fps []string, index int) string {
 	if len(entries) == 1 {
 		fps[index] = entries[0].Fingerprint
 		return entries[0].Fingerprint
@@ -52,7 +52,7 @@ func buildHelper(entries []Kdtree.KDNodeKey, fps []string, index int) string {
 
 // ACTUAL DOG SHIT CODE BRO. how the fuck have i written something this stupid
 
-// func BuildFingerprints(entries []Kdtree.KDNodeKey) []string {
+// func BuildFingerprints(entries []kdnode.Key) []string {
 // 	sort.Slice(entries, func(i, j int) bool {
 // 		return entries[i].Timestamp < entries[j].Timestamp
 // 	})

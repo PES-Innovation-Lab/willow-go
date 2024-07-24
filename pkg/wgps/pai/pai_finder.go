@@ -38,27 +38,31 @@ type LocalFragmentInfo[ReadCapability, SubspaceReadCapability any] struct {
 }
 
 /** Given `ReadAuthorisation`s, emits the intersected ones  */
+
 type Intersection[ReadCapability, SubspaceReadCapability any] struct {
 	NamespaceId       types.NamespaceId
 	ReadAuthorisation wgpstypes.ReadAuthorisation[ReadCapability, SubspaceReadCapability]
 	Uint64            uint64
 }
+
 type BindFragment[PsiGroup any] struct {
 	PsiGroup    PsiGroup
 	IsSecondary bool
 }
+
 type ReplyFragment[PsiGroup any] struct {
 	FragmentGrp uint64
 	PsiGroup    PsiGroup
 }
+
 type SubspaceCapReply[SubspaceReadCapability any] struct {
 	Handle                 uint64
 	SubspaceReadCapability SubspaceReadCapability
 }
 
 type PaiFinder[ReadCapability, PsiGroup, SubspaceReadCapability any, PsiScalar int, K constraints.Unsigned] struct {
-	IntersectionHandlesOurs   handlestore.HandleStore[wgpstypes.Intersection[PsiGroup]]
-	IntersectionHandlesTheirs handlestore.HandleStore[wgpstypes.Intersection[PsiGroup]]
+	IntersectionHandlesOurs   handlestore.HandleStore
+	IntersectionHandlesTheirs handlestore.HandleStore
 
 	IntersectionQueue []Intersection[ReadCapability, SubspaceReadCapability]
 
@@ -253,7 +257,7 @@ func (p *PaiFinder[ReadCapability, PsiGroup, SubspaceReadCapability, PsiScalar, 
 		if !intersection.IsComplete {
 			continue
 		}
-		if !p.PaiScheme.IsGroupEqual(intersection.Group, result.Group) {
+		if !p.PaiScheme.IsGroupEqual(intersection.Group, result) {
 			continue
 		}
 		var FragmentInfo LocalFragmentInfo[ReadCapability, SubspaceReadCapability] = p.FragmentsInfo[ourHandle]
@@ -296,13 +300,13 @@ func (p *PaiFinder[ReadCapability, PsiGroup, SubspaceReadCapability, PsiScalar, 
 }
 
 func (p *PaiFinder[ReadCapability, PsiGroup, SubspaceReadCapability, PsiScalar, K]) CheckForIntersections(handle uint64, ours bool) {
-	var storeToGetHandleFrom handlestore.HandleStore[wgpstypes.Intersection[PsiGroup]]
+	var storeToGetHandleFrom handlestore.HandleStore
 	if ours {
 		storeToGetHandleFrom = p.IntersectionHandlesOurs
 	} else {
 		storeToGetHandleFrom = p.IntersectionHandlesTheirs
 	}
-	var storeToCheckAgainst handlestore.HandleStore[wgpstypes.Intersection[PsiGroup]]
+	var storeToCheckAgainst handlestore.HandleStore
 	if ours {
 		storeToCheckAgainst = p.IntersectionHandlesTheirs
 	} else {

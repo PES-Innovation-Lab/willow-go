@@ -2,6 +2,7 @@ package wgpstypes
 
 import (
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
+	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/store"
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/PES-Innovation-Lab/willow-go/utils"
 	"golang.org/x/exp/constraints"
@@ -26,10 +27,11 @@ func IsBetty(role SyncRole) bool {
 	return role == SyncRoleBetty
 }
 
-type GetStoreFn[Prefingerprint,
+type GetStoreFn[PreFingerPrint,
 	Fingerprint constraints.Ordered,
+	K constraints.Unsigned,
 	AuthorisationToken string,
-	AuthorisationOpts []byte] func(namespace types.NamespaceId)
+	AuthorisationOpts []byte] func(namespace types.NamespaceId) store.Store[PreFingerPrint, Fingerprint, K, AuthorisationOpts, AuthorisationToken]
 
 type ReadAuthorisation[ReadCapability, SubspaceReadCapability any] struct {
 	Capability ReadCapability
@@ -42,8 +44,8 @@ type ReadAuthorisation[ReadCapability, SubspaceReadCapability any] struct {
 
 // Transport defines the interface for communication channels
 type Transport interface {
-	Send(data []byte) error     // Use byte slice instead of Uint8Array
-	Recv() (chan []byte, error) // Returns a receive channel and potential error (PLEASE CHECK IF THIS IS RIGHT)
+	Send(data []byte, channel Channel) error // Use byte slice instead of Uint8Array
+	Recv(channel Channel) ([]byte, error)    // Returns a receive channel and potential error (PLEASE CHECK IF THIS IS RIGHT)
 	Close() error
 	IsClosed() bool
 }
@@ -65,11 +67,12 @@ const (
 	StaticTokenHandle
 )
 
-type LogicalChannel int
+type Channel int
 
 const (
+	ControlChannel Channel = iota
 	/* Logical channel for performing 3d range-based set reconciliation. */
-	ReconciliationChannel LogicalChannel = iota
+	ReconciliationChannel
 	/* Logical channel for transmitting Entries and Payloads outside of 3d range-based set reconciliation. */
 	DataChannel
 	/* Logical channel for controlling the binding of new IntersectionHandles. */
@@ -116,50 +119,50 @@ const (
 // 1. Control messages
 
 /** Make a binding promise of available buffer capacity to the other peer. */
-type MsgControlIssueGuaranteeData struct {
+type ControlIssueGuaranteeData struct {
 	Amount  uint64
-	Channel LogicalChannel
+	Channel Channel
 }
 type MsgControlIssueGuarantee struct {
 	Kind MsgKind
-	Data MsgControlIssueGuaranteeData
+	Data ControlIssueGuaranteeData
 }
 
 /** Allow the other peer to reduce its total buffer capacity by amount. */
-type MsgControlAbsolveData struct {
+type ControlAbsolveData struct {
 	Amount  uint64
-	Channel LogicalChannel
+	Channel Channel
 }
 type MsgControlAbsolve struct {
 	Kind MsgKind
-	Data MsgControlAbsolveData
+	Data ControlAbsolveData
 }
 
 /** Ask the other peer to send an ControlAbsolve message such that the receiver remaining guarantees will be target. */
-type MsgControlPleadData struct {
+type ControlPleadData struct {
 	Target  uint64
-	Channel LogicalChannel
+	Channel Channel
 }
 type MsgControlPlead struct {
 	Kind MsgKind
-	Data MsgControlPleadData
+	Data ControlPleadData
 }
 
-type MsgControlAnnounceDroppingData struct {
-	Channel LogicalChannel
+type ControlAnnounceDroppingData struct {
+	Channel Channel
 }
 type MsgControlAnnounceDropping struct {
 	Kind MsgKind
-	Data MsgControlAnnounceDroppingData
+	Data ControlAnnounceDroppingData
 }
 
 /** Notify the other peer that it can stop dropping messages of this logical channel. */
-type MsgControlApologiseData struct {
-	Channel LogicalChannel
+type ControlApologiseData struct {
+	Channel Channel
 }
 type MsgControlApologise struct {
 	Kind MsgKind
-	Data MsgControlApologiseData
+	Data ControlApologiseData
 }
 
 type MsgControlFreeData struct {

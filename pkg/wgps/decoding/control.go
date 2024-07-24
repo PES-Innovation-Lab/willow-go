@@ -5,7 +5,7 @@ import (
 	"github.com/PES-Innovation-Lab/willow-go/utils"
 )
 
-func DecodeChannelFromBeginningOfByte(bytes int) wgpstypes.LogicalChannel {
+func DecodeChannelFromBeginningOfByte(bytes int) wgpstypes.Channel {
 	if (bytes & 0xc0) == 0xc0 {
 		return wgpstypes.StaticTokenChannel
 	} else if (bytes & 0xa0) == 0xa0 {
@@ -23,7 +23,7 @@ func DecodeChannelFromBeginningOfByte(bytes int) wgpstypes.LogicalChannel {
 	}
 }
 
-func DecodeChannelFromEndOfByte(bytes int) wgpstypes.LogicalChannel {
+func DecodeChannelFromEndOfByte(bytes int) wgpstypes.Channel {
 	if (bytes & 0x6) == 0x6 {
 		return wgpstypes.StaticTokenChannel
 	} else if (bytes & 0x5) == 0x5 {
@@ -68,7 +68,7 @@ func DecodeControlIssueGuarantee(bytes *utils.GrowingBytes) wgpstypes.MsgControl
 
 	return wgpstypes.MsgControlIssueGuarantee{
 		Kind: wgpstypes.ControlAbsolve,
-		Data: wgpstypes.MsgControlIssueGuaranteeData{
+		Data: wgpstypes.ControlIssueGuaranteeData{
 			Channel: Channel,
 			Amount:  uint64(Amount),
 		},
@@ -88,7 +88,7 @@ func DecodeControlAbsolve(bytes *utils.GrowingBytes) wgpstypes.MsgControlAbsolve
 
 	return wgpstypes.MsgControlAbsolve{
 		Kind: wgpstypes.ControlAbsolve,
-		Data: wgpstypes.MsgControlAbsolveData{
+		Data: wgpstypes.ControlAbsolveData{
 			Channel: Channel,
 			Amount:  uint64(Amount),
 		},
@@ -108,7 +108,7 @@ func DecodeControlPlead(bytes *utils.GrowingBytes) wgpstypes.MsgControlPlead {
 
 	return wgpstypes.MsgControlPlead{
 		Kind: wgpstypes.ControlPlead,
-		Data: wgpstypes.MsgControlPleadData{
+		Data: wgpstypes.ControlPleadData{
 			Channel: Channel,
 			Target:  uint64(Target),
 		},
@@ -124,7 +124,7 @@ func DecodeControlAnnounceDropping(bytes *utils.GrowingBytes) wgpstypes.MsgContr
 
 	return wgpstypes.MsgControlAnnounceDropping{
 		Kind: wgpstypes.ControlAnnounceDropping,
-		Data: wgpstypes.MsgControlAnnounceDroppingData{
+		Data: wgpstypes.ControlAnnounceDroppingData{
 			Channel: Channel,
 		},
 	}
@@ -139,7 +139,7 @@ func DecodeControlApologise(bytes *utils.GrowingBytes) wgpstypes.MsgControlApolo
 
 	return wgpstypes.MsgControlApologise{
 		Kind: wgpstypes.ControlApologise,
-		Data: wgpstypes.MsgControlApologiseData{
+		Data: wgpstypes.ControlApologiseData{
 			Channel: Channel,
 		},
 	}

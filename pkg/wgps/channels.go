@@ -4,7 +4,7 @@ import (
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/wgpstypes"
 )
 
-var MsgLogicalChannels = map[wgpstypes.MsgKind]wgpstypes.LogicalChannel{
+var MsgLogicalChannels = map[wgpstypes.MsgKind]wgpstypes.Channel{
 	wgpstypes.PaiBindFragment:                wgpstypes.IntersectionChannel,
 	wgpstypes.PaiReplyFragment:               wgpstypes.IntersectionChannel,
 	wgpstypes.SetupBindReadCapability:        wgpstypes.CapabilityChannel,

@@ -7,13 +7,15 @@ import (
 
 type GuaranteedQueue struct {
 	Guarantees    uint64
-	Queue         []byte
+	Queue         chan []byte
+	ReceivedBytes []byte
 	OutGoingBytes []byte
 }
 
 /** Add some bytes to the queue. */
 func (q *GuaranteedQueue) Push(bytes []byte) {
-	q.Queue = append(q.Queue, bytes...)
+	q.Queue <- bytes
+	q.ReceivedBytes = append(q.ReceivedBytes, bytes...)
 	q.UseGuarantees()
 }
 
@@ -35,20 +37,20 @@ func (q *GuaranteedQueue) Plead(targetSize uint64) uint64 {
 
 func (q *GuaranteedQueue) UseGuarantees() {
 	for len(q.Queue) > 0 {
-		var peekHead = string(q.Queue[0])
+		var peekHead = string((q.ReceivedBytes)[0])
 
 		if len(peekHead) == 0 || len(peekHead) > len(strconv.FormatUint(q.Guarantees, 10)) {
 			return
 		}
 
-		head := q.Queue[0]
-		q.Queue = q.Queue[1:]
+		head := q.ReceivedBytes[0]
+		q.ReceivedBytes = q.ReceivedBytes[1:]
 		q.OutGoingBytes = append(q.OutGoingBytes, head)
 		q.Guarantees -= uint64(len(string(head)))
 	}
 }
 
-func fetchOutgoingBytes(ctx context.Context, outgoingBytes [][]byte) <-chan []byte {
+func fetchOutgoingBytes(ctx context.Context, outgoingBytes [][]byte) chan []byte {
 	ch := make(chan []byte)
 
 	go func() {

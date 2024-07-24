@@ -9,7 +9,7 @@ import (
 )
 
 type EncodedSyncMessage struct {
-	Channel wgpstypes.LogicalChannel
+	Channel wgpstypes.Channel
 	Message []byte
 }
 
@@ -80,7 +80,7 @@ func (me *MessageEncoder[ReadCapability, Receiver, SyncSignature, ReceiverSecret
 }
 
 func (me *MessageEncoder[ReadCapability, Receiver, SyncSignature, ReceiverSecretKey, PsiGroup, PsiScalar, SubspaceCapability, SubspaceReceiver, SyncSubspaceSignature, SubspaceSecretKey, Prefingerprint, Fingerprint, AuthorisationToken, StaticToken, DynamicToken, AuthorisationOpts, K]) Encode(message wgpstypes.SyncMessage) {
-	Push := func(channel wgpstypes.LogicalChannel, message []byte) {
+	Push := func(channel wgpstypes.Channel, message []byte) {
 		me.MessageChannel <- EncodedSyncMessage{Channel: channel, Message: message}
 	}
 

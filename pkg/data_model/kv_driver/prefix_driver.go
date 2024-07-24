@@ -1,19 +1,20 @@
 package kv_driver
 
 import (
-	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/Kdtree"
+	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/kdnode"
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/PES-Innovation-Lab/willow-go/utils"
+	kdtree "github.com/rishitc/go-kd-tree"
 	"golang.org/x/exp/constraints"
 )
 
 type PrefixDriver[PathParamValue constraints.Unsigned] struct{}
 
-func (PD *PrefixDriver[PathParamValue]) DriverPrefixesOf(Subspace types.SubspaceId, Path types.Path, pathParams types.PathParams[PathParamValue], kdt *Kdtree.KDTree[Kdtree.KDNodeKey]) []Kdtree.KDNodeKey {
+func (PD *PrefixDriver[PathParamValue]) DriverPrefixesOf(Subspace types.SubspaceId, Path types.Path, pathParams types.PathParams[PathParamValue], kdt *kdtree.KDTree[kdnode.Key]) []kdnode.Key {
 	prefixes := utils.PrefixesOf(Path)
 	prefixes = prefixes[1:(len(prefixes) - 1)]
 
-	var results []Kdtree.KDNodeKey
+	var results []kdnode.Key
 	// var nothing types.SubspaceId
 
 	for _, prefix := range prefixes {
@@ -41,14 +42,14 @@ func (PD *PrefixDriver[PathParamValue]) DriverPrefixesOf(Subspace types.Subspace
 			TimeRange:     timeRange,
 		}
 
-		queryResults := Kdtree.Query(kdt, range3d)
+		queryResults := kdnode.Query(kdt, range3d)
 		results = append(results, queryResults...)
 
 	}
 	return results
 }
 
-func (PD *PrefixDriver[PathParamValue]) PrefixedBy(Subspace types.SubspaceId, Path types.Path, PathParams types.PathParams[PathParamValue], kdt *(Kdtree.KDTree[Kdtree.KDNodeKey])) []Kdtree.KDNodeKey {
+func (PD *PrefixDriver[PathParamValue]) PrefixedBy(Subspace types.SubspaceId, Path types.Path, PathParams types.PathParams[PathParamValue], kdt *(kdtree.KDTree[kdnode.Key])) []kdnode.Key {
 	// var nothing T
 	subspaceRange := types.Range[types.SubspaceId]{
 		Start:   Subspace,
@@ -73,7 +74,7 @@ func (PD *PrefixDriver[PathParamValue]) PrefixedBy(Subspace types.SubspaceId, Pa
 		PathRange:     pathRange,
 		TimeRange:     timeRange,
 	}
-	res := Kdtree.Query(kdt, range3d)
+	res := kdnode.Query(kdt, range3d)
 
 	return res
 }
