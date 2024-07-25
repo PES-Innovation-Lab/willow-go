@@ -2,8 +2,8 @@ package pai
 
 import (
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
-	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/handlestore"
+	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/syncutils"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/wgpstypes"
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/PES-Innovation-Lab/willow-go/utils"
@@ -13,8 +13,8 @@ import (
 type PaiFinderOpts[ReadCapability, PsiGroup, SubspaceReadCapability any, PsiScalar int, K constraints.Unsigned] struct {
 	NamespaceScheme           datamodeltypes.NamespaceScheme
 	PaiScheme                 wgpstypes.PaiScheme[ReadCapability, PsiGroup, PsiScalar, K]
-	IntersectionHandlesOurs   handlestore.HandleStore
-	IntersectionHandlesTheirs handlestore.HandleStore
+	IntersectionHandlesOurs   handlestore.HandleStore[wgpstypes.Intersection[PsiGroup]]
+	IntersectionHandlesTheirs handlestore.HandleStore[wgpstypes.Intersection[PsiGroup]]
 }
 
 const (
@@ -61,8 +61,8 @@ type SubspaceCapReply[SubspaceReadCapability any] struct {
 }
 
 type PaiFinder[ReadCapability, PsiGroup, SubspaceReadCapability any, PsiScalar int, K constraints.Unsigned] struct {
-	IntersectionHandlesOurs   handlestore.HandleStore
-	IntersectionHandlesTheirs handlestore.HandleStore
+	IntersectionHandlesOurs   handlestore.HandleStore[wgpstypes.Intersection[PsiGroup]]
+	IntersectionHandlesTheirs handlestore.HandleStore[wgpstypes.Intersection[PsiGroup]]
 
 	IntersectionQueue []Intersection[ReadCapability, SubspaceReadCapability]
 
@@ -257,7 +257,7 @@ func (p *PaiFinder[ReadCapability, PsiGroup, SubspaceReadCapability, PsiScalar, 
 		if !intersection.IsComplete {
 			continue
 		}
-		if !p.PaiScheme.IsGroupEqual(intersection.Group, result) {
+		if !p.PaiScheme.IsGroupEqual(intersection.Group, result.Group) {
 			continue
 		}
 		var FragmentInfo LocalFragmentInfo[ReadCapability, SubspaceReadCapability] = p.FragmentsInfo[ourHandle]
@@ -266,7 +266,7 @@ func (p *PaiFinder[ReadCapability, PsiGroup, SubspaceReadCapability, PsiScalar, 
 			//throw an error
 		}
 
-		if !wgps.IsSubspaceReadAuthorisation(FragmentInfo.Authorisation) {
+		if !syncutils.IsSubspaceReadAuthorisation(FragmentInfo.Authorisation) {
 			continue
 		}
 		p.SubspaceCapReplyQueue = append(p.SubspaceCapReplyQueue, SubspaceCapReply[SubspaceReadCapability]{
@@ -300,13 +300,13 @@ func (p *PaiFinder[ReadCapability, PsiGroup, SubspaceReadCapability, PsiScalar, 
 }
 
 func (p *PaiFinder[ReadCapability, PsiGroup, SubspaceReadCapability, PsiScalar, K]) CheckForIntersections(handle uint64, ours bool) {
-	var storeToGetHandleFrom handlestore.HandleStore
+	var storeToGetHandleFrom handlestore.HandleStore[wgpstypes.Intersection[PsiGroup]]
 	if ours {
 		storeToGetHandleFrom = p.IntersectionHandlesOurs
 	} else {
 		storeToGetHandleFrom = p.IntersectionHandlesTheirs
 	}
-	var storeToCheckAgainst handlestore.HandleStore
+	var storeToCheckAgainst handlestore.HandleStore[wgpstypes.Intersection[PsiGroup]]
 	if ours {
 		storeToCheckAgainst = p.IntersectionHandlesTheirs
 	} else {
@@ -397,13 +397,13 @@ func (p *PaiFinder[ReadCapability, PsiGroup, SubspaceReadCapability, PsiScalar, 
 }
 
 func (p *PaiFinder[ReadCapability, PsiGroup, SubspaceReadCapability, PsiScalar, K]) GetIntersectionPrivy(handle uint64, ours bool) wgpstypes.ReadCapPrivy {
-	var storeToGetHandleFrom handlestore.HandleStore
+	var storeToGetHandleFrom handlestore.HandleStore[wgpstypes.Intersection[PsiGroup]]
 	if ours {
 		storeToGetHandleFrom = p.IntersectionHandlesOurs
 	} else {
 		storeToGetHandleFrom = p.IntersectionHandlesTheirs
 	}
-	var storeToCheckAgainst handlestore.HandleStore
+	var storeToCheckAgainst handlestore.HandleStore[wgpstypes.Intersection[PsiGroup]]
 	if ours {
 		storeToCheckAgainst = p.IntersectionHandlesTheirs
 	} else {

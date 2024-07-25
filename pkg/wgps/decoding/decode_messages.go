@@ -27,8 +27,8 @@ type DecodeMessageOpts[
 	AuthorisationOpts []byte,
 	K constraints.Unsigned,
 ] struct {
-	reconciliation.ReconcileMsgTrackerOpts
-	Schemes wgpstypes.SyncSchemes[
+	Reconcile reconciliation.ReconcileMsgTrackerOpts
+	Schemes   wgpstypes.SyncSchemes[
 		ReadCapability,
 		Receiver,
 		SyncSignature,
@@ -92,8 +92,8 @@ func DecodeMessgaes[
 	DynamicToken,
 	AuthorisationOpts,
 	K,
-]) (wgpstypes.SyncMessage, error) {
-	reconcilerMsgTracker := reconciliation.NewReconcileMsgTracker[Fingerprint, DynamicToken](opts)
+]) wgpstypes.SyncMessage {
+	reconcilerMsgTracker := reconciliation.NewReconcileMsgTracker[Fingerprint, DynamicToken](opts.Reconcile)
 
 	bytes := *utils.GrowingBytes(opts.Transport)
 
@@ -103,31 +103,31 @@ func DecodeMessgaes[
 		FirstByte := bytes.Array[0]
 
 		if FirstByte == 0x0 {
-			DecodeCommitmentReveal(bytes, opts.ChallengeLength)
+			return DecodeCommitmentReveal(bytes, opts.ChallengeLength)
 		} else if (FirstByte & 0x98) == 0x98 {
 			// Control aplogise
-			DecodeControlApologise(bytes)
+			return DecodeControlApologise(bytes)
 		} else if (FirstByte & 0x90) == 0x90 {
 			// Control announce dropping
-			DecodeControlAnnounceDropping(bytes)
+			return DecodeControlAnnounceDropping(bytes)
 		} else if (FirstByte & 0x8c) == 0x8c {
 			// Control free
-			DecodeControlFree(bytes)
+			return DecodeControlFree(bytes)
 		} else if (FirstByte & 0x88) == 0x88 {
 			// Control plead
-			DecodeControlPlead(bytes)
+			return DecodeControlPlead(bytes)
 		} else if (FirstByte & 0x84) == 0x84 {
 			// Control Absolve
-			DecodeControlAbsolve(bytes)
+			return DecodeControlAbsolve(bytes)
 		} else if (FirstByte & 0x80) == 0x80 {
 			// Control Issue Guarantee.
-			DecodeControlIssueGuarantee(bytes)
+			return DecodeControlIssueGuarantee(bytes)
 		} else if (FirstByte & 0x70) == 0x70 {
 			// Data Reply Payload
-			DecodeDataReplyPayload(bytes)
+			return DecodeDataReplyPayload(bytes)
 		} else if (FirstByte & 0x6c) == 0x6c {
 			// Data Bind Payload request
-			DecodeDataBindPayloadRequest(bytes, DecodeOpts[K]{
+			return DecodeDataBindPayloadRequest(bytes, DecodeOpts[K]{
 				DecodeNamespaceId:         opts.Schemes.NamespaceScheme.EncodingScheme.DecodeStream,
 				DecodeSubspaceId:          opts.Schemes.SubspaceScheme.EncodingScheme.DecodeStream,
 				PathScheme:                opts.Schemes.PathParams,
@@ -141,9 +141,11 @@ func DecodeMessgaes[
 				if (FirstByte & 0x58) == 0x58 {
 					bytes.Prune(1)
 
-					Kind := wgpstypes.ReconciliationTerminatePayload
+					return wgpstypes.MsgReconciliationSendPayload{
+						Kind: wgpstypes.ReconciliationSendPayload,
+					}
 				} else {
-					DecodeReconciliationSendPayload(bytes)
+					return DecodeReconciliationSendPayload(bytes)
 				}
 			} else if reconcilerMsgTracker.IsExpectingReconciliationSendEntry() {
 				var tracker reconciliation.ReconcileMsgTracker[Fingerprint, DynamicToken]
@@ -156,12 +158,14 @@ func DecodeMessgaes[
 					GetPrivy:            tracker.GetPrivy,
 				})
 				reconcilerMsgTracker.OnSendEntry(Message)
+				return Message
 			} else {
 				Message := DecodeReconciliationAnnounceEntries(bytes, AnnounceOpts[K]{ //NEED TO CHECK ANNOUNCEOPTS ONCE, THERE MIGHT BE A FIELD MISMATCH
 					DecodeSubspaceId: opts.Schemes.SubspaceScheme.EncodingScheme.DecodeStream,
 					PathScheme:       opts.Schemes.PathParams,
 				})
 				reconcilerMsgTracker.OnAnnounceEntries(Message)
+				return Message
 			}
 		} else if (FirstByte & 0x40) == 0x40 {
 			// Reconciliation Send Fingerprint
@@ -172,35 +176,37 @@ func DecodeMessgaes[
 				DecodeSubspaceId:    opts.Schemes.SubspaceScheme.EncodingScheme.DecodeStream,
 				PathScheme:          opts.Schemes.PathParams,
 				GetPrivy:            tracker.GetPrivy,
-				AoiHandlesToRange3d: opts.AoiHandlesToRange3d,
+				AoiHandlesToRange3d: opts.Reconcile.AoiHandlesToRange3d,
 			})
 			reconcilerMsgTracker.OnSendFingerprint(Message)
+			return Message
 		} else if (FirstByte & 0x30) == 0x30 {
 			// Setup Bind Static Token
-			DecodeSetupBindStaticToken(bytes, opts.Schemes.AuthorisationToken.Encodings.StaticToken.DecodeStream)
+			return DecodeSetupBindStaticToken(bytes, opts.Schemes.AuthorisationToken.Encodings.StaticToken.DecodeStream)
 		} else if (FirstByte & 0x28) == 0x28 {
 			// Setup Bind Area of Interest
-			DecodeSetupBindAreaOfInterest(bytes, func(authHandle uint64) types.Area {
+			return DecodeSetupBindAreaOfInterest(bytes, func(authHandle uint64) types.Area {
 				Cap := opts.GetTheirCap(authHandle)
 				return opts.Schemes.AccessControl.GetGrantedArea(Cap)
 			}, opts.Schemes.SubspaceScheme.EncodingScheme.DecodeStream, opts.Schemes.PathParams)
 		} else if (FirstByte & 0x20) == 0x20 {
 			// Setup Bind Read Capability
-			DecodeSetupBindReadCapability(bytes, opts.Schemes.AccessControl.Encodings.ReadCap, opts.GetIntersectionPrivy, opts.Schemes.AccessControl.Encodings.SyncSignature.DecodeStream)
+			return DecodeSetupBindReadCapability(bytes, opts.Schemes.AccessControl.Encodings.ReadCap, opts.GetIntersectionPrivy, opts.Schemes.AccessControl.Encodings.SyncSignature.DecodeStream)
 		} else if (FirstByte & 0x10) == 0x10 {
 			// PAI Reply Subspace Capability
-			DecodePaiReplySubspaceCapability(bytes, opts.Schemes.SubspaceCap.Encodings.SubspaceCapability.DecodeStream, opts.Schemes.SubspaceCap.Encodings.SyncSubspaceSignature.DecodeStream)
+			return DecodePaiReplySubspaceCapability(bytes, opts.Schemes.SubspaceCap.Encodings.SubspaceCapability.DecodeStream, opts.Schemes.SubspaceCap.Encodings.SyncSubspaceSignature.DecodeStream)
 		} else if (FirstByte & 0xc) == 0xc {
 			// PAI Request Subspace Capability
-			DecodePaiRequestSubspaceCapability(bytes)
+			return DecodePaiRequestSubspaceCapability(bytes)
 		} else if (FirstByte & 0x8) == 0x8 {
 			// PAI Reply Fragment
-			DecodePaiReplyFragment(bytes, opts.Schemes.Pai.GroupMemberEncoding.DecodeStream)
+			return DecodePaiReplyFragment(bytes, opts.Schemes.Pai.GroupMemberEncoding.DecodeStream)
 		} else if (FirstByte & 0x4) == 0x4 {
 			// PAI Bind Fragment
-			DecodePaiBindFragment(bytes, opts.Schemes.Pai.GroupMemberEncoding.DecodeStream)
+			return DecodePaiBindFragment(bytes, opts.Schemes.Pai.GroupMemberEncoding.DecodeStream)
 		} else {
 			//throw an error
 		}
 	}
+	return nil
 }
