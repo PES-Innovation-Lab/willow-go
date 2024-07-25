@@ -1,4 +1,4 @@
-package wgps
+package syncutils
 
 import (
 	"fmt"
@@ -13,20 +13,20 @@ func IsSubspaceReadAuthorisation[ReadCapability, SubspaceReadCapability any](aut
 	return false
 }
 
-func AsyncReceive(receiver chan any, callback func(interface{}) error, onEnd func()) {
-	go func() {
-		for {
-			value := <-receiver
-			err := callback(value)
-			if err != nil {
-				fmt.Println("Error in callback:", err)
-				return
+func AsyncReceive[ValueType any](receiver chan ValueType, callback func(ValueType) error, onEnd func()) {
 
-			}
-			if onEnd != nil {
-				onEnd()
-				break
-			}
+	for {
+		value := <-receiver
+		err := callback(value)
+		if err != nil {
+			fmt.Println("Error in callback:", err)
+			return
+
 		}
-	}()
+		if onEnd != nil {
+			onEnd()
+			break
+		}
+	}
+
 }

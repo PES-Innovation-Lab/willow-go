@@ -250,10 +250,10 @@ type MsgSetupBindAreaOfInterest struct {
 	Data MsgSetupBindAreaOfInterestData
 }
 
-type MsgSetupBindStaticTokenData[StaticToken constraints.Ordered] struct {
+type MsgSetupBindStaticTokenData[StaticToken string] struct {
 	StaticToken StaticToken
 }
-type MsgSetupBindStaticToken[StaticToken constraints.Ordered] struct {
+type MsgSetupBindStaticToken[StaticToken string] struct {
 	Kind MsgKind
 	Data MsgSetupBindStaticTokenData[StaticToken]
 }
