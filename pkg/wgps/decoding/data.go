@@ -1,6 +1,8 @@
 package decoding
 
 import (
+	"fmt"
+
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/wgpstypes"
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/PES-Innovation-Lab/willow-go/utils"
@@ -109,7 +111,7 @@ func DecodeDataSendEntry[DynamicToken string, ValueType constraints.Unsigned](by
 			}, bytes, opts.AoiHandlesToArea(SenderHandle, ReceiverHandle), opts.AoiHandlesToNamespace(SenderHandle, ReceiverHandle),
 		) //gotta check this out
 	} else {
-		//throw an error
+		fmt.Errorf("ould not decode entry encoded relative to area when no handles are provided")
 	}
 
 	if !IsOffsetEncoded {
@@ -275,7 +277,7 @@ func DecodeDataBindPayloadRequest[ValueType constraints.Unsigned](bytes *utils.G
 			}, bytes, opts.AoiHandlesToArea(SenderHandle, ReceiverHandle), opts.AoiHandlesToNamespace(SenderHandle, ReceiverHandle),
 		)
 	} else {
-		//throw an error
+		fmt.Errorf("Could not decode")
 	}
 	return wgpstypes.MsgDataBindPayloadRequest{
 		Kind: wgpstypes.DataBindPayloadRequest,
