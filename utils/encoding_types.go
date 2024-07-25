@@ -2,7 +2,6 @@ package utils
 
 import (
 	"github.com/PES-Innovation-Lab/willow-go/types"
-	"golang.org/x/exp/constraints"
 )
 
 // TO DO !!!!
@@ -11,14 +10,14 @@ import (
 
 type StreamDecoder[ValueType any] func(value *GrowingBytes) ValueType
 
-type EncodingScheme[ValueType types.OrderableGeneric] struct {
+type EncodingScheme[ValueType any] struct {
 	Encode        func(value ValueType) []byte
 	Decode        func(encoded []byte) (ValueType, error)
 	EncodedLength func(value ValueType) uint64
-	DecodeStream  func(value *GrowingBytes) (ValueType, error)
+	DecodeStream  func(value *GrowingBytes) chan ValueType
 }
 
-type PrivyEncodingScheme[ValueType types.OrderableGeneric, PrivyType any, K constraints.Unsigned] struct {
+type PrivyEncodingScheme[ValueType types.OrderableGeneric, PrivyType any, K any] struct {
 	// e.g. Value type here is a SetupBindReadCapability
 	// the privy type is what both sides know - in this case,
 	// the outer area and the namespace.

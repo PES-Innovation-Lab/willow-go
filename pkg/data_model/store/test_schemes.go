@@ -22,9 +22,14 @@ var NameSpaceEncoding utils.EncodingScheme[types.NamespaceId] = utils.EncodingSc
 	EncodedLength: func(id types.NamespaceId) uint64 {
 		return uint64(len(id))
 	},
-	DecodeStream: func(value *utils.GrowingBytes) (types.NamespaceId, error) {
-		bytes := value.NextAbsolute(1)
-		return types.NamespaceId(bytes), nil
+	DecodeStream: func(value *utils.GrowingBytes) chan types.NamespaceId {
+		ch := make(chan types.NamespaceId)
+		go func() {
+			bytes := value.NextAbsolute(1)
+			ch <- types.NamespaceId(bytes)
+			close(ch)
+		}()
+		return ch
 	},
 }
 var TestNameSpaceScheme datamodeltypes.NamespaceScheme = datamodeltypes.NamespaceScheme{
@@ -45,9 +50,14 @@ var SubspaceEncoding utils.EncodingScheme[types.SubspaceId] = utils.EncodingSche
 	EncodedLength: func(id types.SubspaceId) uint64 {
 		return uint64(len(id))
 	},
-	DecodeStream: func(value *utils.GrowingBytes) (types.SubspaceId, error) {
-		bytes := value.NextAbsolute(1)
-		return types.SubspaceId(bytes), nil
+	DecodeStream: func(value *utils.GrowingBytes) chan types.SubspaceId {
+		ch := make(chan types.SubspaceId)
+		go func() {
+			bytes := value.NextAbsolute(1)
+			ch <- types.SubspaceId(bytes)
+			close(ch)
+		}()
+		return ch
 	},
 }
 
@@ -80,9 +90,14 @@ var TestAuthorisationScheme datamodeltypes.AuthorisationScheme[[]byte, string] =
 		EncodedLength: func(id string) uint64 {
 			return uint64(len(id))
 		},
-		DecodeStream: func(value *utils.GrowingBytes) (string, error) {
-			bytes := value.NextAbsolute(1)
-			return string(bytes), nil
+		DecodeStream: func(value *utils.GrowingBytes) chan string {
+			ch := make(chan string)
+			go func() {
+				bytes := value.NextAbsolute(1)
+				ch <- string(bytes)
+				close(ch)
+			}()
+			return ch
 		},
 	},
 }

@@ -3,6 +3,7 @@ package decoding
 import (
 	"math"
 
+	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/wgpstypes"
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/PES-Innovation-Lab/willow-go/utils"
@@ -11,8 +12,8 @@ import (
 
 type SendOpts[Fingerprint constraints.Ordered, ValueType constraints.Unsigned] struct {
 	NeutralFingerprint  Fingerprint
-	DecodeFingerprint   func(bytes *utils.GrowingBytes) Fingerprint
-	DecodeSubspaceId    func(bytes *utils.GrowingBytes) types.SubspaceId
+	DecodeFingerprint   func(bytes *utils.GrowingBytes) chan Fingerprint
+	DecodeSubspaceId    func(bytes *utils.GrowingBytes) chan types.SubspaceId
 	PathScheme          types.PathParams[ValueType] //need to check if this is right
 	GetPrivy            func() wgpstypes.ReconciliationPrivy
 	AoiHandlesToRange3d func(senderAoiHandle uint64, receiverAoiHandle uint64) types.Range3d
@@ -50,7 +51,7 @@ func DecodeReconciliationSendFingerprint[Fingerprint constraints.Ordered, ValueT
 	if CoversNotNone {
 		bytes.NextAbsolute(CoversCompactWidth)
 
-		Covers = uint64(utils.DecodeCompactWidth(bytes.Array[:CoversCompactWidth]))
+		Covers, _ = utils.DecodeIntMax64(bytes.Array[:CoversCompactWidth])
 
 		bytes.Prune(CoversCompactWidth)
 	} else {
@@ -60,7 +61,7 @@ func DecodeReconciliationSendFingerprint[Fingerprint constraints.Ordered, ValueT
 	if !IsSenderPrevSender {
 		bytes.NextAbsolute(SenderCompactWidth)
 
-		SenderHandle = uint64(utils.DecodeCompactWidth(bytes.Array[:SenderCompactWidth]))
+		SenderHandle, _ = utils.DecodeIntMax64(bytes.Array[:SenderCompactWidth])
 
 		bytes.Prune(SenderCompactWidth)
 	} else {
@@ -70,7 +71,7 @@ func DecodeReconciliationSendFingerprint[Fingerprint constraints.Ordered, ValueT
 	if !IsReceiverPrevReceiver {
 		bytes.NextAbsolute(ReceiverCompactWidth)
 
-		ReceiverHandle = uint64(utils.DecodeCompactWidth(bytes.Array[:ReceiverCompactWidth]))
+		ReceiverHandle, _ = utils.DecodeIntMax64(bytes.Array[:ReceiverCompactWidth])
 
 		bytes.Prune(ReceiverCompactWidth)
 	} else {
@@ -82,7 +83,7 @@ func DecodeReconciliationSendFingerprint[Fingerprint constraints.Ordered, ValueT
 	if IsFingerprintNeutral {
 		fingerprint = opts.NeutralFingerprint
 	} else {
-		fingerprint = opts.DecodeFingerprint(bytes)
+		fingerprint = <-opts.DecodeFingerprint(bytes)
 	}
 
 	var Outer types.Range3d
@@ -108,14 +109,14 @@ func DecodeReconciliationSendFingerprint[Fingerprint constraints.Ordered, ValueT
 	}
 }
 
-type AnnounceOpts struct {
-	DecodeSubspaceId    func(bytes *utils.GrowingBytes) types.SubspaceId
-	PathScheme          types.PathParams[uint64]
+type AnnounceOpts[ValueType constraints.Unsigned] struct {
+	DecodeSubspaceId    func(bytes *utils.GrowingBytes) chan types.SubspaceId
+	PathScheme          types.PathParams[ValueType]
 	GetPrivy            func() wgpstypes.ReconciliationPrivy
 	AoiHandlesToRange3d func(senderAoiHandle uint64, receiverAoiHandle uint64) types.Range3d
 }
 
-func DecodeReconciliationAnnounceEntries(bytes *utils.GrowingBytes, opts AnnounceOpts) wgpstypes.MsgReconciliationAnnounceEntries {
+func DecodeReconciliationAnnounceEntries[ValueType constraints.Unsigned](bytes *utils.GrowingBytes, opts AnnounceOpts[ValueType]) wgpstypes.MsgReconciliationAnnounceEntries {
 	Privy := opts.GetPrivy()
 
 	bytes.NextAbsolute(2)
@@ -151,7 +152,7 @@ func DecodeReconciliationAnnounceEntries(bytes *utils.GrowingBytes, opts Announc
 
 			bytes.NextAbsolute(CoversCompactWidth)
 
-			Covers = uint64(utils.DecodeCompactWidth(bytes.Array[1 : 1+CoversCompactWidth]))
+			Covers, _ = utils.DecodeIntMax64(bytes.Array[1 : 1+CoversCompactWidth])
 
 			bytes.Prune(1 + CoversCompactWidth)
 		} else {
@@ -169,7 +170,7 @@ func DecodeReconciliationAnnounceEntries(bytes *utils.GrowingBytes, opts Announc
 		SenderCompactWidth := int(math.Pow(2, float64(int((SecondByte)>>6))))
 		bytes.NextAbsolute(SenderCompactWidth)
 
-		SenderHandle = uint64(utils.DecodeCompactWidth(bytes.Array[:SenderCompactWidth]))
+		SenderHandle, _ = utils.DecodeIntMax64(bytes.Array[:SenderCompactWidth])
 
 		bytes.Prune(SenderCompactWidth)
 	} else {
@@ -180,7 +181,7 @@ func DecodeReconciliationAnnounceEntries(bytes *utils.GrowingBytes, opts Announc
 		ReceiverCompactWidth := int(math.Pow(2, float64(int((SecondByte>>4)&0x3))))
 		bytes.NextAbsolute(ReceiverCompactWidth)
 
-		ReceiverHandle = uint64(utils.DecodeCompactWidth(bytes.Array[:ReceiverCompactWidth]))
+		ReceiverHandle, _ = utils.DecodeIntMax64(bytes.Array[:ReceiverCompactWidth])
 
 		bytes.Prune(ReceiverCompactWidth)
 	} else {
@@ -189,7 +190,7 @@ func DecodeReconciliationAnnounceEntries(bytes *utils.GrowingBytes, opts Announc
 
 	bytes.NextAbsolute(CountWidth)
 
-	Count := uint64(utils.DecodeCompactWidth(bytes.Array[:CountWidth]))
+	Count, _ := utils.DecodeIntMax64(bytes.Array[:CountWidth])
 
 	bytes.Prune(CountWidth)
 
@@ -218,13 +219,132 @@ func DecodeReconciliationAnnounceEntries(bytes *utils.GrowingBytes, opts Announc
 	}
 }
 
-type EntryOpts[DynamicToken any] struct {
-	DecodeNamespaceId   func(bytes *utils.GrowingBytes) types.NamespaceId
-	DecodeSubspaceId    func(bytes *utils.GrowingBytes) types.SubspaceId
-	DecodeDynamicToken  func(bytes *utils.GrowingBytes) DynamicToken
-	DecodePayloadDigest func(bytes *utils.GrowingBytes) types.PayloadDigest
-	PathScheme          types.PathParams[uint64]
+type EntryOpts[DynamicToken string, ValueType constraints.Unsigned] struct {
+	DecodeNamespaceId   func(bytes *utils.GrowingBytes) chan types.NamespaceId
+	DecodeSubspaceId    func(bytes *utils.GrowingBytes) chan types.SubspaceId
+	DecodeDynamicToken  func(bytes *utils.GrowingBytes) chan DynamicToken
+	DecodePayloadDigest func(bytes *utils.GrowingBytes) chan types.PayloadDigest
+	PathScheme          types.PathParams[ValueType]
 	GetPrivy            func() wgpstypes.ReconciliationPrivy
 }
 
-func DecodeReconciliationSendEntry[DynamicToken any](bytes *utils.GrowingBytes, opts EntryOpts[DynamicToken])
+func DecodeReconciliationSendEntry[DynamicToken string, ValueType constraints.Unsigned](bytes *utils.GrowingBytes, opts EntryOpts[DynamicToken, ValueType]) wgpstypes.MsgReconciliationSendEntry[DynamicToken] {
+	Privy := opts.GetPrivy()
+
+	bytes.NextAbsolute(1)
+
+	Header := bytes.Array[0]
+
+	IsPrevStaticToken := (Header & 0x8) == 0x8
+	IsEncodedRelativeToPrev := (Header & 0x4) == 0x4
+	CompactWidthAvailable := int(math.Pow(2, float64(int((Header & 0x3)))))
+
+	var StaticTokenHandle uint64
+
+	if IsPrevStaticToken {
+		StaticTokenHandle = Privy.PrevStaticTokenHandle
+		bytes.Prune(1)
+	} else {
+		bytes.NextAbsolute(2)
+		StaticTokensizeByte := bytes.Array[1]
+
+		var CompactWidth int = 0
+
+		if (StaticTokensizeByte & 0xff) == 0xff {
+			CompactWidth = 8
+		} else if (StaticTokensizeByte & 0xbf) == 0xbf {
+			CompactWidth = 4
+		} else if (StaticTokensizeByte & 0x7f) == 0x7f {
+			CompactWidth = 2
+		} else {
+			CompactWidth = 1
+		}
+
+		bytes.NextAbsolute(2 + CompactWidth)
+
+		if StaticTokensizeByte < 63 {
+			StaticTokenHandle = uint64(StaticTokensizeByte)
+		} else {
+			StaticTokenHandle, _ = utils.DecodeIntMax64(bytes.Array[2 : 2+CompactWidth])
+		}
+		bytes.Prune(2 + CompactWidth)
+	}
+
+	bytes.NextAbsolute(CompactWidthAvailable)
+
+	Available, _ := utils.DecodeIntMax64(bytes.Array[:CompactWidthAvailable])
+
+	bytes.Prune(CompactWidthAvailable)
+
+	dynamicToken := opts.DecodeDynamicToken(bytes)
+
+	var decodeResultChan chan utils.DecodeResult
+	var Entry types.Entry
+
+	if IsEncodedRelativeToPrev {
+		decodeResultChan = utils.DecodeStreamEntryRelativeEntry[ValueType](
+			struct {
+				DecodeStreamNamespace     func(bytes *utils.GrowingBytes) chan types.NamespaceId
+				DecodeStreamSubspace      func(bytes *utils.GrowingBytes) chan types.SubspaceId
+				DecodeStreamPayloadDigest func(bytes *utils.GrowingBytes) chan types.PayloadDigest
+				PathScheme                types.PathParams[ValueType]
+			}{
+				DecodeStreamNamespace:     opts.DecodeNamespaceId,
+				DecodeStreamSubspace:      opts.DecodeSubspaceId,
+				DecodeStreamPayloadDigest: opts.DecodePayloadDigest,
+				PathScheme:                opts.PathScheme,
+			}, bytes, Privy.PrevEntry)
+		result := <-decodeResultChan
+		Entry = result.Entry //gotta check this out
+	} else {
+		decodeResultChan = utils.DecodeStreamEntryRelativeRange3d[ValueType](
+			struct {
+				DecodeStreamSubspace      func(bytes *utils.GrowingBytes) chan types.SubspaceId
+				DecodeStreamPayloadDigest func(bytes *utils.GrowingBytes) chan types.PayloadDigest
+				PathScheme                types.PathParams[ValueType]
+			}{
+				DecodeStreamSubspace:      opts.DecodeSubspaceId,
+				DecodeStreamPayloadDigest: opts.DecodePayloadDigest,
+				PathScheme:                opts.PathScheme,
+			}, bytes, Privy.Announced.Range, Privy.Announced.Namespace,
+		)
+	}
+
+	return wgpstypes.MsgReconciliationSendEntry[DynamicToken]{ //need to verify the type of DynamicToken
+		Kind: wgpstypes.ReconciliationSendEntry,
+		Data: wgpstypes.MsgReconciliationSendEntryData[DynamicToken]{
+			Entry: datamodeltypes.LengthyEntry{
+				Available: Available,
+				Entry:     Entry,
+			},
+			DynamicToken:      <-dynamicToken,
+			StaticTokenHandle: StaticTokenHandle,
+		},
+	}
+}
+
+func DecodeReconciliationSendPayload(bytes *utils.GrowingBytes) wgpstypes.MsgReconciliationSendPayload {
+	bytes.NextAbsolute(1)
+
+	AmountCompactWidth := CompactWidthFromEndOfByte(int(bytes.Array[0]))
+
+	bytes.NextAbsolute(1 + AmountCompactWidth)
+
+	Amount, _ := utils.DecodeIntMax64(bytes.Array[1 : 1+AmountCompactWidth])
+
+	bytes.Prune(1 + AmountCompactWidth)
+
+	bytes.NextAbsolute(int(Amount))
+
+	MessageBytes := bytes.Array[:int(Amount)]
+
+	bytes.Prune(int(Amount))
+
+	return wgpstypes.MsgReconciliationSendPayload{
+		Kind: wgpstypes.ReconciliationSendPayload,
+		Data: wgpstypes.MsgReconciliationSendPayloadData{
+			Amount: uint64(Amount),
+			Bytes:  MessageBytes,
+		},
+	}
+}

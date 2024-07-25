@@ -5,7 +5,7 @@ import (
 	"github.com/PES-Innovation-Lab/willow-go/utils"
 )
 
-func ChannelMaskStart(mask int, channel wgpstypes.LogicalChannel) int {
+func ChannelMaskStart(mask int, channel wgpstypes.Channel) int {
 	switch channel {
 	case wgpstypes.ReconciliationChannel:
 		return mask
@@ -26,7 +26,7 @@ func ChannelMaskStart(mask int, channel wgpstypes.LogicalChannel) int {
 	}
 }
 
-func ChannelMaskEnd(mask int, channel wgpstypes.LogicalChannel) int {
+func ChannelMaskEnd(mask int, channel wgpstypes.Channel) int {
 	switch channel {
 	case wgpstypes.ReconciliationChannel:
 		return mask

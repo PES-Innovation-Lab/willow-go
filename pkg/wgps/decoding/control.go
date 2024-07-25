@@ -2,11 +2,10 @@ package decoding
 
 import (
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/wgpstypes"
-	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/PES-Innovation-Lab/willow-go/utils"
 )
 
-func DecodeChannelFromBeginningOfByte(bytes int) wgpstypes.LogicalChannel {
+func DecodeChannelFromBeginningOfByte(bytes int) wgpstypes.Channel {
 	if (bytes & 0xc0) == 0xc0 {
 		return wgpstypes.StaticTokenChannel
 	} else if (bytes & 0xa0) == 0xa0 {
@@ -24,7 +23,7 @@ func DecodeChannelFromBeginningOfByte(bytes int) wgpstypes.LogicalChannel {
 	}
 }
 
-func DecodeChannelFromEndOfByte(bytes int) wgpstypes.LogicalChannel {
+func DecodeChannelFromEndOfByte(bytes int) wgpstypes.Channel {
 	if (bytes & 0x6) == 0x6 {
 		return wgpstypes.StaticTokenChannel
 	} else if (bytes & 0x5) == 0x5 {
@@ -64,12 +63,12 @@ func DecodeControlIssueGuarantee(bytes *utils.GrowingBytes) wgpstypes.MsgControl
 	Channel := DecodeChannelFromBeginningOfByte(int(bytes.Array[1]))
 
 	bytes.NextAbsolute(2 + CompactWidth)
-	Amount := types.DecodeCompactWidth(bytes.Array[2 : 2+CompactWidth]) //TODO: Need to see why this is not defined anywhere
+	Amount, _ := utils.DecodeIntMax64(bytes.Array[2 : 2+CompactWidth]) //TODO: Need to see why this is not defined anywhere
 	bytes.Prune(2 + CompactWidth)
 
 	return wgpstypes.MsgControlIssueGuarantee{
 		Kind: wgpstypes.ControlAbsolve,
-		Data: wgpstypes.MsgControlIssueGuaranteeData{
+		Data: wgpstypes.ControlIssueGuaranteeData{
 			Channel: Channel,
 			Amount:  uint64(Amount),
 		},
@@ -84,12 +83,12 @@ func DecodeControlAbsolve(bytes *utils.GrowingBytes) wgpstypes.MsgControlAbsolve
 	Channel := DecodeChannelFromBeginningOfByte(int(bytes.Array[1]))
 
 	bytes.NextAbsolute(2 + CompactWidth)
-	Amount := types.DecodeCompactWidth(bytes.Array[2 : 2+CompactWidth]) //TODO: Need to see why this is not defined anywhere
+	Amount, _ := utils.DecodeIntMax64(bytes.Array[2 : 2+CompactWidth]) //TODO: Need to see why this is not defined anywhere
 	bytes.Prune(2 + CompactWidth)
 
 	return wgpstypes.MsgControlAbsolve{
 		Kind: wgpstypes.ControlAbsolve,
-		Data: wgpstypes.MsgControlAbsolveData{
+		Data: wgpstypes.ControlAbsolveData{
 			Channel: Channel,
 			Amount:  uint64(Amount),
 		},
@@ -104,12 +103,12 @@ func DecodeControlPlead(bytes *utils.GrowingBytes) wgpstypes.MsgControlPlead {
 	Channel := DecodeChannelFromBeginningOfByte(int(bytes.Array[1]))
 
 	bytes.NextAbsolute(2 + CompactWidth)
-	Target := types.DecodeCompactWidth(bytes.Array[2 : 2+CompactWidth]) //TODO: Need to see why this is not defined anywhere
+	Target, _ := utils.DecodeIntMax64(bytes.Array[2 : 2+CompactWidth]) //TODO: Need to see why this is not defined anywhere
 	bytes.Prune(2 + CompactWidth)
 
 	return wgpstypes.MsgControlPlead{
 		Kind: wgpstypes.ControlPlead,
-		Data: wgpstypes.MsgControlPleadData{
+		Data: wgpstypes.ControlPleadData{
 			Channel: Channel,
 			Target:  uint64(Target),
 		},
@@ -125,7 +124,7 @@ func DecodeControlAnnounceDropping(bytes *utils.GrowingBytes) wgpstypes.MsgContr
 
 	return wgpstypes.MsgControlAnnounceDropping{
 		Kind: wgpstypes.ControlAnnounceDropping,
-		Data: wgpstypes.MsgControlAnnounceDroppingData{
+		Data: wgpstypes.ControlAnnounceDroppingData{
 			Channel: Channel,
 		},
 	}
@@ -140,7 +139,7 @@ func DecodeControlApologise(bytes *utils.GrowingBytes) wgpstypes.MsgControlApolo
 
 	return wgpstypes.MsgControlApologise{
 		Kind: wgpstypes.ControlApologise,
-		Data: wgpstypes.MsgControlApologiseData{
+		Data: wgpstypes.ControlApologiseData{
 			Channel: Channel,
 		},
 	}
@@ -157,7 +156,7 @@ func DecodeControlFree(bytes *utils.GrowingBytes) wgpstypes.MsgControlFree {
 
 	bytes.NextAbsolute(2 + CompactWidth)
 
-	Handle := types.DecodeCompactWidth(bytes.Array[2 : 2+CompactWidth])
+	Handle, _ := utils.DecodeIntMax64(bytes.Array[2 : 2+CompactWidth])
 
 	bytes.Prune(2 + CompactWidth)
 

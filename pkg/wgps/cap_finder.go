@@ -4,14 +4,15 @@ import (
 	"encoding/base64"
 
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
+	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/handlestore"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/wgpstypes"
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/PES-Innovation-Lab/willow-go/utils"
 	"golang.org/x/exp/constraints"
 )
 
-type Options[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey constraints.Ordered, K constraints.Unsigned] struct {
-	HandleStoreOurs HandleStore[ReadCapability]
+type Options[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey any, K constraints.Unsigned] struct {
+	HandleStoreOurs handlestore.HandleStore[ReadCapability]
 	Schemes         struct {
 		Namespace     datamodeltypes.NamespaceScheme
 		Subspace      datamodeltypes.SubspaceScheme
@@ -19,12 +20,12 @@ type Options[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey constrai
 	}
 }
 
-type CapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey constraints.Ordered, K constraints.Unsigned] struct {
+type CapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey any, K constraints.Unsigned] struct {
 	NamespaceMap map[string]map[uint64]struct{}
 	Opts         Options[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K]
 }
 
-func isEmpty[T constraints.Ordered](value T) bool {
+func isEmpty[T any](value T) bool {
 	switch v := any(value).(type) {
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, uintptr:
 		return v == 0
@@ -41,7 +42,7 @@ func isEmpty[T constraints.Ordered](value T) bool {
 }
 
 // NewCapFinder creates a new instance of CapFinder with initialized NamespaceMap.
-func NewCapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey constraints.Ordered, K constraints.Unsigned](opts Options[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K]) *CapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K] {
+func NewCapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey any, K constraints.Unsigned](opts Options[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K]) *CapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K] {
 	return &CapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K]{
 		NamespaceMap: make(map[string]map[uint64]struct{}),
 		Opts:         opts,
@@ -49,10 +50,7 @@ func NewCapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey con
 }
 
 func (c *CapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K]) GetNamespaceKey(namespace types.NamespaceId) (string, error) {
-	encoded, err := c.EncodeNamespace(namespace)
-	if err != nil {
-		return "", err
-	}
+	encoded := c.Opts.Schemes.Namespace.EncodingScheme.Encode(namespace)
 	return base64.StdEncoding.EncodeToString(encoded), nil
 }
 

@@ -6,7 +6,7 @@ import (
 	"github.com/PES-Innovation-Lab/willow-go/utils"
 )
 
-func DecodePaiFragment[PsiGroup types.OrderableGeneric](bytes *utils.GrowingBytes, groupDecoder utils.StreamDecoder[PsiGroup]) wgpstypes.MsgPaiBindFragment[PsiGroup] {
+func DecodePaiBindFragment[PsiGroup types.OrderableGeneric](bytes *utils.GrowingBytes, groupDecoder utils.StreamDecoder[PsiGroup]) wgpstypes.MsgPaiBindFragment[PsiGroup] {
 	bytes.NextAbsolute(1)
 
 	IsSecondary := bytes.Array[0] == 0x6
@@ -29,7 +29,7 @@ func DecodePaiReplyFragment[PsiGroup types.OrderableGeneric](bytes *utils.Growin
 
 	CompactWidth := CompactWidthFromEndOfByte(int(bytes.Array[0]))
 
-	Handle := utils.DecodeCompactWidth(bytes.Array[1 : 1+CompactWidth])
+	Handle, _ := utils.DecodeIntMax64(bytes.Array[1 : 1+CompactWidth])
 
 	bytes.Prune(1 + CompactWidth)
 
@@ -49,7 +49,7 @@ func DecodePaiRequestSubspaceCapability(bytes *utils.GrowingBytes) wgpstypes.Msg
 
 	CompactWidth := CompactWidthFromEndOfByte(int(bytes.Array[0]))
 
-	Handle := utils.DecodeCompactWidth(bytes.Array[1 : 1+CompactWidth])
+	Handle, _ := utils.DecodeIntMax64(bytes.Array[1 : 1+CompactWidth])
 
 	bytes.Prune(1 + CompactWidth)
 
@@ -61,17 +61,17 @@ func DecodePaiRequestSubspaceCapability(bytes *utils.GrowingBytes) wgpstypes.Msg
 	}
 }
 
-func DecodePaiReplySubspaceCapability[SubspaceCapability, SyncSubspaceSignature any](bytes utils.GrowingBytes, decodeCap utils.StreamDecoder[SubspaceCapability], decodeSig utils.StreamDecoder[SyncSubspaceSignature]) wgpstypes.MsgPaiReplySubspaceCapability[SubspaceCapability, SyncSubspaceSignature] { //NEED TO CHANGE THESE TYPE DEFINITIONS
+func DecodePaiReplySubspaceCapability[SubspaceCapability, SyncSubspaceSignature any](bytes *utils.GrowingBytes, decodeCap utils.StreamDecoder[SubspaceCapability], decodeSig utils.StreamDecoder[SyncSubspaceSignature]) wgpstypes.MsgPaiReplySubspaceCapability[SubspaceCapability, SyncSubspaceSignature] { //NEED TO CHANGE THESE TYPE DEFINITIONS
 	bytes.NextAbsolute(1)
 
 	CompactWidth := CompactWidthFromEndOfByte(int(bytes.Array[0]))
 
-	Handle := utils.DecodeCompactWidth(bytes.Array[1 : 1+CompactWidth])
+	Handle, _ := utils.DecodeIntMax64(bytes.Array[1 : 1+CompactWidth])
 
 	bytes.Prune(1 + CompactWidth)
 
-	Capability := decodeCap(&bytes)
-	Signature := decodeSig(&bytes)
+	Capability := decodeCap(bytes)
+	Signature := decodeSig(bytes)
 
 	return wgpstypes.MsgPaiReplySubspaceCapability[SubspaceCapability, SyncSubspaceSignature]{ //need to check this out
 		Kind: wgpstypes.PaiReplySubspaceCapability,

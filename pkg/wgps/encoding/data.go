@@ -7,7 +7,7 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-func EncodeDataSendEntry[DynamicToken constraints.Ordered, K constraints.Unsigned](
+func EncodeDataSendEntry[DynamicToken string, K constraints.Unsigned](
 	msg wgpstypes.MsgDataSendEntry[DynamicToken],
 	opts struct {
 		EncodeDynamicToken  func(token DynamicToken) []byte

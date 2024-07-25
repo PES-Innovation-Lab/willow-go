@@ -2,6 +2,7 @@ package wgpstypes
 
 import (
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
+	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/store"
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/PES-Innovation-Lab/willow-go/utils"
 	"golang.org/x/exp/constraints"
@@ -26,10 +27,11 @@ func IsBetty(role SyncRole) bool {
 	return role == SyncRoleBetty
 }
 
-type GetStoreFn[Prefingerprint,
+type GetStoreFn[PreFingerPrint,
 	Fingerprint constraints.Ordered,
+	K constraints.Unsigned,
 	AuthorisationToken string,
-	AuthorisationOpts []byte] func(namespace types.NamespaceId)
+	AuthorisationOpts []byte] func(namespace types.NamespaceId) store.Store[PreFingerPrint, Fingerprint, K, AuthorisationOpts, AuthorisationToken]
 
 type ReadAuthorisation[ReadCapability, SubspaceReadCapability any] struct {
 	Capability ReadCapability
@@ -42,8 +44,8 @@ type ReadAuthorisation[ReadCapability, SubspaceReadCapability any] struct {
 
 // Transport defines the interface for communication channels
 type Transport interface {
-	Send(data []byte) error     // Use byte slice instead of Uint8Array
-	Recv() (chan []byte, error) // Returns a receive channel and potential error (PLEASE CHECK IF THIS IS RIGHT)
+	Send(data []byte, channel Channel) error // Use byte slice instead of Uint8Array
+	Recv(channel Channel) ([]byte, error)    // Returns a receive channel and potential error (PLEASE CHECK IF THIS IS RIGHT)
 	Close() error
 	IsClosed() bool
 }
@@ -65,11 +67,12 @@ const (
 	StaticTokenHandle
 )
 
-type LogicalChannel int
+type Channel int
 
 const (
+	ControlChannel Channel = iota
 	/* Logical channel for performing 3d range-based set reconciliation. */
-	ReconciliationChannel LogicalChannel = iota
+	ReconciliationChannel
 	/* Logical channel for transmitting Entries and Payloads outside of 3d range-based set reconciliation. */
 	DataChannel
 	/* Logical channel for controlling the binding of new IntersectionHandles. */
@@ -116,50 +119,50 @@ const (
 // 1. Control messages
 
 /** Make a binding promise of available buffer capacity to the other peer. */
-type MsgControlIssueGuaranteeData struct {
+type ControlIssueGuaranteeData struct {
 	Amount  uint64
-	Channel LogicalChannel
+	Channel Channel
 }
 type MsgControlIssueGuarantee struct {
 	Kind MsgKind
-	Data MsgControlIssueGuaranteeData
+	Data ControlIssueGuaranteeData
 }
 
 /** Allow the other peer to reduce its total buffer capacity by amount. */
-type MsgControlAbsolveData struct {
+type ControlAbsolveData struct {
 	Amount  uint64
-	Channel LogicalChannel
+	Channel Channel
 }
 type MsgControlAbsolve struct {
 	Kind MsgKind
-	Data MsgControlAbsolveData
+	Data ControlAbsolveData
 }
 
 /** Ask the other peer to send an ControlAbsolve message such that the receiver remaining guarantees will be target. */
-type MsgControlPleadData struct {
+type ControlPleadData struct {
 	Target  uint64
-	Channel LogicalChannel
+	Channel Channel
 }
 type MsgControlPlead struct {
 	Kind MsgKind
-	Data MsgControlPleadData
+	Data ControlPleadData
 }
 
-type MsgControlAnnounceDroppingData struct {
-	Channel LogicalChannel
+type ControlAnnounceDroppingData struct {
+	Channel Channel
 }
 type MsgControlAnnounceDropping struct {
 	Kind MsgKind
-	Data MsgControlAnnounceDroppingData
+	Data ControlAnnounceDroppingData
 }
 
 /** Notify the other peer that it can stop dropping messages of this logical channel. */
-type MsgControlApologiseData struct {
-	Channel LogicalChannel
+type ControlApologiseData struct {
+	Channel Channel
 }
 type MsgControlApologise struct {
 	Kind MsgKind
-	Data MsgControlApologiseData
+	Data ControlApologiseData
 }
 
 type MsgControlFreeData struct {
@@ -214,12 +217,12 @@ type MsgPaiRequestSubspaceCapability struct {
 }
 
 /** Send a previously requested SubspaceCapability. */
-type MsgPaiReplySubspaceCapabilityData[SubspaceCapability, SyncSubspaceSignature constraints.Ordered] struct {
+type MsgPaiReplySubspaceCapabilityData[SubspaceCapability, SyncSubspaceSignature any] struct {
 	Handle     uint64
 	Capability SubspaceCapability
 	Signature  SyncSubspaceSignature
 }
-type MsgPaiReplySubspaceCapability[SubspaceCapability, SyncSubspaceSignature constraints.Ordered] struct {
+type MsgPaiReplySubspaceCapability[SubspaceCapability, SyncSubspaceSignature any] struct {
 	Kind MsgKind
 	Data MsgPaiReplySubspaceCapabilityData[SubspaceCapability, SyncSubspaceSignature]
 }
@@ -227,12 +230,12 @@ type MsgPaiReplySubspaceCapability[SubspaceCapability, SyncSubspaceSignature con
 // 3. Setup messages
 
 /** Bind a ReadCapability to a CapabilityHandle. */
-type MsgSetupBindReadCapabilityData[ReadCapability, SyncSignature constraints.Ordered] struct {
+type MsgSetupBindReadCapabilityData[ReadCapability, SyncSignature any] struct {
 	Capability ReadCapability
 	Handle     uint64
 	Signature  SyncSignature
 }
-type MsgSetupBindReadCapability[ReadCapability, SyncSignature constraints.Ordered] struct {
+type MsgSetupBindReadCapability[ReadCapability, SyncSignature any] struct {
 	Kind MsgKind
 	Data MsgSetupBindReadCapabilityData[ReadCapability, SyncSignature]
 }
@@ -242,15 +245,15 @@ type MsgSetupBindAreaOfInterestData struct {
 	AreaOfInterest types.AreaOfInterest
 	Authorisation  uint64
 }
-type MsgSetupBindAreaOfinterest struct {
+type MsgSetupBindAreaOfInterest struct {
 	Kind MsgKind
 	Data MsgSetupBindAreaOfInterestData
 }
 
-type MsgSetupBindStaticTokenData[StaticToken constraints.Ordered] struct {
+type MsgSetupBindStaticTokenData[StaticToken string] struct {
 	StaticToken StaticToken
 }
-type MsgSetupBindStaticToken[StaticToken constraints.Ordered] struct {
+type MsgSetupBindStaticToken[StaticToken string] struct {
 	Kind MsgKind
 	Data MsgSetupBindStaticTokenData[StaticToken]
 }
@@ -286,12 +289,12 @@ type MsgReconciliationAnnounceEntries struct {
 }
 
 /** Transmit a LengthyEntry as part of 3d range-based set reconciliation. */
-type MsgReconciliationSendEntryData[DynamicToken constraints.Ordered] struct {
+type MsgReconciliationSendEntryData[DynamicToken string] struct {
 	Entry             datamodeltypes.LengthyEntry
 	StaticTokenHandle uint64
 	DynamicToken      DynamicToken
 }
-type MsgReconciliationSendEntry[DynamicToken constraints.Ordered] struct {
+type MsgReconciliationSendEntry[DynamicToken string] struct {
 	Kind MsgKind
 	Data MsgReconciliationSendEntryData[DynamicToken]
 }
@@ -314,13 +317,13 @@ type MsgReconciliationTerminatePayload struct {
 // 4. Data messages
 
 /** Transmit an AuthorisedEntry to the other peer, and optionally prepare transmission of its Payload. */
-type MsgDataSendEntryData[DynamicToken constraints.Ordered] struct {
+type MsgDataSendEntryData[DynamicToken string] struct {
 	Entry             types.Entry
 	StaticTokenHandle uint64
 	DynamicToken      DynamicToken
 	Offset            uint64
 }
-type MsgDataSendEntry[DynamicToken constraints.Ordered] struct {
+type MsgDataSendEntry[DynamicToken string] struct {
 	Kind MsgKind
 	Data MsgDataSendEntryData[DynamicToken]
 }
@@ -368,6 +371,80 @@ type MsgDataReplyPayload struct {
 
 type SyncMessage interface {
 	IsSyncMessage()
+	GetKind() MsgKind
+}
+
+func (m MsgControlIssueGuarantee) GetKind() MsgKind {
+	return m.Kind
+}
+func (m MsgControlAbsolve) GetKind() MsgKind {
+	return m.Kind
+}
+func (m MsgControlPlead) GetKind() MsgKind {
+	return m.Kind
+}
+func (m MsgControlAnnounceDropping) GetKind() MsgKind {
+	return m.Kind
+}
+func (m MsgControlApologise) GetKind() MsgKind {
+	return m.Kind
+}
+func (m MsgControlFree) GetKind() MsgKind {
+	return m.Kind
+}
+func (m MsgCommitmentReveal) GetKind() MsgKind {
+	return m.Kind
+}
+func (m MsgPaiBindFragment[PsiGroup]) GetKind() MsgKind {
+	return m.Kind
+}
+func (m MsgPaiReplyFragment[PsiGroup]) GetKind() MsgKind {
+	return m.Kind
+}
+func (m MsgPaiRequestSubspaceCapability) GetKind() MsgKind {
+	return m.Kind
+}
+func (m MsgPaiReplySubspaceCapability[SubspaceCapability, SyncSubspaceSignature]) GetKind() MsgKind {
+	return m.Kind
+}
+func (m MsgSetupBindReadCapability[ReadCapability, SyncSignature]) GetKind() MsgKind {
+	return m.Kind
+}
+func (m MsgSetupBindAreaOfInterest) GetKind() MsgKind {
+	return m.Kind
+}
+func (m MsgSetupBindStaticToken[StaticToken]) GetKind() MsgKind {
+	return m.Kind
+}
+func (m MsgReconciliationSendFingerprint[Fingerprint]) GetKind() MsgKind {
+	return m.Kind
+}
+func (m MsgReconciliationAnnounceEntries) GetKind() MsgKind {
+	return m.Kind
+}
+func (m MsgReconciliationSendEntry[DynamicToken]) GetKind() MsgKind {
+	return m.Kind
+}
+func (m MsgReconciliationSendPayload) GetKind() MsgKind {
+	return m.Kind
+}
+func (m MsgReconciliationTerminatePayload) GetKind() MsgKind {
+	return m.Kind
+}
+func (m MsgDataSendEntry[DynamicToken]) GetKind() MsgKind {
+	return m.Kind
+}
+func (m MsgDataSendPayload) GetKind() MsgKind {
+	return m.Kind
+}
+func (m MsgDataSetMetadata) GetKind() MsgKind {
+	return m.Kind
+}
+func (m MsgDataBindPayloadRequest) GetKind() MsgKind {
+	return m.Kind
+}
+func (m MsgDataReplyPayload) GetKind() MsgKind {
+	return m.Kind
 }
 
 func (MsgControlIssueGuarantee) IsSyncMessage()                                                 {}
@@ -382,18 +459,18 @@ func (MsgPaiReplyFragment[PsiGroup]) IsSyncMessage()                            
 func (MsgPaiRequestSubspaceCapability) IsSyncMessage()                                          {}
 func (MsgPaiReplySubspaceCapability[SubspaceCapability, SyncSubspaceSignature]) IsSyncMessage() {}
 func (MsgSetupBindReadCapability[ReadCapability, SyncSignature]) IsSyncMessage()                {}
-func (MsgSetupBindAreaOfinterest) IsSyncMessage()                                               {}
+func (MsgSetupBindAreaOfInterest) IsSyncMessage()                                               {}
 func (MsgSetupBindStaticToken[StaticToken]) IsSyncMessage()                                     {}
 func (MsgReconciliationSendFingerprint[Fingerprint]) IsSyncMessage()                            {}
 func (MsgReconciliationAnnounceEntries) IsSyncMessage()                                         {}
-func (MsgReconciliationSendEntry[DynamicToken]) IsSyncMessage() {
-}
-func (MsgReconciliationSendPayload) IsSyncMessage()      {}
-func (MsgReconciliationTerminatePayload) IsSyncMessage() {}
-func (MsgDataSendPayload) IsSyncMessage()                {}
-func (MsgDataSetMetadata) IsSyncMessage()                {}
-func (MsgDataBindPayloadRequest) IsSyncMessage()         {}
-func (MsgDataReplyPayload) IsSyncMessage()               {}
+func (MsgReconciliationSendEntry[DynamicToken]) IsSyncMessage()                                 {}
+func (MsgReconciliationSendPayload) IsSyncMessage()                                             {}
+func (MsgReconciliationTerminatePayload) IsSyncMessage()                                        {}
+func (MsgDataSendEntry[DynamicToken]) IsSyncMessage()                                           {}
+func (MsgDataSendPayload) IsSyncMessage()                                                       {}
+func (MsgDataSetMetadata) IsSyncMessage()                                                       {}
+func (MsgDataBindPayloadRequest) IsSyncMessage()                                                {}
+func (MsgDataReplyPayload) IsSyncMessage()                                                      {}
 
 // Messages categorised by logical channel
 type ReconciliationChannelMsg interface {
@@ -431,7 +508,7 @@ type AreaOfInterestChannelMsg interface {
 	IsAreaOfInterestChannelMsg()
 }
 
-func (MsgSetupBindAreaOfinterest) IsAreaOfInterestChannelMsg() {}
+func (MsgSetupBindAreaOfInterest) IsAreaOfInterestChannelMsg() {}
 
 type PayloadRequestChannelMsg interface {
 	IsPayloadRequestChannelMsg()
@@ -470,15 +547,9 @@ type ReadCapPrivy struct {
 	Namespace types.NamespaceId
 }
 
-// Define the PrivyEncodingScheme type with generics
-type PrivyEncodingScheme[ReadCapability any, Privy any] struct {
-	ReadCapability ReadCapability
-	Privy          Privy
-}
-
 // Define the ReadCapEncodingScheme type alias
-type ReadCapEncodingScheme[ReadCapability any] struct {
-	PrivyEncodingScheme[ReadCapability, ReadCapPrivy]
+type ReadCapEncodingScheme[ReadCapability any, K any] struct {
+	utils.PrivyEncodingScheme[ReadCapability, ReadCapPrivy, K]
 }
 
 type ReconciliationPrivy struct {
@@ -517,7 +588,7 @@ type SyncSchemes[ReadCapability any,
 	NamespaceScheme    datamodeltypes.NamespaceScheme
 	SubspaceScheme     datamodeltypes.SubspaceScheme
 	PathParams         types.PathParams[K]
-	AuhtorisationToken AuthorisationTokenScheme[AuthorisationToken, StaticToken, DynamicToken]
+	AuthorisationToken AuthorisationTokenScheme[AuthorisationToken, StaticToken, DynamicToken]
 	Payload            datamodeltypes.PayloadScheme
 	Fingerprint        datamodeltypes.FingerprintScheme[Prefingerprint, Fingerprint]
 }
@@ -530,8 +601,8 @@ type AccessControlScheme[SyncSignature, ReadCapability, Receiver, ReceiverSecret
 	Signatures          types.SignatureScheme[Receiver, ReceiverSecretKey, SyncSignature]
 	IsValidCap          func(cap ReadCapability) bool
 	Encodings           struct {
-		ReadCap       ReadCapEncodingScheme[ReadCapability]
-		SyncSignature utils.EncodingScheme[K]
+		ReadCap       ReadCapEncodingScheme[ReadCapability, K]
+		SyncSignature utils.EncodingScheme[SyncSignature]
 	}
 }
 
