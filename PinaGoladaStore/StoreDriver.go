@@ -22,8 +22,8 @@ func InitStorage(nameSpaceId types.NamespaceId) *store.Store[uint64, uint64, uin
 		log.Fatal(err)
 	}
 
-	payloadRefKVstore := kv_driver.KvDriver{Db: payloadRefDb}
-	PayloadReferenceCounter := payloadDriver.PayloadReferenceCounter{
+	payloadRefKVstore := kv_driver.KvDriver[uint8]{Db: payloadRefDb}
+	PayloadReferenceCounter := payloadDriver.PayloadReferenceCounter[uint8]{
 		Store: payloadRefKVstore,
 	}
 
@@ -31,7 +31,7 @@ func InitStorage(nameSpaceId types.NamespaceId) *store.Store[uint64, uint64, uin
 	if err != nil {
 		log.Fatal(err)
 	}
-	entryKvStore := kv_driver.KvDriver{Db: entryDb}
+	entryKvStore := kv_driver.KvDriver[uint8]{Db: entryDb}
 
 	PayloadLock := &sync.Mutex{}
 	TestPayloadDriver := payloadDriver.MakePayloadDriver(fmt.Sprintf("willow/%s/payload", string(nameSpaceId)), TestPayloadScheme, PayloadLock)
@@ -39,7 +39,7 @@ func InitStorage(nameSpaceId types.NamespaceId) *store.Store[uint64, uint64, uin
 	entryDriver := entrydriver.EntryDriver[uint64, uint64, uint8]{
 		PayloadReferenceCounter: PayloadReferenceCounter,
 		Opts: struct {
-			KVDriver          kv_driver.KvDriver
+			KVDriver          kv_driver.KvDriver[uint8]
 			NamespaceScheme   datamodeltypes.NamespaceScheme
 			SubspaceScheme    datamodeltypes.SubspaceScheme
 			PayloadScheme     datamodeltypes.PayloadScheme

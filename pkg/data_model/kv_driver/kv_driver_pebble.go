@@ -204,11 +204,11 @@ func (k *KvDriver[T]) ListValues(aoi types.AreaOfInterest, params types.PathPara
 		}
 
 		//If the Max_count is defined in the aoi, then we check if the values are exceeding the limit
-		//Undefined Max_count or Max_size are 0 values
+		//Undefined MaxCount or MaxSize are 0 values
 		//If the values exceed the limit, we break the loop
 		//We also check if we go past the lower time constraint, if we do we break the loop
 		//Since the keys are ordered wrt to timestamp, this is possible
-		if (aoi.Max_count > 0 && len(values) >= int(aoi.Max_count)) || timestamp < aoi.Area.Times.Start {
+		if (aoi.MaxCount > 0 && len(values) >= int(aoi.MaxCount)) || timestamp < aoi.Area.Times.Start {
 			break
 		}
 
@@ -224,7 +224,7 @@ func (k *KvDriver[T]) ListValues(aoi types.AreaOfInterest, params types.PathPara
 		payloadLength += value.PayloadLength
 
 		//If the Max_size is defined in the aoi, then we check if the values are exceeding the limit
-		if aoi.Max_size > 0 && payloadLength >= aoi.Max_size {
+		if aoi.MaxSize > 0 && payloadLength >= aoi.MaxSize {
 			break
 		}
 
