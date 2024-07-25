@@ -15,7 +15,12 @@ import (
 // absolutelty beautiful code
 // TO DO : add routines??
 
-func BuildFingerprints(entries []kdnode.Key) []string {
+type Node struct {
+	Index int
+	Hash  string
+}
+
+func BuildFingerprints(entries []kdnode.Key) []Node {
 	// check for empty entries
 	if len(entries) == 0 {
 		log.Fatal(`Empty entry list, line 21, fingerprinting.go`)
@@ -29,10 +34,17 @@ func BuildFingerprints(entries []kdnode.Key) []string {
 		buildHelper(entries[0:mid], fptree, 1),
 		buildHelper(entries[mid:], fptree, 2),
 	)
-
 	fptree = ShortenArray(fptree)
+	nodeTree := make([]Node, int(temp))
+	for i, fp := range fptree {
+		newNode := Node{
+			Index: i,
+			Hash:  fp,
+		}
+		nodeTree[i] = newNode
+	}
 
-	return fptree
+	return nodeTree
 }
 
 func buildHelper(entries []kdnode.Key, fps []string, index int) string {
@@ -49,51 +61,6 @@ func buildHelper(entries []kdnode.Key, fps []string, index int) string {
 	fps[index] = fingerprint
 	return fingerprint
 }
-
-// ACTUAL DOG SHIT CODE BRO. how the fuck have i written something this stupid
-
-// func BuildFingerprints(entries []kdnode.Key) []string {
-// 	sort.Slice(entries, func(i, j int) bool {
-// 		return entries[i].Timestamp < entries[j].Timestamp
-// 	})
-
-// 	// calculate the number of layers required in the tree
-// 	level_log := math.Log2(float64(len(entries)))
-// 	level_log = math.Ceil(level_log) // number of levels in the tree in float64
-// 	level_count := uint64(level_log) // number of levels in the tree in uint64
-
-// 	// going for a tree stored as an array
-// 	// length of the array will be 2**(level_count - 1) + len(entries)
-// 	max_len := int(math.Pow(2, level_log-1)) + len(entries) - 1
-// 	fptree := make([]string, max_len)
-// 	leaf_start_index := max_len - len(entries)
-
-// 	// setting the leaf node values
-// 	for _, entry := range entries {
-// 		fptree[leaf_start_index] = entry.Fingerprint
-// 		leaf_start_index++
-// 	}
-
-// 	// now need to calculate the internal nodes 🥵
-// 	// each internal node will be the xor of it's children 💪
-
-// 	// outermost loop decrements through the (max depth - 1) to root level of tree
-// 	for i := level_count; i > 0; i-- {
-// 		index := math.Pow(2, float64(i-1))
-// 		for j := int(index) - 1; j < int(math.Pow(2, float64(i))-1); j++ {
-// 			if j < len(entries) {
-// 				fptree[j] = xorStrings(fptree[2*j+1], fptree[2*j+2])
-// 			}
-// 		}
-// 	}
-// 	return fptree
-// }
-
-// Placeholder for xorStrings function
-// func xorStrings(a, b string) string {
-// 	// Implement the actual XOR logic for simplicity
-// 	return a + b
-// }
 
 // ShortenArray shortens the array to include elements up to the last non-empty string.
 func ShortenArray(arr []string) []string {
@@ -132,4 +99,10 @@ func xorStrings(a, b string) string {
 		result[i] = a[i] ^ b[i]
 	}
 	return string(result)
+}
+
+func SplitRange(NodeTree []Node, node Node) (Node, Node) {
+	leftChild := node.Index*2 + 1
+	rightChild := node.Index*2 + 2
+	return NodeTree[leftChild], NodeTree[rightChild]
 }

@@ -67,7 +67,7 @@ var TestSubspaceScheme datamodeltypes.SubspaceScheme = datamodeltypes.SubspaceSc
 	Order:               utils.OrderSubspace,
 	MinimalSubspaceId:   types.SubspaceId(""),
 }
-var TestFingerprintScheme datamodeltypes.FingerprintScheme[uint64, uint64] = datamodeltypes.FingerprintScheme[uint64, uint64]{} //Dummy scheme
+var TestFingerprintScheme datamodeltypes.FingerprintScheme[string, string] = datamodeltypes.FingerprintScheme[string, string]{} //Dummy scheme
 
 var TestAuthorisationScheme datamodeltypes.AuthorisationScheme[[]byte, string] = datamodeltypes.AuthorisationScheme[[]byte, string]{
 	Authorise: func(entry types.Entry, opts []byte) (string, error) {
@@ -128,7 +128,7 @@ var TestPayloadScheme datamodeltypes.PayloadScheme = datamodeltypes.PayloadSchem
 		return ch
 	},
 }
-var StoreSchemes datamodeltypes.StoreSchemes[uint64, uint64, uint8, []byte, string] = datamodeltypes.StoreSchemes[uint64, uint64, uint8, []byte, string]{
+var StoreSchemes datamodeltypes.StoreSchemes[string, string, uint8, []byte, string] = datamodeltypes.StoreSchemes[string, string, uint8, []byte, string]{
 	PathParams:          TestPathParams,
 	NamespaceScheme:     TestNameSpaceScheme,
 	AuthorisationScheme: TestAuthorisationScheme,

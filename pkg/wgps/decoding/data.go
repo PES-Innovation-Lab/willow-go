@@ -9,7 +9,7 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-type Opts[DynamicToken constraints.Ordered, ValueType constraints.Unsigned] struct {
+type Opts[DynamicToken string, ValueType constraints.Unsigned] struct {
 	DecodeNamespaceId      func(bytes *utils.GrowingBytes) chan types.NamespaceId
 	DecodeSubspaceId       func(bytes *utils.GrowingBytes) chan types.SubspaceId
 	DecodeDynamicToken     func(bytes *utils.GrowingBytes) DynamicToken
@@ -111,7 +111,7 @@ func DecodeDataSendEntry[DynamicToken string, ValueType constraints.Unsigned](by
 			}, bytes, opts.AoiHandlesToArea(SenderHandle, ReceiverHandle), opts.AoiHandlesToNamespace(SenderHandle, ReceiverHandle),
 		) //gotta check this out
 	} else {
-		fmt.Errorf("ould not decode entry encoded relative to area when no handles are provided")
+		fmt.Errorf("could not decode entry encoded relative to area when no handles are provided")
 	}
 
 	if !IsOffsetEncoded {

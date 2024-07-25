@@ -28,7 +28,7 @@ func IsBetty(role SyncRole) bool {
 }
 
 type GetStoreFn[PreFingerPrint,
-	Fingerprint constraints.Ordered,
+	Fingerprint string,
 	K constraints.Unsigned,
 	AuthorisationToken string,
 	AuthorisationOpts []byte] func(namespace types.NamespaceId) store.Store[PreFingerPrint, Fingerprint, K, AuthorisationOpts, AuthorisationToken]
@@ -576,7 +576,7 @@ type SyncSchemes[ReadCapability any,
 	SyncSubspaceSignature,
 	SubspaceSecretKey any,
 	Prefingerprint,
-	Fingerprint constraints.Ordered,
+	Fingerprint string,
 	AuthorisationToken,
 	StaticToken,
 	DynamicToken string,

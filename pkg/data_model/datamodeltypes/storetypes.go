@@ -8,25 +8,25 @@ import (
 )
 
 type ExtendedEntry struct {
-	Entry         types.Entry
+	Entry      types.Entry
 	AuthDigest types.PayloadDigest
 }
 
 type NamespaceScheme struct {
-	EncodingScheme 	   utils.EncodingScheme[types.NamespaceId]
+	EncodingScheme     utils.EncodingScheme[types.NamespaceId]
 	IsEqual            types.EqualityFn[types.NamespaceId]
 	DefaultNamespaceId types.NamespaceId
 }
 
 type SubspaceScheme struct {
-	EncodingScheme  	utils.EncodingScheme[types.SubspaceId]
+	EncodingScheme      utils.EncodingScheme[types.SubspaceId]
 	SuccessorSubspaceFn types.SuccessorFn[types.SubspaceId]
 	Order               types.TotalOrder[types.SubspaceId]
 	MinimalSubspaceId   types.SubspaceId
 }
 
 type PayloadScheme struct {
-	EncodingScheme		 utils.EncodingScheme[types.PayloadDigest]
+	EncodingScheme       utils.EncodingScheme[types.PayloadDigest]
 	FromBytes            func(bytes []byte) chan types.PayloadDigest
 	Order                types.TotalOrder[types.PayloadDigest]
 	DefaultPayloadDigest types.PayloadDigest
@@ -38,8 +38,8 @@ type AuthorisationScheme[AuthorisationOpts []byte, AuthorisationToken string] st
 	TokenEncoding    utils.EncodingScheme[AuthorisationToken]
 }
 
-type FingerprintScheme[PreFingerPrint, FingerPrint constraints.Ordered] struct {
-	FingerPrintSingleton func(entry LengthyEntry) chan PreFingerPrint
+type FingerprintScheme[PreFingerPrint, FingerPrint string] struct {
+	FingerPrintSingleton func(entry LengthyEntry) PreFingerPrint
 	FingerPrintCombine   func(a, b PreFingerPrint) PreFingerPrint
 	FingerPrintFinalise  func(fp PreFingerPrint) FingerPrint
 	Neutral              PreFingerPrint
@@ -48,7 +48,7 @@ type FingerprintScheme[PreFingerPrint, FingerPrint constraints.Ordered] struct {
 	Encoding             utils.EncodingScheme[FingerPrint]
 }
 
-type StoreSchemes[PreFingerPrint, FingerPrint constraints.Ordered, K constraints.Unsigned, AuthorisationOpts []byte, AuthorisationToken string] struct {
+type StoreSchemes[PreFingerPrint, FingerPrint string, K constraints.Unsigned, AuthorisationOpts []byte, AuthorisationToken string] struct {
 	PathParams          types.PathParams[K]
 	NamespaceScheme     NamespaceScheme
 	SubspaceScheme      SubspaceScheme

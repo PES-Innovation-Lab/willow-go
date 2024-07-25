@@ -11,7 +11,7 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-type KDTreeStorage[PreFingerPrint, FingerPrint constraints.Ordered, K constraints.Unsigned] struct {
+type KDTreeStorage[PreFingerPrint, FingerPrint string, K constraints.Unsigned] struct {
 	KDTree *kdtree.KDTree[kdnode.Key]
 
 	Opts struct {

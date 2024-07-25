@@ -15,7 +15,7 @@ import (
 	"github.com/cockroachdb/pebble"
 )
 
-func InitStorage(nameSpaceId types.NamespaceId) *store.Store[uint64, uint64, uint8, []byte, string] {
+func InitStorage(nameSpaceId types.NamespaceId) *store.Store[string, string, uint8, []byte, string] {
 
 	payloadRefDb, err := pebble.Open(fmt.Sprintf("willow/%s/payloadrefcounter", string(nameSpaceId)), &pebble.Options{})
 	if err != nil {
@@ -36,7 +36,7 @@ func InitStorage(nameSpaceId types.NamespaceId) *store.Store[uint64, uint64, uin
 	PayloadLock := &sync.Mutex{}
 	TestPayloadDriver := payloadDriver.MakePayloadDriver(fmt.Sprintf("willow/%s/payload", string(nameSpaceId)), TestPayloadScheme, PayloadLock)
 
-	entryDriver := entrydriver.EntryDriver[uint64, uint64, uint8]{
+	entryDriver := entrydriver.EntryDriver[string, string, uint8]{
 		PayloadReferenceCounter: PayloadReferenceCounter,
 		Opts: struct {
 			KVDriver          kv_driver.KvDriver[uint8]
@@ -44,7 +44,7 @@ func InitStorage(nameSpaceId types.NamespaceId) *store.Store[uint64, uint64, uin
 			SubspaceScheme    datamodeltypes.SubspaceScheme
 			PayloadScheme     datamodeltypes.PayloadScheme
 			PathParams        types.PathParams[uint8]
-			FingerprintScheme datamodeltypes.FingerprintScheme[uint64, uint64]
+			FingerprintScheme datamodeltypes.FingerprintScheme[string, string]
 		}{
 			KVDriver:          entryKvStore,
 			NamespaceScheme:   TestNameSpaceScheme,
@@ -56,7 +56,7 @@ func InitStorage(nameSpaceId types.NamespaceId) *store.Store[uint64, uint64, uin
 	}
 	TestPrefixDriver := kv_driver.PrefixDriver[uint8]{}
 
-	return &store.Store[uint64, uint64, uint8, []byte, string]{
+	return &store.Store[string, string, uint8, []byte, string]{
 		Schemes:            StoreSchemes,
 		EntryDriver:        entryDriver,
 		PayloadDriver:      TestPayloadDriver,
@@ -66,7 +66,7 @@ func InitStorage(nameSpaceId types.NamespaceId) *store.Store[uint64, uint64, uin
 	}
 }
 
-func InitKDTree(WillowStore *store.Store[uint64, uint64, uint8, []byte, string]) {
+func InitKDTree(WillowStore *store.Store[string, string, uint8, []byte, string]) {
 
 	encodedKeyValue, _ := WillowStore.EntryDriver.Opts.KVDriver.ListAllValues()
 	var keys []kdnode.Key
