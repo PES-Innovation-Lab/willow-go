@@ -38,7 +38,7 @@ type MessageEncoder[
 	ReconcileMsgTracker reconciliation.ReconcileMsgTracker[Fingerprint, DynamicToken]
 	Schemes             wgpstypes.SyncSchemes[ReadCapability, Receiver, SyncSignature, ReceiverSecretKey, PsiGroup, PsiScalar, SubspaceCapability, SubspaceReceiver, SyncSubspaceSignature, SubspaceSecretKey, Prefingerprint, Fingerprint, AuthorisationToken, StaticToken, DynamicToken, AuthorisationOpts, K]
 	Opts                struct {
-		reconciliation.ReconcileMsgTrackerOpts
+		Reconcile             reconciliation.ReconcileMsgTrackerOpts
 		GetIntersectionPrivy  func(handle uint64) wgpstypes.ReadCapPrivy
 		GetCap                func(handle uint64) ReadCapability
 		GetCurrentlySentEntry func() types.Entry
@@ -62,7 +62,7 @@ func NewMessageEncoder[ReadCapability any,
 	DynamicToken string,
 	AuthorisationOpts []byte,
 	K constraints.Unsigned](schemes wgpstypes.SyncSchemes[ReadCapability, Receiver, SyncSignature, ReceiverSecretKey, PsiGroup, PsiScalar, SubspaceCapability, SubspaceReceiver, SyncSubspaceSignature, SubspaceSecretKey, Prefingerprint, Fingerprint, AuthorisationToken, StaticToken, DynamicToken, AuthorisationOpts, K], opts struct {
-	reconciliation.ReconcileMsgTrackerOpts
+	Reconcile             reconciliation.ReconcileMsgTrackerOpts
 	GetIntersectionPrivy  func(handle uint64) wgpstypes.ReadCapPrivy
 	GetCap                func(handle uint64) ReadCapability
 	GetCurrentlySentEntry func() types.Entry
@@ -76,7 +76,7 @@ func NewMessageEncoder[ReadCapability any,
 }
 
 func (me *MessageEncoder[ReadCapability, Receiver, SyncSignature, ReceiverSecretKey, PsiGroup, PsiScalar, SubspaceCapability, SubspaceReceiver, SyncSubspaceSignature, SubspaceSecretKey, Prefingerprint, Fingerprint, AuthorisationToken, StaticToken, DynamicToken, AuthorisationOpts, K]) Initialize() {
-	me.ReconcileMsgTracker = *reconciliation.NewReconcileMsgTracker[Fingerprint, DynamicToken](me.Opts)
+	me.ReconcileMsgTracker = *reconciliation.NewReconcileMsgTracker[Fingerprint, DynamicToken](me.Opts.Reconcile)
 }
 
 func (me *MessageEncoder[ReadCapability, Receiver, SyncSignature, ReceiverSecretKey, PsiGroup, PsiScalar, SubspaceCapability, SubspaceReceiver, SyncSubspaceSignature, SubspaceSecretKey, Prefingerprint, Fingerprint, AuthorisationToken, StaticToken, DynamicToken, AuthorisationOpts, K]) Encode(message wgpstypes.SyncMessage) {
