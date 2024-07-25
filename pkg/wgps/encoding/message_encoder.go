@@ -3,8 +3,9 @@ package encoding
 import (
 	"fmt"
 
-	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps"
+	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/channels"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/reconciliation"
+
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/wgpstypes"
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"golang.org/x/exp/constraints"
@@ -40,8 +41,8 @@ type MessageEncoder[
 	Schemes             wgpstypes.SyncSchemes[ReadCapability, Receiver, SyncSignature, ReceiverSecretKey, PsiGroup, PsiScalar, SubspaceCapability, SubspaceReceiver, SyncSubspaceSignature, SubspaceSecretKey, Prefingerprint, Fingerprint, AuthorisationToken, StaticToken, DynamicToken, AuthorisationOpts, K]
 	Opts                struct {
 		reconciliation.ReconcileMsgTrackerOpts
-		GetIntersectionPrivy  func(handle uint64) wgpstypes.ReadCapPrivy
-		GetCap                func(handle uint64) ReadCapability
+		//GetIntersectionPrivy  func(handle uint64) wgpstypes.ReadCapPrivy
+		//GetCap                func(handle uint64) ReadCapability
 		GetCurrentlySentEntry func() types.Entry
 	}
 }
@@ -64,8 +65,8 @@ func NewMessageEncoder[ReadCapability any,
 	AuthorisationOpts []byte,
 	K constraints.Unsigned](schemes wgpstypes.SyncSchemes[ReadCapability, Receiver, SyncSignature, ReceiverSecretKey, PsiGroup, PsiScalar, SubspaceCapability, SubspaceReceiver, SyncSubspaceSignature, SubspaceSecretKey, Prefingerprint, Fingerprint, AuthorisationToken, StaticToken, DynamicToken, AuthorisationOpts, K], opts struct {
 	reconciliation.ReconcileMsgTrackerOpts
-	GetIntersectionPrivy  func(handle uint64) wgpstypes.ReadCapPrivy
-	GetCap                func(handle uint64) ReadCapability
+	//GetIntersectionPrivy  func(handle uint64) wgpstypes.ReadCapPrivy
+	//GetCap                func(handle uint64) ReadCapability
 	GetCurrentlySentEntry func() types.Entry
 }) *MessageEncoder[ReadCapability, Receiver, SyncSignature, ReceiverSecretKey, PsiGroup, PsiScalar, SubspaceCapability, SubspaceReceiver, SyncSubspaceSignature, SubspaceSecretKey, Prefingerprint, Fingerprint, AuthorisationToken, StaticToken, DynamicToken, AuthorisationOpts, K] {
 
@@ -130,13 +131,13 @@ func (me *MessageEncoder[ReadCapability, Receiver, SyncSignature, ReceiverSecret
 
 	// Setup
 	case wgpstypes.MsgSetupBindReadCapability[ReadCapability, SyncSignature]:
-		Privy := me.Opts.GetIntersectionPrivy(msg.Data.Handle)
-		bytes = EncodeSetupBindReadCapability[ReadCapability, SyncSignature](msg, me.Schemes.AccessControl.Encodings.ReadCap, me.Schemes.AccessControl.Encodings.SyncSignature.Encode, Privy)
+		//Privy := me.Opts.GetIntersectionPrivy(msg.Data.Handle)
+		//bytes = EncodeSetupBindReadCapability[ReadCapability, SyncSignature](msg, me.Schemes.AccessControl.Encodings.ReadCap, me.Schemes.AccessControl.Encodings.SyncSignature.Encode, Privy)
 		break
 	case wgpstypes.MsgSetupBindAreaOfInterest:
-		Cap := me.Opts.GetCap(msg.Data.Authorisation)
-		Outer := me.Schemes.AccessControl.GetGrantedArea(Cap)
-		bytes = EncodeSetupBindAreaOfInterest[K](msg, struct {
+		//Cap := me.Opts.GetCap(msg.Data.Authorisation)
+		//Outer := me.Schemes.AccessControl.GetGrantedArea(Cap)
+		/*bytes = EncodeSetupBindAreaOfInterest[K](msg, struct {
 			Outer          types.Area
 			PathScheme     types.PathParams[K]
 			EncodeSubspace func(subspace types.SubspaceId) []byte
@@ -146,7 +147,7 @@ func (me *MessageEncoder[ReadCapability, Receiver, SyncSignature, ReceiverSecret
 			PathScheme:     me.Schemes.PathParams,
 			EncodeSubspace: me.Schemes.SubspaceScheme.EncodingScheme.Encode,
 			OrderSubspace:  me.Schemes.SubspaceScheme.Order,
-		})
+		}) */
 		break
 	case wgpstypes.MsgSetupBindStaticToken[StaticToken]:
 		bytes = EncodeSetupBindStaticToken[StaticToken](msg, me.Schemes.AuthorisationToken.Encodings.StaticToken.Encode)
@@ -268,6 +269,6 @@ func (me *MessageEncoder[ReadCapability, Receiver, SyncSignature, ReceiverSecret
 	default:
 		return fmt.Errorf("did not know how to encode message")
 	}
-	Push(wgps.MsgLogicalChannels[message.GetKind()], bytes)
+	Push(channels.MsgLogicalChannels[message.GetKind()], bytes)
 	return nil
 }

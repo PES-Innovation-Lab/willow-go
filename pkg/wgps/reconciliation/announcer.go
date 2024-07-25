@@ -5,7 +5,8 @@ import (
 
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/store"
-	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps"
+
+	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/handlestore"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/wgpstypes"
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"golang.org/x/exp/constraints"
@@ -14,7 +15,7 @@ import (
 type AnnouncerOpts[AuthorisationToken string, StaticToken, DynamicToken, ValueType constraints.Ordered] struct {
 	AuthorisationTokenScheme   wgpstypes.AuthorisationTokenScheme[AuthorisationToken, StaticToken, DynamicToken]
 	PayloadScheme              datamodeltypes.PayloadScheme
-	StaticTokenHandleStoreOurs wgps.HandleStore[ValueType]
+	StaticTokenHandleStoreOurs handlestore.HandleStore[ValueType]
 }
 
 type AnnouncementPack[StaticToken, DynamicToken constraints.Ordered] struct {
@@ -40,7 +41,7 @@ type AnnouncementPack[StaticToken, DynamicToken constraints.Ordered] struct {
 type Announcer[PreFingerPrint, FingerPrint, StaticToken, DynamicToken, ValueType constraints.Ordered, Authorisationopts []byte, AuthorisationToken string, K constraints.Unsigned] struct {
 	AuthorisationTokenScheme   wgpstypes.AuthorisationTokenScheme[AuthorisationToken, StaticToken, DynamicToken]
 	PayloadScheme              datamodeltypes.PayloadScheme
-	StaticTokenHandleStoreOurs wgps.HandleStore[ValueType]
+	StaticTokenHandleStoreOurs handlestore.HandleStore[ValueType]
 	StaticTokenHandleMap       map[string]uint64
 	AnnouncementPackQueue      chan AnnouncementPack[StaticToken, DynamicToken]
 }
