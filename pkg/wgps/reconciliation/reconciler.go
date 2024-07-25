@@ -184,4 +184,43 @@ func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, Authorisa
 	}
 
 }
-*/
+
+func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, AuthorisationToken]) fingerprints() <-chan struct {
+	Range       types.Range3d
+	FingerPrint FingerPrint
+	Covers      uint64
+} {
+	out := make(chan struct {
+		Range       types.Range3d
+		FingerPrint FingerPrint
+		Covers      uint64
+	})
+	go func() {
+		defer close(out)
+		for details := range r.FingerPrintQueue {
+			out <- details
+		}
+	}()
+	return out
+}
+
+func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, AuthorisationToken]) announcements() <-chan struct {
+	Range        types.Range3d
+	Count        int
+	WantResponse bool
+	Covers       uint64
+} {
+	out := make(chan struct {
+		Range        types.Range3d
+		Count        int
+		WantResponse bool
+		Covers       uint64
+	})
+	go func() {
+		defer close(out)
+		for details := range r.AnnounceQueue {
+			out <- details
+		}
+	}()
+	return out
+}

@@ -5,20 +5,19 @@ import (
 
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/store"
-
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/handlestore"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/wgpstypes"
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"golang.org/x/exp/constraints"
 )
 
-type AnnouncerOpts[AuthorisationToken string, StaticToken, DynamicToken, ValueType constraints.Ordered] struct {
+type AnnouncerOpts[AuthorisationToken, StaticToken, DynamicToken string, ValueType any] struct {
 	AuthorisationTokenScheme   wgpstypes.AuthorisationTokenScheme[AuthorisationToken, StaticToken, DynamicToken]
 	PayloadScheme              datamodeltypes.PayloadScheme
-	StaticTokenHandleStoreOurs handlestore.HandleStore[ValueType]
+	StaticTokenHandleStoreOurs handlestore.HandleStore[StaticToken] //need to check this out
 }
 
-type AnnouncementPack[StaticToken, DynamicToken constraints.Ordered] struct {
+type AnnouncementPack[StaticToken, DynamicToken string] struct {
 	StaticTokenBinds []StaticToken
 
 	// Then send a ReconciliationAnnounceEntries
@@ -38,24 +37,19 @@ type AnnouncementPack[StaticToken, DynamicToken constraints.Ordered] struct {
 	}
 }
 
-type Announcer[PreFingerPrint, FingerPrint, StaticToken, DynamicToken, ValueType constraints.Ordered, Authorisationopts []byte, AuthorisationToken string, K constraints.Unsigned] struct {
+type Announcer[PreFingerPrint, FingerPrint constraints.Ordered, ValueType any, StaticToken, DynamicToken string, AuthorisationOpts []byte, AuthorisationToken string, K constraints.Unsigned] struct {
 	AuthorisationTokenScheme   wgpstypes.AuthorisationTokenScheme[AuthorisationToken, StaticToken, DynamicToken]
 	PayloadScheme              datamodeltypes.PayloadScheme
-	StaticTokenHandleStoreOurs handlestore.HandleStore[ValueType]
+	StaticTokenHandleStoreOurs handlestore.HandleStore[StaticToken]
 	StaticTokenHandleMap       map[string]uint64
 	AnnouncementPackQueue      chan AnnouncementPack[StaticToken, DynamicToken]
 }
 
-func NewAnnouncer[AuthorisationOpts []byte,
-	AuthorisationToken string, PreFingerPrint,
-	FingerPrint, StaticToken, DynamicToken,
-	ValueType constraints.Ordered, K constraints.Unsigned](
+func NewAnnouncer[PreFingerPrint, FingerPrint constraints.Ordered, ValueType any, StaticToken, DynamicToken string, AuthorisationOpts []byte, AuthorisationToken string, K constraints.Unsigned](
 	opts AnnouncerOpts[AuthorisationToken, StaticToken,
-		DynamicToken, ValueType]) *Announcer[PreFingerPrint,
-	FingerPrint, StaticToken, DynamicToken, ValueType,
-	AuthorisationOpts, AuthorisationToken, K] {
+		DynamicToken, ValueType]) *Announcer[PreFingerPrint, FingerPrint, ValueType, StaticToken, DynamicToken, AuthorisationOpts, AuthorisationToken, K] {
 
-	return &Announcer[PreFingerPrint, FingerPrint, StaticToken, DynamicToken, ValueType, AuthorisationOpts, AuthorisationToken, K]{
+	return &Announcer[PreFingerPrint, FingerPrint, ValueType, StaticToken, DynamicToken, AuthorisationOpts, AuthorisationToken, K]{
 		AuthorisationTokenScheme:   opts.AuthorisationTokenScheme,
 		PayloadScheme:              opts.PayloadScheme,
 		StaticTokenHandleStoreOurs: opts.StaticTokenHandleStoreOurs,
@@ -65,7 +59,7 @@ func NewAnnouncer[AuthorisationOpts []byte,
 
 }
 
-func (a *Announcer[PreFingerPrint, FingerPrint, StaticToken, DynamicToken, ValueType, AuthorisationOpts, AuthorisationToken, K]) GetStaticTokenHandle(
+func (a *Announcer[PreFingerPrint, FingerPrint, ValueType, StaticToken, DynamicToken, AuthorisationOpts, AuthorisationToken, K]) GetStaticTokenHandle(
 	staticToken StaticToken,
 ) (struct {
 	Handle         uint64
@@ -87,7 +81,7 @@ func (a *Announcer[PreFingerPrint, FingerPrint, StaticToken, DynamicToken, Value
 			AlreadyExisted: true,
 		}, nil
 	}
-	newHandle := a.StaticTokenHandleStoreOurs.Bind(staticToken, encoded)
+	newHandle := a.StaticTokenHandleStoreOurs.Bind(staticToken)
 	a.StaticTokenHandleMap[string(encoded)] = newHandle
 	return returnStruct{
 		Handle:         newHandle,
@@ -95,7 +89,7 @@ func (a *Announcer[PreFingerPrint, FingerPrint, StaticToken, DynamicToken, Value
 	}, nil
 }
 
-func (a *Announcer[PreFingerPrint, FingerPrint, StaticToken, DynamicToken, ValueType, AuthorisationOpts, AuthorisationToken, K]) QueueAnnounce(
+func (a *Announcer[PreFingerPrint, FingerPrint, ValueType, StaticToken, DynamicToken, AuthorisationOpts, AuthorisationToken, K]) QueueAnnounce(
 	announcement struct {
 		SenderHandle   uint64
 		ReceiverHandle uint64
@@ -114,4 +108,64 @@ func (a *Announcer[PreFingerPrint, FingerPrint, StaticToken, DynamicToken, Value
 		DynamicToken      DynamicToken
 	}{}
 
+	//TODO: Implement QueryRange in Store
+	results := announcement.Store.QueryRange(announcement.Range, oldest)
+
+	for result := range results {
+		entry := result[0]
+		payload := result[1]
+		authToken := result[2]
+
+		staticToken, dynamicToken := a.AuthorisationTokenScheme.DecomposeAuthToken(authToken)
+
+		TokenHandle, _ := a.GetStaticTokenHandle(staticToken)
+
+		staticTokenHandle := TokenHandle.Handle
+		staticTokenHandleAlreadyExisted := TokenHandle.AlreadyExisted
+
+		if !staticTokenHandleAlreadyExisted {
+			staticTokenBinds = append(staticTokenBinds, staticToken)
+		}
+
+		entries = append(entries, struct {
+			LengthyEntry      datamodeltypes.LengthyEntry
+			StaticTokenHandle uint64
+			DynamicToken      DynamicToken
+		}{
+			LengthyEntry:      entry, //need ot change this later
+			StaticTokenHandle: staticTokenHandle,
+			DynamicToken:      dynamicToken,
+		})
+	}
+
+	a.AnnouncementPackQueue <- AnnouncementPack[StaticToken, DynamicToken]{
+		StaticTokenBinds: staticTokenBinds,
+		Announcement: struct {
+			Range          types.Range3d
+			Count          int
+			WantResponse   bool
+			SenderHandle   uint64
+			ReceiverHandle uint64
+			Covers         uint64
+		}{
+			Range:          announcement.Range,
+			Count:          len(entries),
+			WantResponse:   announcement.WantResponse,
+			SenderHandle:   announcement.SenderHandle,
+			ReceiverHandle: announcement.ReceiverHandle,
+			Covers:         announcement.Covers,
+		},
+		Entries: entries,
+	}
+}
+
+func (a *Announcer[PreFingerPrint, FingerPrint, ValueType, StaticToken, DynamicToken, AuthorisationOpts, AuthorisationToken, K]) announcementPacks() <-chan AnnouncementPack[StaticToken, DynamicToken] {
+	out := make(chan AnnouncementPack[StaticToken, DynamicToken])
+	go func() {
+		defer close(out)
+		for pack := range a.AnnouncementPackQueue {
+			out <- pack
+		}
+	}()
+	return out
 }
