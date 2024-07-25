@@ -378,3 +378,13 @@ func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationT
 func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]) List() []kdnode.Key {
 	return s.EntryDriver.Storage.KDTree.Values()
 }
+
+// function to return values present in the area of interest
+func (s *Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]) ListWithAOI(aoi types.AreaOfInterest) ([]types.Entry, error) {
+	entries, err := s.EntryDriver.Opts.KVDriver.ListValues(aoi, s.Schemes.PathParams, s.NameSpaceId)
+
+	if err != nil {
+		return nil, err
+	}
+	return entries, nil
+}

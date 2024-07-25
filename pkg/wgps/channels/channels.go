@@ -1,4 +1,4 @@
-package wgps
+package channels
 
 import (
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/wgpstypes"
