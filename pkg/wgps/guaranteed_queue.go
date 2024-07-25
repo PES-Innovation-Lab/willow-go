@@ -50,7 +50,7 @@ func (q *GuaranteedQueue) UseGuarantees() {
 	}
 }
 
-func fetchOutgoingBytes(ctx context.Context, outgoingBytes [][]byte) chan []byte {
+func FetchOutgoingBytes(ctx context.Context, outgoingBytes [][]byte) chan []byte {
 	ch := make(chan []byte)
 
 	go func() {

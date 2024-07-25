@@ -1,8 +1,14 @@
 package wgps
 
 import (
+	"fmt"
+
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/data"
+	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/encoding"
+	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/reconciliation"
+
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/handlestore"
+	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/syncutils"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/transport"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/wgpstypes"
 	"github.com/PES-Innovation-Lab/willow-go/types"
@@ -10,6 +16,48 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
+type NewMessengerReturn[
+
+	ReadCapability any,
+	Receiver types.SubspaceId,
+	SyncSignature,
+	ReceiverSecretKey,
+	PsiGroup any,
+	PsiScalar int,
+	SubspaceCapability any,
+	SubspaceReceiver types.SubspaceId,
+	SyncSubspaceSignature,
+	SubspaceSecretKey any,
+	Prefingerprint,
+	Fingerprint constraints.Ordered,
+	AuthorisationToken,
+	StaticToken,
+	DynamicToken string,
+	AuthorisationOpts []byte,
+	K constraints.Unsigned,
+
+] struct {
+	NewMessenger *WgpsMessenger[
+		ReadCapability,
+		Receiver,
+		SyncSignature,
+		ReceiverSecretKey,
+		PsiGroup,
+		PsiScalar,
+		SubspaceCapability,
+		SubspaceReceiver,
+		SyncSubspaceSignature,
+		SubspaceSecretKey,
+		Prefingerprint,
+		Fingerprint,
+		AuthorisationToken,
+		StaticToken,
+		DynamicToken,
+		AuthorisationOpts,
+		K,
+	]
+	Error error
+}
 type WgpsMessengerOpts[
 	ReadCapability any,
 	Receiver types.SubspaceId,
@@ -93,22 +141,75 @@ type WgpsMessenger[
 	Closed bool
 	//Interests map[*wgpstypes.ReadAuthorisation[ReadCapability, SubspaceCapability]][]types.AreaOfInterest
 	Transport *transport.QuicTransport
-	//Encoder                  encoding.MessageEncoder //TODO: has to be changed to MessageEncoder
-	OutChannelReconciliation GuaranteedQueue
-	OutChannelData           GuaranteedQueue
-	OutChannelIntersection   GuaranteedQueue
-	OutChannelCapability     GuaranteedQueue
-	OutChannelAreaOfInterest GuaranteedQueue
-	OutChannelPayloadRequest GuaranteedQueue
-	OutChannelStaticToken    GuaranteedQueue
-	InChannelReconciliation  []wgpstypes.ReconciliationChannelMsg
-	InChannelData            []wgpstypes.DataChannelMsg
+
+	InitiatorEncoder *encoding.MessageEncoder[
+		ReadCapability,
+		Receiver,
+		SyncSignature,
+		ReceiverSecretKey,
+		PsiGroup,
+		PsiScalar,
+		SubspaceCapability,
+		SubspaceReceiver,
+		SyncSubspaceSignature,
+		SubspaceSecretKey,
+		Prefingerprint,
+		Fingerprint,
+		AuthorisationToken,
+		StaticToken,
+		DynamicToken,
+		AuthorisationOpts,
+		K,
+	]
+	AcceptedEncoder *encoding.MessageEncoder[
+		ReadCapability,
+		Receiver,
+		SyncSignature,
+		ReceiverSecretKey,
+		PsiGroup,
+		PsiScalar,
+		SubspaceCapability,
+		SubspaceReceiver,
+		SyncSubspaceSignature,
+		SubspaceSecretKey,
+		Prefingerprint,
+		Fingerprint,
+		AuthorisationToken,
+		StaticToken,
+		DynamicToken,
+		AuthorisationOpts,
+		K,
+	]
+	InitiatorOutChannelReconciliation GuaranteedQueue
+	InitiatorOutChannelData           GuaranteedQueue
+	InitiatorOutChannelIntersection   GuaranteedQueue
+	InitiatorOutChannelCapability     GuaranteedQueue
+	InitiatorOutChannelAreaOfInterest GuaranteedQueue
+	InitiatorOutChannelPayloadRequest GuaranteedQueue
+	InitiatorOutChannelStaticToken    GuaranteedQueue
+	AcceptedOutChannelReconciliation  GuaranteedQueue
+	AcceptedOutChannelData            GuaranteedQueue
+	AcceptedOutChannelIntersection    GuaranteedQueue
+	AcceptedOutChannelCapability      GuaranteedQueue
+	AcceptedOutChannelAreaOfInterest  GuaranteedQueue
+	AcceptedOutChannelPayloadRequest  GuaranteedQueue
+	AcceptedOutChannelStaticToken     GuaranteedQueue
+	InitiatorInChannelReconciliation  chan wgpstypes.ReconciliationChannelMsg
+	InitiatorInChannelData            chan wgpstypes.DataChannelMsg
 	//InChannelIntersection    []wgpstypes.IntersectionChannelMsg
 	//InChannelCapability      []wgpstypes.CapabilityChannelMsg
 	//InChannelAreaOfInterest  []wgpstypes.AreaOfInterestChannelMsg
-	InChannelPayloadRequest []wgpstypes.PayloadRequestChannelMsg
-	InChannelStaticToken    []wgpstypes.StaticTokenChannelMsg
-	InChannelNone           []wgpstypes.NoChannelMsg
+	InitiatorInChannelPayloadRequest chan wgpstypes.PayloadRequestChannelMsg
+	InitiatorInChannelStaticToken    chan wgpstypes.StaticTokenChannelMsg
+	InitiatorInChannelNone           chan wgpstypes.NoChannelMsg
+	AcceptedInChannelReconciliation  chan wgpstypes.ReconciliationChannelMsg
+	AcceptedInChannelData            chan wgpstypes.DataChannelMsg
+	//InChannelIntersection    []wgpstypes.IntersectionChannelMsg
+	//InChannelCapability      []wgpstypes.CapabilityChannelMsg
+	//InChannelAreaOfInterest  []wgpstypes.AreaOfInterestChannelMsg
+	AcceptedInChannelPayloadRequest chan wgpstypes.PayloadRequestChannelMsg
+	AcceptedInChannelStaticToken    chan wgpstypes.StaticTokenChannelMsg
+	AcceptedInChannelNone           chan wgpstypes.NoChannelMsg
 
 	// Commitment scheme
 	//MaxPayloadSizePower int
@@ -162,7 +263,7 @@ type WgpsMessenger[
 		Remaining uint64
 		//IsReceiving bool
 	}
-	//ReconciliationPayloadIngester data.PayloadIngester[Prefingerprint, Fingerprint, K, AuthorisationToken, AuthorsationOpts] //will have to change the type definition
+	ReconciliationPayloadIngester data.PayloadIngester[Prefingerprint, Fingerprint, AuthorisationToken, AuthorisationOpts]
 
 	//Data
 	//CapFinder               CapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K]
@@ -175,8 +276,7 @@ type WgpsMessenger[
 
 	DataSender data.DataSender[Prefingerprint, Fingerprint, K, AuthorisationToken, DynamicToken, AuthorisationOpts]
 
-	//DataPayloadIngester data.PayloadIngester[Prefingerprint, Fingerprint, AuthorisationToken, AuthorsationOpts] //will have to change the type definition
-
+	DataPayloadIngester data.PayloadIngester[Prefingerprint, Fingerprint, AuthorisationToken, AuthorisationOpts]
 }
 
 func NewWgpsMessenger[
@@ -217,27 +317,28 @@ func NewWgpsMessenger[
 		AuthorisationOpts,
 		K,
 	],
-) (WgpsMessenger[
-	ReadCapability,
-	Receiver,
-	SyncSignature,
-	ReceiverSecretKey,
-	PsiGroup,
-	PsiScalar,
-	SubspaceCapability,
-	SubspaceReceiver,
-	SyncSubspaceSignature,
-	SubspaceSecretKey,
-	Prefingerprint,
-	Fingerprint,
-	AuthorisationToken,
-	StaticToken,
-	DynamicToken,
-	AuthorisationOpts,
-	K,
-], error) {
+	newMessengerChan chan NewMessengerReturn[
+		ReadCapability,
+		Receiver,
+		SyncSignature,
+		ReceiverSecretKey,
+		PsiGroup,
+		PsiScalar,
+		SubspaceCapability,
+		SubspaceReceiver,
+		SyncSubspaceSignature,
+		SubspaceSecretKey,
+		Prefingerprint,
+		Fingerprint,
+		AuthorisationToken,
+		StaticToken,
+		DynamicToken,
+		AuthorisationOpts,
+		K,
+	],
+) {
 
-	var newWgpsMessenger WgpsMessenger[
+	var newWgpsMessenger *WgpsMessenger[
 		ReadCapability,
 		Receiver,
 		SyncSignature,
@@ -260,31 +361,152 @@ func NewWgpsMessenger[
 
 	newWgpsMessenger.GetStore = opts.GetStore
 	newWgpsMessenger.Schemes = opts.Schemes
-	newWgpsMessenger.Transport, err = transport.NewQuicTransport("localhost:4242")
-	if err != nil {
-		return newWgpsMessenger, err
 
-	}
-	newWgpsMessenger.OutChannelData = GuaranteedQueue{
+	newWgpsMessenger.InitiatorOutChannelData = GuaranteedQueue{
 		Queue:         make(chan []byte, 32),
 		ReceivedBytes: make([]byte, 1),
 		OutGoingBytes: make([]byte, 1),
 	}
-	newWgpsMessenger.OutChannelReconciliation = GuaranteedQueue{
+	newWgpsMessenger.InitiatorOutChannelReconciliation = GuaranteedQueue{
 		Queue:         make(chan []byte, 32),
 		ReceivedBytes: make([]byte, 1),
 		OutGoingBytes: make([]byte, 1),
 	}
-	newWgpsMessenger.OutChannelPayloadRequest = GuaranteedQueue{
+	newWgpsMessenger.InitiatorOutChannelPayloadRequest = GuaranteedQueue{
+		Queue:         make(chan []byte, 32),
+		ReceivedBytes: make([]byte, 1),
+		OutGoingBytes: make([]byte, 1),
+	}
+	newWgpsMessenger.AcceptedOutChannelData = GuaranteedQueue{
+		Queue:         make(chan []byte, 32),
+		ReceivedBytes: make([]byte, 1),
+		OutGoingBytes: make([]byte, 1),
+	}
+	newWgpsMessenger.AcceptedOutChannelReconciliation = GuaranteedQueue{
+		Queue:         make(chan []byte, 32),
+		ReceivedBytes: make([]byte, 1),
+		OutGoingBytes: make([]byte, 1),
+	}
+	newWgpsMessenger.AcceptedOutChannelPayloadRequest = GuaranteedQueue{
 		Queue:         make(chan []byte, 32),
 		ReceivedBytes: make([]byte, 1),
 		OutGoingBytes: make([]byte, 1),
 	}
 
-	newWgpsMessenger.InChannelData = make([]wgpstypes.DataChannelMsg, 1)
-	newWgpsMessenger.InChannelReconciliation = make([]wgpstypes.ReconciliationChannelMsg, 1)
-	newWgpsMessenger.InChannelPayloadRequest = make([]wgpstypes.PayloadRequestChannelMsg, 1)
-	newWgpsMessenger.InChannelNone = make([]wgpstypes.NoChannelMsg, 1)
+	newWgpsMessenger.InitiatorInChannelData = make(chan wgpstypes.DataChannelMsg, 32)
+	newWgpsMessenger.InitiatorInChannelReconciliation = make(chan wgpstypes.ReconciliationChannelMsg, 32)
+	newWgpsMessenger.InitiatorInChannelPayloadRequest = make(chan wgpstypes.PayloadRequestChannelMsg, 32)
+	newWgpsMessenger.InitiatorInChannelNone = make(chan wgpstypes.NoChannelMsg, 32)
+	newWgpsMessenger.AcceptedInChannelData = make(chan wgpstypes.DataChannelMsg, 32)
+	newWgpsMessenger.AcceptedInChannelReconciliation = make(chan wgpstypes.ReconciliationChannelMsg, 32)
+	newWgpsMessenger.AcceptedInChannelPayloadRequest = make(chan wgpstypes.PayloadRequestChannelMsg, 32)
+	newWgpsMessenger.AcceptedInChannelNone = make(chan wgpstypes.NoChannelMsg, 32)
+
+	newWgpsMessenger.ReconciliationPayloadIngester = data.NewPayloadIngester[
+		Prefingerprint,
+		Fingerprint,
+		K,
+		AuthorisationToken,
+		AuthorisationOpts,
+	](data.PayloadIngesterOpts[
+		Prefingerprint,
+		Fingerprint,
+		K,
+		AuthorisationToken,
+		AuthorisationOpts,
+	]{
+		GetStore:               opts.GetStore,
+		ProcessReceivedPayload: opts.ProcessReceivedPayload,
+	})
+
+	newWgpsMessenger.AcceptedEncoder = encoding.NewMessageEncoder[
+		ReadCapability,
+		Receiver,
+		SyncSignature,
+		ReceiverSecretKey,
+		PsiGroup,
+		PsiScalar,
+		SubspaceCapability,
+		SubspaceReceiver,
+		SyncSubspaceSignature,
+		SubspaceSecretKey,
+		Prefingerprint,
+		Fingerprint,
+		AuthorisationToken,
+		StaticToken,
+		DynamicToken,
+		AuthorisationOpts,
+		K,
+	](newWgpsMessenger.Schemes,
+		struct {
+			reconciliation.ReconcileMsgTrackerOpts
+			//GetIntersectionPrivy  func(handle uint64) wgpstypes.ReadCapPrivy
+			//GetCap                func(handle uint64) ReadCapability
+			GetCurrentlySentEntry func() types.Entry
+		}{
+			reconciliation.ReconcileMsgTrackerOpts{
+				DefaultNamespaceId:   newWgpsMessenger.Schemes.NamespaceScheme.DefaultNamespaceId,
+				DefaultSubspaceId:    newWgpsMessenger.Schemes.SubspaceScheme.MinimalSubspaceId,
+				DefaultPayloadDigest: newWgpsMessenger.Schemes.Payload.DefaultPayloadDigest,
+			},
+			func() types.Entry {
+
+				return newWgpsMessenger.CurrentlySentEntry
+
+			}},
+	)
+
+	newWgpsMessenger.InitiatorEncoder = encoding.NewMessageEncoder[
+		ReadCapability,
+		Receiver,
+		SyncSignature,
+		ReceiverSecretKey,
+		PsiGroup,
+		PsiScalar,
+		SubspaceCapability,
+		SubspaceReceiver,
+		SyncSubspaceSignature,
+		SubspaceSecretKey,
+		Prefingerprint,
+		Fingerprint,
+		AuthorisationToken,
+		StaticToken,
+		DynamicToken,
+		AuthorisationOpts,
+		K,
+	](newWgpsMessenger.Schemes,
+		struct {
+			reconciliation.ReconcileMsgTrackerOpts
+			//GetIntersectionPrivy  func(handle uint64) wgpstypes.ReadCapPrivy
+			//GetCap                func(handle uint64) ReadCapability
+			GetCurrentlySentEntry func() types.Entry
+		}{
+			reconciliation.ReconcileMsgTrackerOpts{
+				DefaultNamespaceId:   newWgpsMessenger.Schemes.NamespaceScheme.DefaultNamespaceId,
+				DefaultSubspaceId:    newWgpsMessenger.Schemes.SubspaceScheme.MinimalSubspaceId,
+				DefaultPayloadDigest: newWgpsMessenger.Schemes.Payload.DefaultPayloadDigest,
+			},
+			func() types.Entry {
+
+				return newWgpsMessenger.CurrentlySentEntry
+
+			}},
+	)
+
+	newWgpsMessenger.HandlesStaticTokenOurs = handlestore.HandleStore[StaticToken]{
+		Map: handlestore.NewMap[StaticToken](),
+	}
+
+	newWgpsMessenger.HandlesStaticTokenTheirs = handlestore.HandleStore[StaticToken]{
+		Map: handlestore.NewMap[StaticToken](),
+	}
+	newWgpsMessenger.HandlesAoisOurs = handlestore.HandleStore[types.AreaOfInterest]{
+		Map: handlestore.NewMap[types.AreaOfInterest](),
+	}
+
+	newWgpsMessenger.HandlesAoisTheirs = handlestore.HandleStore[types.AreaOfInterest]{
+		Map: handlestore.NewMap[types.AreaOfInterest](),
+	}
 
 	newWgpsMessenger.CurrentlySentEntry = utils.DefaultEntry(
 		newWgpsMessenger.Schemes.NamespaceScheme.DefaultNamespaceId,
@@ -320,5 +542,292 @@ func NewWgpsMessenger[
 	]{
 		HandlesPayloadRequestsTheirs: newWgpsMessenger.HandlesPayloadRequestsTheirs,
 	})
-	return newWgpsMessenger, nil
+
+	newWgpsMessenger.DataPayloadIngester = data.NewPayloadIngester[
+		Prefingerprint,
+		Fingerprint,
+		K,
+		AuthorisationToken,
+		AuthorisationOpts,
+	](data.PayloadIngesterOpts[
+		Prefingerprint,
+		Fingerprint,
+		K,
+		AuthorisationToken,
+		AuthorisationOpts,
+	]{
+		GetStore:               opts.GetStore,
+		ProcessReceivedPayload: opts.ProcessReceivedPayload,
+	})
+
+	go syncutils.AsyncReceive[encoding.EncodedSyncMessage](newWgpsMessenger.InitiatorEncoder.MessageChannel, func(msg encoding.EncodedSyncMessage) error {
+		switch msg.Channel {
+		case wgpstypes.ReconciliationChannel:
+			newWgpsMessenger.InitiatorOutChannelReconciliation.Push(msg.Message)
+
+		}
+		return nil
+	}, nil)
+
+	go syncutils.AsyncReceive[encoding.EncodedSyncMessage](newWgpsMessenger.AcceptedEncoder.MessageChannel, func(msg encoding.EncodedSyncMessage) error {
+		switch msg.Channel {
+		case wgpstypes.ReconciliationChannel:
+			newWgpsMessenger.AcceptedOutChannelReconciliation.Push(msg.Message)
+
+		}
+		return nil
+	}, nil)
+
+	go syncutils.AsyncReceive[[]byte](newWgpsMessenger.AcceptedOutChannelData.Queue, func(value []byte) error {
+		err := newWgpsMessenger.Transport.Send(value, wgpstypes.DataChannel, wgpstypes.SyncRoleBetty)
+		return err
+	}, nil)
+	go syncutils.AsyncReceive[[]byte](newWgpsMessenger.AcceptedOutChannelReconciliation.Queue, func(value []byte) error {
+		err := newWgpsMessenger.Transport.Send(value, wgpstypes.ReconciliationChannel, wgpstypes.SyncRoleBetty)
+		return err
+	}, nil)
+	go syncutils.AsyncReceive[[]byte](newWgpsMessenger.AcceptedOutChannelPayloadRequest.Queue, func(value []byte) error {
+		err := newWgpsMessenger.Transport.Send(value, wgpstypes.PayloadRequestChannel, wgpstypes.SyncRoleBetty)
+		return err
+	}, nil)
+	go syncutils.AsyncReceive[[]byte](newWgpsMessenger.AcceptedOutChannelStaticToken.Queue, func(value []byte) error {
+		err := newWgpsMessenger.Transport.Send(value, wgpstypes.StaticTokenChannel, wgpstypes.SyncRoleBetty)
+		return err
+	}, nil)
+	go syncutils.AsyncReceive[[]byte](newWgpsMessenger.AcceptedOutChannelCapability.Queue, func(value []byte) error {
+		err := newWgpsMessenger.Transport.Send(value, wgpstypes.CapabilityChannel, wgpstypes.SyncRoleBetty)
+		return err
+	}, nil)
+	go syncutils.AsyncReceive[[]byte](newWgpsMessenger.AcceptedOutChannelIntersection.Queue, func(value []byte) error {
+		err := newWgpsMessenger.Transport.Send(value, wgpstypes.IntersectionChannel, wgpstypes.SyncRoleBetty)
+		return err
+	}, nil)
+	go syncutils.AsyncReceive[[]byte](newWgpsMessenger.AcceptedOutChannelAreaOfInterest.Queue, func(value []byte) error {
+		err := newWgpsMessenger.Transport.Send(value, wgpstypes.AreaOfInterestChannel, wgpstypes.SyncRoleBetty)
+		return err
+	}, nil)
+	go syncutils.AsyncReceive[[]byte](newWgpsMessenger.InitiatorOutChannelData.Queue, func(value []byte) error {
+		err := newWgpsMessenger.Transport.Send(value, wgpstypes.DataChannel, wgpstypes.SyncRoleAlfie)
+		return err
+	}, nil)
+	go syncutils.AsyncReceive[[]byte](newWgpsMessenger.InitiatorOutChannelReconciliation.Queue, func(value []byte) error {
+		err := newWgpsMessenger.Transport.Send(value, wgpstypes.ReconciliationChannel, wgpstypes.SyncRoleAlfie)
+		return err
+	}, nil)
+	go syncutils.AsyncReceive[[]byte](newWgpsMessenger.InitiatorOutChannelPayloadRequest.Queue, func(value []byte) error {
+		err := newWgpsMessenger.Transport.Send(value, wgpstypes.PayloadRequestChannel, wgpstypes.SyncRoleAlfie)
+		return err
+	}, nil)
+	go syncutils.AsyncReceive[[]byte](newWgpsMessenger.InitiatorOutChannelStaticToken.Queue, func(value []byte) error {
+		err := newWgpsMessenger.Transport.Send(value, wgpstypes.StaticTokenChannel, wgpstypes.SyncRoleAlfie)
+		return err
+	}, nil)
+	go syncutils.AsyncReceive[[]byte](newWgpsMessenger.InitiatorOutChannelCapability.Queue, func(value []byte) error {
+		err := newWgpsMessenger.Transport.Send(value, wgpstypes.CapabilityChannel, wgpstypes.SyncRoleAlfie)
+		return err
+	}, nil)
+	go syncutils.AsyncReceive[[]byte](newWgpsMessenger.InitiatorOutChannelIntersection.Queue, func(value []byte) error {
+		err := newWgpsMessenger.Transport.Send(value, wgpstypes.IntersectionChannel, wgpstypes.SyncRoleAlfie)
+		return err
+	}, nil)
+	go syncutils.AsyncReceive[[]byte](newWgpsMessenger.InitiatorOutChannelAreaOfInterest.Queue, func(value []byte) error {
+		err := newWgpsMessenger.Transport.Send(value, wgpstypes.AreaOfInterestChannel, wgpstypes.SyncRoleAlfie)
+		return err
+	}, nil)
+
+	newWgpsMessenger.Transport, err = transport.NewQuicTransport("localhost:4242")
+	if err != nil {
+
+		newMessengerChan <- NewMessengerReturn[
+			ReadCapability,
+			Receiver,
+			SyncSignature,
+			ReceiverSecretKey,
+			PsiGroup,
+			PsiScalar,
+			SubspaceCapability,
+			SubspaceReceiver,
+			SyncSubspaceSignature,
+			SubspaceSecretKey,
+			Prefingerprint,
+			Fingerprint,
+			AuthorisationToken,
+			StaticToken,
+			DynamicToken,
+			AuthorisationOpts,
+			K,
+		]{
+			NewMessenger: newWgpsMessenger,
+			Error:        err,
+		}
+		return
+
+	}
+
+	newMessengerChan <- NewMessengerReturn[
+		ReadCapability,
+		Receiver,
+		SyncSignature,
+		ReceiverSecretKey,
+		PsiGroup,
+		PsiScalar,
+		SubspaceCapability,
+		SubspaceReceiver,
+		SyncSubspaceSignature,
+		SubspaceSecretKey,
+		Prefingerprint,
+		Fingerprint,
+		AuthorisationToken,
+		StaticToken,
+		DynamicToken,
+		AuthorisationOpts,
+		K,
+	]{
+		NewMessenger: newWgpsMessenger,
+		Error:        nil,
+	}
+	select {}
+}
+
+func (w *WgpsMessenger[
+	ReadCapability,
+	Receiver,
+	SyncSignature,
+	ReceiverSecretKey,
+	PsiGroup,
+	PsiScalar,
+	SubspaceCapability,
+	SubspaceReceiver,
+	SyncSubspaceSignature,
+	SubspaceSecretKey,
+	Prefingerprint,
+	Fingerprint,
+	AuthorisationToken,
+	StaticToken,
+	DynamicToken,
+	AuthorisationOpts,
+	K,
+]) Initiate(addr string, areasofinterests []types.AreaOfInterest) error {
+
+	err := w.Transport.Initiate(addr)
+	return err
+
+}
+
+func (w *WgpsMessenger[
+	ReadCapability,
+	Receiver,
+	SyncSignature,
+	ReceiverSecretKey,
+	PsiGroup,
+	PsiScalar,
+	SubspaceCapability,
+	SubspaceReceiver,
+	SyncSubspaceSignature,
+	SubspaceSecretKey,
+	Prefingerprint,
+	Fingerprint,
+	AuthorisationToken,
+	StaticToken,
+	DynamicToken,
+	AuthorisationOpts,
+	K,
+]) HandleMsgData(msg wgpstypes.DataChannelMsg) error {
+	switch msg := msg.(type) {
+	case wgpstypes.MsgDataSendEntry[DynamicToken]:
+		staticToken, found := w.HandlesStaticTokenTheirs.Get(msg.Data.StaticTokenHandle)
+		if !found {
+			return fmt.Errorf("static token not found")
+		}
+		authToken := w.Schemes.AuthorisationToken.RecomposeAuthToken(staticToken, msg.Data.DynamicToken)
+		store := w.GetStore(msg.Data.Entry.Namespace_id)
+		_, err := store.IngestEntry(msg.Data.Entry, authToken)
+		if err != nil {
+			return fmt.Errorf("could not ingest entry")
+		}
+		w.DataPayloadIngester.Target(msg.Data.Entry, false)
+	}
+	return nil
+}
+
+func (w *WgpsMessenger[
+	ReadCapability,
+	Receiver,
+	SyncSignature,
+	ReceiverSecretKey,
+	PsiGroup,
+	PsiScalar,
+	SubspaceCapability,
+	SubspaceReceiver,
+	SyncSubspaceSignature,
+	SubspaceSecretKey,
+	Prefingerprint,
+	Fingerprint,
+	AuthorisationToken,
+	StaticToken,
+	DynamicToken,
+	AuthorisationOpts,
+	K,
+]) HandleMsgPayloadRequest(
+	msg wgpstypes.PayloadRequestChannelMsg) {
+
+	switch msg := msg.(type) {
+	case wgpstypes.MsgDataBindPayloadRequest:
+		handle := w.HandlesPayloadRequestsTheirs.Bind(data.PayloadRequest{
+			Offset: msg.Data.Offset,
+			Entry:  msg.Data.Entry,
+		})
+		w.DataSender.QueuePayloadRequest(handle)
+	}
+
+}
+
+func (w *WgpsMessenger[
+	ReadCapability,
+	Receiver,
+	SyncSignature,
+	ReceiverSecretKey,
+	PsiGroup,
+	PsiScalar,
+	SubspaceCapability,
+	SubspaceReceiver,
+	SyncSubspaceSignature,
+	SubspaceSecretKey,
+	Prefingerprint,
+	Fingerprint,
+	AuthorisationToken,
+	StaticToken,
+	DynamicToken,
+	AuthorisationOpts,
+	K,
+]) HandleMsgStaticToken(
+	msg wgpstypes.StaticTokenChannelMsg) {
+	switch msg := msg.(type) {
+	case wgpstypes.MsgSetupBindStaticToken[StaticToken]:
+		w.HandlesStaticTokenTheirs.Bind(msg.Data.StaticToken)
+	}
+}
+
+func (w *WgpsMessenger[
+	ReadCapability,
+	Receiver,
+	SyncSignature,
+	ReceiverSecretKey,
+	PsiGroup,
+	PsiScalar,
+	SubspaceCapability,
+	SubspaceReceiver,
+	SyncSubspaceSignature,
+	SubspaceSecretKey,
+	Prefingerprint,
+	Fingerprint,
+	AuthorisationToken,
+	StaticToken,
+	DynamicToken,
+	AuthorisationOpts,
+	K,
+]) Close() error {
+	w.Closed = true
+	err := w.Transport.Close()
+	return err
 }

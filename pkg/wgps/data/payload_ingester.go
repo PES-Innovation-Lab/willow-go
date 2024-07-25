@@ -32,7 +32,7 @@ type Event struct {
 	Cancel bool
 }
 
-type PayloadIngsterOpts[PreFingerPrint, FingerPrint constraints.Ordered, K constraints.Unsigned, AuthorisationToken string, AuthorisationOpts []byte] struct {
+type PayloadIngesterOpts[PreFingerPrint, FingerPrint constraints.Ordered, K constraints.Unsigned, AuthorisationToken string, AuthorisationOpts []byte] struct {
 	GetStore               wgpstypes.GetStoreFn[PreFingerPrint, FingerPrint, K, AuthorisationToken, AuthorisationOpts]
 	ProcessReceivedPayload func(bytes []byte, entryLength uint64) []byte
 }
@@ -51,7 +51,7 @@ type PayloadIngester[Prefingerprint, Fingerprint constraints.Ordered, Authorisat
 
 // NewPayloadIngester creates a new PayloadIngester with the initial state.
 func NewPayloadIngester[Prefingerprint, Fingerprint constraints.Ordered, K constraints.Unsigned, AuthorisationToken string, AuthorisationOpts []byte](
-	opts PayloadIngsterOpts[Prefingerprint, Fingerprint, K, AuthorisationToken, AuthorisationOpts],
+	opts PayloadIngesterOpts[Prefingerprint, Fingerprint, K, AuthorisationToken, AuthorisationOpts],
 ) PayloadIngester[Prefingerprint, Fingerprint, AuthorisationToken, AuthorisationOpts] {
 
 	var newPayloadIngester PayloadIngester[Prefingerprint, Fingerprint, AuthorisationToken, AuthorisationOpts]

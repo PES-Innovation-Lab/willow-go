@@ -10,6 +10,8 @@ import (
 
 func main() {
 	bettyTransport, err := transport.NewQuicTransport("localhost:4242")
+	fmt.Println("Will this run?")
+	fmt.Println(*bettyTransport)
 	if err != nil {
 		fmt.Println(err)
 		return
