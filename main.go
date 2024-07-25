@@ -82,7 +82,7 @@ LOOP:
 			fmt.Print("exit:\t\tUsage: exit\n\n", Reset)
 		case "new":
 			if nameSpaces[input] != 255 {
-				fmt.Printf("%sCreating new NameSpaceID %s\n", White, input)
+				fmt.Printf("%sCreating new NameSpaceID %s\n", White, objects[1])
 				fmt.Println("Are sure you want to create a new NameSpaceID (y/n)", Reset)
 				if !scanner.Scan() {
 					break LOOP

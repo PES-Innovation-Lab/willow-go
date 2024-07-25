@@ -21,41 +21,6 @@ type KDTreeStorage[PreFingerPrint, FingerPrint string, K constraints.Unsigned] s
 		PathParams        types.PathParams[K]
 		FingerprintScheme FingerprintScheme[PreFingerPrint, FingerPrint]
 	}
-
-	/** Retrieve an entry at a subspace and path. */
-	// Get func(subspace types.SubspaceId, path types.Path) (struct {
-	// 	Entry         types.Entry
-	// 	AuthTokenHash types.PayloadDigest
-	// }, error)
-	// /** Insert a new entry. */
-	// Insert func(opts struct {
-	// 	Subspace      types.SubspaceId
-	// 	Path          types.Path
-	// 	PayloadDigest types.PayloadDigest
-	// 	Timestamp     uint64
-	// 	PayloadLength uint64
-	// 	AuthTokenHash types.PayloadDigest
-	// }) error
-
-	// /** Update the available payload bytes for a given entry. */
-
-	// UpdateAvailablePayload func(subspace types.SubspaceId, path types.Path) bool
-	// /** Remove an entry. */
-	// Remove func(entry types.Position3d) error
-	// // Used during sync.
-
-	// /** Summarise a given `Range3d` by mapping the included set of `Entry` to ` PreFingerprint`.  */
-	// Summarise func(range3d types.Range3d) struct {
-	// 	Fingerprint PreFingerPrint
-	// 	Size        uint64
-	// }
-	// /** Split a range into two smaller ranges. */
-	// SplitRange func(range3d types.Range3d, knownSize uint) []types.Range3d
-	// /** 3D Range Query **/
-	// Query func(range3d types.Range3d, reverse bool) []struct {
-	// 	Entry         types.Entry
-	// 	AuthTokenHash types.PayloadDigest
-	// }
 }
 
 func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Get(Subspace types.SubspaceId, Path types.Path) (types.Position3d, error) {
@@ -131,7 +96,7 @@ func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Remove(entry types.Posit
 
 // TODO :- Not Fullproof, check triplestorage.ts implementation for further additions
 func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) GetInterestRange(areaOfInterest types.AreaOfInterest) types.Range3d {
-	newRange := utils.AreaTo3dRange[K](
+	newRange := utils.AreaTo3dRange(
 		utils.Options[K]{
 			MinimalSubspace:        k.Opts.SubspaceScheme.MinimalSubspaceId,
 			SuccessorSubspace:      k.Opts.SubspaceScheme.SuccessorSubspaceFn,
