@@ -111,7 +111,7 @@ func (r Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, Authorisat
 // Initialize the reconciliation process.
 intersection := <-r.Ranges */
 // TODO : Implement Summarise function in store
-/*preFingerprint := r.Store.Summarise(intersection)
+/* preFingerprint := r.Store.Summarise(intersection)
 	finalised := r.FingerprintScheme.FingerPrintFinalise(preFingerprint)
 	r.FingerPrintQueue <- struct {
 		Range       types.Range3d
@@ -121,7 +121,9 @@ intersection := <-r.Ranges */
 		Range:       intersection,
 		FingerPrint: finalised,
 	}
-}
+} */
+
+/*
 
 func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, AuthorisationToken]) Respond(
 	yourRange types.Range3d,
@@ -223,4 +225,4 @@ func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, Authorisa
 		}
 	}()
 	return out
-}
+} */

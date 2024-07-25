@@ -800,7 +800,7 @@ func (w *WgpsMessenger[
 	DynamicToken,
 	AuthorisationOpts,
 	K,
-]) Initiate(addr string, areasofinterests []types.AreaOfInterest) error {
+]) Initiate(addr string) error {
 
 	err := w.Transport.Initiate(addr)
 	return err

@@ -38,7 +38,7 @@ func NewQuicTransport(addr string) (*QuicTransport, error) {
 		if err != nil {
 			log.Fatalf("Failed to set up listener: %v", err)
 		}
-
+		fmt.Println("listening")
 		var conn quic.Connection
 		conn, err = listener.Accept(context.Background())
 
@@ -48,7 +48,7 @@ func NewQuicTransport(addr string) (*QuicTransport, error) {
 
 		for i := 0; i < 8; i++ {
 			newQuicTransport.AcceptedStreams[i], err = conn.AcceptStream(context.Background())
-
+			fmt.Println("Accepted stream")
 			if err != nil {
 				log.Fatalf("Failed to set up stream: %v", err)
 			}
@@ -77,7 +77,7 @@ func (q *QuicTransport) Initiate(addr string) error {
 
 			return err
 		}
-
+		fmt.Println("Initiated stream")
 		_, err = q.InitiatedStreams[i].Write([]byte{byte(i)})
 		if err != nil {
 			return err
