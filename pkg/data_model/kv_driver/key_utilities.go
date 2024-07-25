@@ -53,11 +53,11 @@ func DecodeKey[K constraints.Unsigned](encodedKey []byte, pathParams types.PathP
 }
 
 // payloaddigest payloadlength and authdigest
-func EncodeValues(value struct{
-	PayloadLength uint64 
+func EncodeValues(value struct {
+	PayloadLength uint64
 	PayloadDigest types.PayloadDigest
-	AuthDigest types.PayloadDigest
-	}) []byte {
+	AuthDigest    types.PayloadDigest
+}) []byte {
 	var buffer bytes.Buffer
 
 	// Encode PayloadLength
@@ -76,11 +76,11 @@ func EncodeValues(value struct{
 }
 
 // Takes a byte array and returns payloadLength, payloadDigest, authDigest
-func DecodeValues(encoded []byte) (struct{
-	PayloadLength uint64 
+func DecodeValues(encoded []byte) struct {
+	PayloadLength uint64
 	PayloadDigest types.PayloadDigest
-	AuthDigest types.PayloadDigest
-	}) {
+	AuthDigest    types.PayloadDigest
+} {
 	// Decorode PayloadLength
 	payloadLength := binary.BigEndian.Uint64(encoded[:8])
 	remaining := encoded[8:]
@@ -91,15 +91,15 @@ func DecodeValues(encoded []byte) (struct{
 	// Decode AuthDigest
 	authDigest, _ := bytesToString(remaining)
 
-	return struct{
-		PayloadLength uint64; 
-		PayloadDigest types.PayloadDigest; 
-		AuthDigest types.PayloadDigest
-		}{
-			PayloadLength: payloadLength, 
-			PayloadDigest: types.PayloadDigest(payloadDigest), 
-			AuthDigest: types.PayloadDigest(authDigest),
-		}
+	return struct {
+		PayloadLength uint64
+		PayloadDigest types.PayloadDigest
+		AuthDigest    types.PayloadDigest
+	}{
+		PayloadLength: payloadLength,
+		PayloadDigest: types.PayloadDigest(payloadDigest),
+		AuthDigest:    types.PayloadDigest(authDigest),
+	}
 }
 
 // stringToBytes converts a string to a byte slice with a length prefix.

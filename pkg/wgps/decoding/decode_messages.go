@@ -1,6 +1,8 @@
 package decoding
 
 import (
+	"fmt"
+
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/reconciliation"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/wgpstypes"
 	"github.com/PES-Innovation-Lab/willow-go/types"
@@ -205,7 +207,7 @@ func DecodeMessgaes[
 			// PAI Bind Fragment
 			return DecodePaiBindFragment(bytes, opts.Schemes.Pai.GroupMemberEncoding.DecodeStream)
 		} else {
-			//throw an error
+			fmt.Errorf("Could not decode")
 		}
 	}
 	return nil

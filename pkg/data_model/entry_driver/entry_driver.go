@@ -16,11 +16,11 @@ import (
 
 // All the necesarry functions and options requires along with the EntryDriver struct!!!
 type EntryDriver[PreFingerPrint, FingerPrint constraints.Ordered, K constraints.Unsigned] struct {
-	PayloadReferenceCounter payloadDriver.PayloadReferenceCounter
+	PayloadReferenceCounter payloadDriver.PayloadReferenceCounter[K]
 	Storage                 datamodeltypes.KDTreeStorage[PreFingerPrint, FingerPrint, K]
 	// GetPayloadLength        func(digest types.PayloadDigest) uint64 why do we need this again????
 	Opts struct {
-		KVDriver          kv_driver.KvDriver
+		KVDriver          kv_driver.KvDriver[K]
 		NamespaceScheme   datamodeltypes.NamespaceScheme
 		SubspaceScheme    datamodeltypes.SubspaceScheme
 		PayloadScheme     datamodeltypes.PayloadScheme
