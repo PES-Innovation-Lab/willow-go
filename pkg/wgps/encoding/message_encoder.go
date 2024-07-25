@@ -1,6 +1,8 @@
 package encoding
 
 import (
+	"fmt"
+
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/reconciliation"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/wgpstypes"
@@ -33,9 +35,8 @@ type MessageEncoder[
 	K constraints.Unsigned,
 
 ] struct {
-	reconciliation.ReconcileMsgTrackerOpts
 	MessageChannel      chan EncodedSyncMessage
-	ReconcileMsgTracker reconciliation.ReconcileMsgTracker[Fingerprint, DynamicToken]
+	ReconcileMsgTracker *reconciliation.ReconcileMsgTracker[Fingerprint, DynamicToken]
 	Schemes             wgpstypes.SyncSchemes[ReadCapability, Receiver, SyncSignature, ReceiverSecretKey, PsiGroup, PsiScalar, SubspaceCapability, SubspaceReceiver, SyncSubspaceSignature, SubspaceSecretKey, Prefingerprint, Fingerprint, AuthorisationToken, StaticToken, DynamicToken, AuthorisationOpts, K]
 	Opts                struct {
 		reconciliation.ReconcileMsgTrackerOpts
@@ -67,19 +68,23 @@ func NewMessageEncoder[ReadCapability any,
 	GetCap                func(handle uint64) ReadCapability
 	GetCurrentlySentEntry func() types.Entry
 }) *MessageEncoder[ReadCapability, Receiver, SyncSignature, ReceiverSecretKey, PsiGroup, PsiScalar, SubspaceCapability, SubspaceReceiver, SyncSubspaceSignature, SubspaceSecretKey, Prefingerprint, Fingerprint, AuthorisationToken, StaticToken, DynamicToken, AuthorisationOpts, K] {
-	return &MessageEncoder[ReadCapability, Receiver, SyncSignature, ReceiverSecretKey, PsiGroup, PsiScalar, SubspaceCapability, SubspaceReceiver, SyncSubspaceSignature, SubspaceSecretKey, Prefingerprint, Fingerprint, AuthorisationToken, StaticToken, DynamicToken, AuthorisationOpts, K]{
-		MessageChannel:      make(chan EncodedSyncMessage),
-		ReconcileMsgTracker: reconciliation.ReconcileMsgTracker[Fingerprint, DynamicToken]{},
-		Schemes:             schemes,
-		Opts:                opts,
-	}
+
+	var newMessageEncoder *MessageEncoder[ReadCapability, Receiver, SyncSignature, ReceiverSecretKey, PsiGroup, PsiScalar, SubspaceCapability, SubspaceReceiver, SyncSubspaceSignature, SubspaceSecretKey, Prefingerprint, Fingerprint, AuthorisationToken, StaticToken, DynamicToken, AuthorisationOpts, K]
+	newMessageEncoder.Schemes = schemes
+	newMessageEncoder.Opts = opts
+	newMessageEncoder.MessageChannel = make(chan EncodedSyncMessage, 32)
+	newMessageEncoder.ReconcileMsgTracker = reconciliation.NewReconcileMsgTracker[Fingerprint, DynamicToken](reconciliation.ReconcileMsgTrackerOpts{
+		DefaultNamespaceId:   opts.DefaultNamespaceId,
+		DefaultSubspaceId:    opts.DefaultSubspaceId,
+		DefaultPayloadDigest: opts.DefaultPayloadDigest,
+		HandleToNamespaceId:  opts.HandleToNamespaceId,
+		AoiHandlesToRange3d:  opts.AoiHandlesToRange3d,
+	})
+
+	return newMessageEncoder
 }
 
-func (me *MessageEncoder[ReadCapability, Receiver, SyncSignature, ReceiverSecretKey, PsiGroup, PsiScalar, SubspaceCapability, SubspaceReceiver, SyncSubspaceSignature, SubspaceSecretKey, Prefingerprint, Fingerprint, AuthorisationToken, StaticToken, DynamicToken, AuthorisationOpts, K]) Initialize() {
-	me.ReconcileMsgTracker = *reconciliation.NewReconcileMsgTracker[Fingerprint, DynamicToken](me.Opts)
-}
-
-func (me *MessageEncoder[ReadCapability, Receiver, SyncSignature, ReceiverSecretKey, PsiGroup, PsiScalar, SubspaceCapability, SubspaceReceiver, SyncSubspaceSignature, SubspaceSecretKey, Prefingerprint, Fingerprint, AuthorisationToken, StaticToken, DynamicToken, AuthorisationOpts, K]) Encode(message wgpstypes.SyncMessage) {
+func (me *MessageEncoder[ReadCapability, Receiver, SyncSignature, ReceiverSecretKey, PsiGroup, PsiScalar, SubspaceCapability, SubspaceReceiver, SyncSubspaceSignature, SubspaceSecretKey, Prefingerprint, Fingerprint, AuthorisationToken, StaticToken, DynamicToken, AuthorisationOpts, K]) Encode(message wgpstypes.SyncMessage) error {
 	Push := func(channel wgpstypes.Channel, message []byte) {
 		me.MessageChannel <- EncodedSyncMessage{Channel: channel, Message: message}
 	}
@@ -261,7 +266,8 @@ func (me *MessageEncoder[ReadCapability, Receiver, SyncSignature, ReceiverSecret
 		bytes = EncodeDataReplyPayload(msg)
 		break
 	default:
-		panic("Didnot know how to encode the message")
+		return fmt.Errorf("did not know how to encode message")
 	}
 	Push(wgps.MsgLogicalChannels[message.GetKind()], bytes)
+	return nil
 }

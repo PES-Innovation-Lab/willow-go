@@ -162,7 +162,7 @@ type WgpsMessenger[
 		Remaining uint64
 		//IsReceiving bool
 	}
-	//ReconciliationPayloadIngester data.PayloadIngester[Prefingerprint, Fingerprint, K, AuthorisationToken, AuthorsationOpts] //will have to change the type definition
+	ReconciliationPayloadIngester data.PayloadIngester[Prefingerprint, Fingerprint, AuthorisationToken, AuthorisationOpts]
 
 	//Data
 	//CapFinder               CapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K]
@@ -175,8 +175,7 @@ type WgpsMessenger[
 
 	DataSender data.DataSender[Prefingerprint, Fingerprint, K, AuthorisationToken, DynamicToken, AuthorisationOpts]
 
-	//DataPayloadIngester data.PayloadIngester[Prefingerprint, Fingerprint, AuthorisationToken, AuthorsationOpts] //will have to change the type definition
-
+	DataPayloadIngester data.PayloadIngester[Prefingerprint, Fingerprint, AuthorisationToken, AuthorisationOpts]
 }
 
 func NewWgpsMessenger[
@@ -286,6 +285,38 @@ func NewWgpsMessenger[
 	newWgpsMessenger.InChannelPayloadRequest = make([]wgpstypes.PayloadRequestChannelMsg, 1)
 	newWgpsMessenger.InChannelNone = make([]wgpstypes.NoChannelMsg, 1)
 
+	newWgpsMessenger.ReconciliationPayloadIngester = data.NewPayloadIngester[
+		Prefingerprint,
+		Fingerprint,
+		K,
+		AuthorisationToken,
+		AuthorisationOpts,
+	](data.PayloadIngesterOpts[
+		Prefingerprint,
+		Fingerprint,
+		K,
+		AuthorisationToken,
+		AuthorisationOpts,
+	]{
+		GetStore:               opts.GetStore,
+		ProcessReceivedPayload: opts.ProcessReceivedPayload,
+	})
+
+	newWgpsMessenger.HandlesStaticTokenOurs = handlestore.HandleStore[StaticToken]{
+		Map: handlestore.NewMap[StaticToken](),
+	}
+
+	newWgpsMessenger.HandlesStaticTokenTheirs = handlestore.HandleStore[StaticToken]{
+		Map: handlestore.NewMap[StaticToken](),
+	}
+	newWgpsMessenger.HandlesAoisOurs = handlestore.HandleStore[types.AreaOfInterest]{
+		Map: handlestore.NewMap[types.AreaOfInterest](),
+	}
+
+	newWgpsMessenger.HandlesAoisTheirs = handlestore.HandleStore[types.AreaOfInterest]{
+		Map: handlestore.NewMap[types.AreaOfInterest](),
+	}
+
 	newWgpsMessenger.CurrentlySentEntry = utils.DefaultEntry(
 		newWgpsMessenger.Schemes.NamespaceScheme.DefaultNamespaceId,
 		newWgpsMessenger.Schemes.SubspaceScheme.MinimalSubspaceId,
@@ -319,6 +350,23 @@ func NewWgpsMessenger[
 		AuthorisationOpts,
 	]{
 		HandlesPayloadRequestsTheirs: newWgpsMessenger.HandlesPayloadRequestsTheirs,
+	})
+
+	newWgpsMessenger.DataPayloadIngester = data.NewPayloadIngester[
+		Prefingerprint,
+		Fingerprint,
+		K,
+		AuthorisationToken,
+		AuthorisationOpts,
+	](data.PayloadIngesterOpts[
+		Prefingerprint,
+		Fingerprint,
+		K,
+		AuthorisationToken,
+		AuthorisationOpts,
+	]{
+		GetStore:               opts.GetStore,
+		ProcessReceivedPayload: opts.ProcessReceivedPayload,
 	})
 	return newWgpsMessenger, nil
 }
