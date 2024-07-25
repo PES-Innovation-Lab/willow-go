@@ -116,7 +116,9 @@ func (a *Announcer[PreFingerPrint, FingerPrint, ValueType, StaticToken, DynamicT
 		path := result.Path
 		subspace := result.Subspace
 
-		staticToken, dynamicToken := a.AuthorisationTokenScheme.DecomposeAuthToken() //to be checked
+		SubspaceName := string(subspace)
+
+		staticToken, dynamicToken := a.AuthorisationTokenScheme.DecomposeAuthToken(AuthorisationToken(SubspaceName))
 
 		TokenHandle, _ := a.GetStaticTokenHandle(staticToken)
 
