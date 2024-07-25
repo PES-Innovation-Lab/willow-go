@@ -2,7 +2,6 @@ package reconciliation
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/store"
@@ -47,7 +46,7 @@ type Reconciler[
 	Ranges chan types.Range3d
 }
 
-func NewReconciler[PreFingerPrint, FingerPrint constraints.Ordered,
+/*func NewReconciler[PreFingerPrint, FingerPrint constraints.Ordered,
 	K constraints.Unsigned, AuthorisationOpts []byte, AuthorisationToken string](opts *ReconcilerOpts[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken],
 ) *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, AuthorisationToken] {
 
@@ -84,14 +83,14 @@ func NewReconciler[PreFingerPrint, FingerPrint constraints.Ordered,
 		wg.Wait()
 	}
 	return newReconciler
-}
+} */
 
 func (r Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, AuthorisationToken]) DetermineRange(
 	aoi1, aoi2 types.AreaOfInterest, role wgpstypes.SyncRole,
 ) error {
 	// Remove the interest from both.
-	range1 := (*r.Store).AreaOfInterestToRange(aoi1)
-	range2 := r.Store.AreaOfInterestToRange(aoi2)
+	range1, _ := (*r.Store).AreaOfInterestToRange(aoi1)
+	range2, _ := r.Store.AreaOfInterestToRange(aoi2)
 
 	isIntersecting, intersection := utils.IntersectRange3d(
 		r.SubspaceScheme.Order,
@@ -108,11 +107,11 @@ func (r Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, Authorisat
 	return nil
 }
 
-func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, AuthorisationToken]) Initiate() {
-	// Initialize the reconciliation process.
-	intersection := <-r.Ranges
-	// TODO : Implement Summarise function in store
-	preFingerprint := r.Store.Summarise(intersection)
+/*func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, AuthorisationToken]) Initiate() {
+// Initialize the reconciliation process.
+intersection := <-r.Ranges */
+// TODO : Implement Summarise function in store
+/*preFingerprint := r.Store.Summarise(intersection)
 	finalised := r.FingerprintScheme.FingerPrintFinalise(preFingerprint)
 	r.FingerPrintQueue <- struct {
 		Range       types.Range3d
@@ -185,3 +184,4 @@ func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, Authorisa
 	}
 
 }
+*/
