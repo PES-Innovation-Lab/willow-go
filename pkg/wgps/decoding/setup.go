@@ -93,7 +93,7 @@ func DecodeSetupBindAreaOfInterest[ValueType constraints.Unsigned](bytes *utils.
 	}
 }
 
-func DecodeSetupBindStaticToken[StaticToken int](bytes *utils.GrowingBytes, decodeStaticToken func(bytes *utils.GrowingBytes) StaticToken) wgpstypes.MsgSetupBindStaticToken[StaticToken] {
+func DecodeSetupBindStaticToken[StaticToken string](bytes *utils.GrowingBytes, decodeStaticToken func(bytes *utils.GrowingBytes) StaticToken) wgpstypes.MsgSetupBindStaticToken[StaticToken] {
 	bytes.NextAbsolute(1)
 
 	bytes.Prune(1)

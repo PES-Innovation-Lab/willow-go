@@ -12,7 +12,7 @@ import (
 )
 
 type Options[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey any, K constraints.Unsigned] struct {
-	HandleStoreOurs handlestore.HandleStore
+	HandleStoreOurs handlestore.HandleStore[ReadCapability]
 	Schemes         struct {
 		Namespace     datamodeltypes.NamespaceScheme
 		Subspace      datamodeltypes.SubspaceScheme
@@ -61,7 +61,7 @@ func (c *CapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K
 		//WillowError (TODO)
 	}
 
-	namespace := c.Opts.Schemes.AccessControl.GetGrantedNamespace(cap.(ReadCapability))
+	namespace := c.Opts.Schemes.AccessControl.GetGrantedNamespace(cap)
 	key, _ := c.GetNamespaceKey(namespace)
 	res := c.NamespaceMap[key]
 	if _, ok := res[handle]; !ok {
@@ -91,7 +91,7 @@ func (c *CapFinder[ReadCapability, SyncSignature, Receiver, ReceiverSecretKey, K
 			//WillowError (TODO)
 		}
 
-		grantedArea := c.Opts.Schemes.AccessControl.GetGrantedArea(cap.(ReadCapability))
+		grantedArea := c.Opts.Schemes.AccessControl.GetGrantedArea(cap)
 
 		isInArea := utils.IsIncludedArea(c.Opts.Schemes.Subspace.Order, grantedArea, entryPos)
 
