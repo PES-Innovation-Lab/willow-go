@@ -151,6 +151,7 @@ type WgpsMessenger[
 	//Interests map[*wgpstypes.ReadAuthorisation[ReadCapability, SubspaceCapability]][]types.AreaOfInterest
 	Transport *transport.QuicTransport
 
+	FingerPrintScheme datamodeltypes.FingerprintScheme[Prefingerprint, Fingerprint]
 	/*InitiatorEncoder *encoding.MessageEncoder[
 		ReadCapability,
 		Receiver,
@@ -377,8 +378,6 @@ func NewWgpsMessenger[
 		K,
 	]
 	var err error
-
-	newWgpsMessenger.GetStore = opts.GetStore
 	newWgpsMessenger.Schemes = opts.Schemes
 
 	newWgpsMessenger.InitiatorOutChannelReconciliation = GuaranteedQueue{
@@ -817,16 +816,22 @@ func NewWgpsMessenger[
 
 	go syncutils.AsyncReceive[[]byte](initiatorDataChannelListener, func(msg []byte) error {
 		// ADD LOGIC FOR DATA AS ALFIE
+		decodedEntry, payload := DecodeEntryPayload(msg)
+		newWgpsMessenger.HandleDataInitiator(decodedEntry, payload)
 		return nil
 	}, nil)
 
 	go syncutils.AsyncReceive[[]byte](acceptedReconciliationChannelListener, func(msg []byte) error {
 		// ADD LOGIC FOR RECONCILIATION AS BETTY
+		extendedFingerprint, range3d := DecodeSummary(msg)
+		newWgpsMessenger.HandleMsgReconciliationAcceptor(range3d, Fingerprint(extendedFingerprint.FingerPrint))
 		return nil
 	}, nil)
 
 	go syncutils.AsyncReceive[[]byte](initiatorReconciliationChannelListener, func(msg []byte) error {
 		// ADD LOGIC FOR RECONCILIATION AS ALFIE
+		decodedValue := DecodeRange(msg)
+		newWgpsMessenger.HandleMsgReconciliationInitiator(decodedValue)
 		return nil
 	}, nil)
 
@@ -2622,98 +2627,98 @@ func (w *WgpsMessenger[
 
 }
 
-func (w *WgpsMessenger[
-	ReadCapability,
-	Receiver,
-	SyncSignature,
-	ReceiverSecretKey,
-	PsiGroup,
-	PsiScalar,
-	SubspaceCapability,
-	SubspaceReceiver,
-	SyncSubspaceSignature,
-	SubspaceSecretKey,
-	Prefingerprint,
-	Fingerprint,
-	AuthorisationToken,
-	StaticToken,
-	DynamicToken,
-	AuthorisationOpts,
-	K,
-]) HandleMsgData(msg wgpstypes.DataChannelMsg) error {
-	switch msg := msg.(type) {
-	case wgpstypes.MsgDataSendEntry[DynamicToken]:
-		staticToken, found := w.HandlesStaticTokenTheirs.Get(msg.Data.StaticTokenHandle)
-		if !found {
-			return fmt.Errorf("static token not found")
-		}
-		authToken := w.Schemes.AuthorisationToken.RecomposeAuthToken(staticToken, msg.Data.DynamicToken)
-		_, err := w.Store.IngestEntry(msg.Data.Entry, authToken)
-		if err != nil {
-			return fmt.Errorf("could not ingest entry")
-		}
-		w.DataPayloadIngester.Target(msg.Data.Entry, false)
-	}
-	return nil
-}
+// func (w *WgpsMessenger[
+// 	ReadCapability,
+// 	Receiver,
+// 	SyncSignature,
+// 	ReceiverSecretKey,
+// 	PsiGroup,
+// 	PsiScalar,
+// 	SubspaceCapability,
+// 	SubspaceReceiver,
+// 	SyncSubspaceSignature,
+// 	SubspaceSecretKey,
+// 	Prefingerprint,
+// 	Fingerprint,
+// 	AuthorisationToken,
+// 	StaticToken,
+// 	DynamicToken,
+// 	AuthorisationOpts,
+// 	K,
+// ]) HandleMsgData(msg wgpstypes.DataChannelMsg) error {
+// 	switch msg := msg.(type) {
+// 	case wgpstypes.MsgDataSendEntry[DynamicToken]:
+// 		staticToken, found := w.HandlesStaticTokenTheirs.Get(msg.Data.StaticTokenHandle)
+// 		if !found {
+// 			return fmt.Errorf("static token not found")
+// 		}
+// 		authToken := w.Schemes.AuthorisationToken.RecomposeAuthToken(staticToken, msg.Data.DynamicToken)
+// 		_, err := w.Store.IngestEntry(msg.Data.Entry, authToken)
+// 		if err != nil {
+// 			return fmt.Errorf("could not ingest entry")
+// 		}
+// 		w.DataPayloadIngester.Target(msg.Data.Entry, false)
+// 	}
+// 	return nil
+// }
 
-func (w *WgpsMessenger[
-	ReadCapability,
-	Receiver,
-	SyncSignature,
-	ReceiverSecretKey,
-	PsiGroup,
-	PsiScalar,
-	SubspaceCapability,
-	SubspaceReceiver,
-	SyncSubspaceSignature,
-	SubspaceSecretKey,
-	Prefingerprint,
-	Fingerprint,
-	AuthorisationToken,
-	StaticToken,
-	DynamicToken,
-	AuthorisationOpts,
-	K,
-]) HandleMsgPayloadRequest(
-	msg wgpstypes.PayloadRequestChannelMsg) {
+// func (w *WgpsMessenger[
+// 	ReadCapability,
+// 	Receiver,
+// 	SyncSignature,
+// 	ReceiverSecretKey,
+// 	PsiGroup,
+// 	PsiScalar,
+// 	SubspaceCapability,
+// 	SubspaceReceiver,
+// 	SyncSubspaceSignature,
+// 	SubspaceSecretKey,
+// 	Prefingerprint,
+// 	Fingerprint,
+// 	AuthorisationToken,
+// 	StaticToken,
+// 	DynamicToken,
+// 	AuthorisationOpts,
+// 	K,
+// ]) HandleMsgPayloadRequest(
+// 	msg wgpstypes.PayloadRequestChannelMsg) {
 
-	switch msg := msg.(type) {
-	case wgpstypes.MsgDataBindPayloadRequest:
-		handle := w.HandlesPayloadRequestsTheirs.Bind(data.PayloadRequest{
-			Offset: msg.Data.Offset,
-			Entry:  msg.Data.Entry,
-		})
-		w.DataSender.QueuePayloadRequest(handle)
-	}
+// 	switch msg := msg.(type) {
+// 	case wgpstypes.MsgDataBindPayloadRequest:
+// 		handle := w.HandlesPayloadRequestsTheirs.Bind(data.PayloadRequest{
+// 			Offset: msg.Data.Offset,
+// 			Entry:  msg.Data.Entry,
+// 		})
+// 		w.DataSender.QueuePayloadRequest(handle)
+// 	}
 
-}
+// }
 
-func (w *WgpsMessenger[
-	ReadCapability,
-	Receiver,
-	SyncSignature,
-	ReceiverSecretKey,
-	PsiGroup,
-	PsiScalar,
-	SubspaceCapability,
-	SubspaceReceiver,
-	SyncSubspaceSignature,
-	SubspaceSecretKey,
-	Prefingerprint,
-	Fingerprint,
-	AuthorisationToken,
-	StaticToken,
-	DynamicToken,
-	AuthorisationOpts,
-	K,
-]) HandleMsgStaticToken(
-	msg wgpstypes.StaticTokenChannelMsg) {
-	switch msg := msg.(type) {
-	case wgpstypes.MsgSetupBindStaticToken[StaticToken]:
-		w.HandlesStaticTokenTheirs.Bind(msg.Data.StaticToken)
-	}
-}
+// func (w *WgpsMessenger[
+// 	ReadCapability,
+// 	Receiver,
+// 	SyncSignature,
+// 	ReceiverSecretKey,
+// 	PsiGroup,
+// 	PsiScalar,
+// 	SubspaceCapability,
+// 	SubspaceReceiver,
+// 	SyncSubspaceSignature,
+// 	SubspaceSecretKey,
+// 	Prefingerprint,
+// 	Fingerprint,
+// 	AuthorisationToken,
+// 	StaticToken,
+// 	DynamicToken,
+// 	AuthorisationOpts,
+// 	K,
+// ]) HandleMsgStaticToken(
+// 	msg wgpstypes.StaticTokenChannelMsg) {
+// 	switch msg := msg.(type) {
+// 	case wgpstypes.MsgSetupBindStaticToken[StaticToken]:
+// 		w.HandlesStaticTokenTheirs.Bind(msg.Data.StaticToken)
+// 	}
+// }
 
 func (w *WgpsMessenger[
 	ReadCapability,
@@ -2759,58 +2764,49 @@ func (
 		AuthorisationOpts,
 		K,
 	]) HandleMsgReconciliationAcceptor(
-	msg wgpstypes.ReconciliationChannelMsg,
-	role wgpstypes.SyncRole,
+	rangeSummary types.Range3d,
+	summary Fingerprint,
 ) {
-	switch msg := msg.(type) {
-	case wgpstypes.MsgReconciliationSendFingerprint[Fingerprint]:
-		reconciler, err := w.ReconcilerMap.GetReconciler(msg.Data.ReceiverHandle, msg.Data.SenderHandle)
+
+	left, right, response := w.Respond(rangeSummary, summary)
+
+	if response.WantResponse {
+		extendedEntries, err := w.Store.EntryDriver.Query(response.Range)
 		if err != nil {
 			log.Fatal(err)
 		}
-		left, right, response := reconciler.Respond(msg.Data.Range, msg.Data.Fingerprint, w.YourRangeCounter)
-
-		if response.WantResponse {
-			extendedEntries, err := w.Store.EntryDriver.Query(response.Range)
-			if err != nil {
-				log.Fatal(err)
-			}
-			for _, extendedEntry := range extendedEntries {
-				payload, _ := w.Store.GetPayload(types.Position3d{
-					Path:     extendedEntry.Entry.Path,
-					Subspace: extendedEntry.Entry.Subspace_id,
-					Time:     extendedEntry.Entry.Timestamp,
-				})
-				encodedEntryPayload := EncodeEntryPayload(extendedEntry.Entry, payload)
-				var finalEncoded []byte
-				binary.BigEndian.PutUint64(finalEncoded, uint64(len(encodedEntryPayload)))
-				finalEncoded = append(finalEncoded, encodedEntryPayload...)
-				w.Transport.Send(finalEncoded, wgpstypes.DataChannel, wgpstypes.SyncRoleBetty)
-			}
-		} else {
-			if reflect.DeepEqual(left, struct {
-				Range       types.Range3d
-				FingerPrint Fingerprint
-				Covers      uint64
-			}{}) && reflect.DeepEqual(right, struct {
-				Range       types.Range3d
-				FingerPrint Fingerprint
-				Covers      uint64
-			}{}) {
-				return
-			}
-			var leftEncodedExtendedRange []byte
-			binary.BigEndian.PutUint64(leftEncodedExtendedRange, uint64(len(EncodeExtendedRange(left))))
-			leftEncodedExtendedRange = append(leftEncodedExtendedRange, EncodeExtendedRange(left)...)
-			w.Transport.Send(leftEncodedExtendedRange, wgpstypes.ReconciliationChannel, wgpstypes.SyncRoleBetty)
-
-			var rightEncodedExtendedRange []byte
-			binary.BigEndian.PutUint64(rightEncodedExtendedRange, uint64(len(EncodeExtendedRange(right))))
-			rightEncodedExtendedRange = append(rightEncodedExtendedRange, EncodeExtendedRange(right)...)
-			w.Transport.Send(rightEncodedExtendedRange, wgpstypes.ReconciliationChannel, wgpstypes.SyncRoleBetty)
+		for _, extendedEntry := range extendedEntries {
+			payload, _ := w.Store.GetPayload(types.Position3d{
+				Path:     extendedEntry.Entry.Path,
+				Subspace: extendedEntry.Entry.Subspace_id,
+				Time:     extendedEntry.Entry.Timestamp,
+			})
+			encodedEntryPayload := EncodeEntryPayload(extendedEntry.Entry, payload)
+			var finalEncoded []byte
+			binary.BigEndian.PutUint64(finalEncoded, uint64(len(encodedEntryPayload)))
+			finalEncoded = append(finalEncoded, encodedEntryPayload...)
+			w.Transport.Send(finalEncoded, wgpstypes.DataChannel, wgpstypes.SyncRoleBetty)
 		}
-	}
+	} else {
+		if reflect.DeepEqual(left, struct {
+			Range       types.Range3d
+			FingerPrint Fingerprint
+		}{}) && reflect.DeepEqual(right, struct {
+			Range       types.Range3d
+			FingerPrint Fingerprint
+		}{}) {
+			return
+		}
+		var leftEncodedExtendedRange []byte
+		binary.BigEndian.PutUint64(leftEncodedExtendedRange, uint64(len(EncodeRange(left.Range))))
+		leftEncodedExtendedRange = append(leftEncodedExtendedRange, EncodeRange(left.Range)...)
+		w.Transport.Send(leftEncodedExtendedRange, wgpstypes.ReconciliationChannel, wgpstypes.SyncRoleBetty)
 
+		var rightEncodedExtendedRange []byte
+		binary.BigEndian.PutUint64(rightEncodedExtendedRange, uint64(len(EncodeRange(right.Range))))
+		rightEncodedExtendedRange = append(rightEncodedExtendedRange, EncodeRange(right.Range)...)
+		w.Transport.Send(rightEncodedExtendedRange, wgpstypes.ReconciliationChannel, wgpstypes.SyncRoleBetty)
+	}
 }
 
 func (
@@ -2833,23 +2829,10 @@ func (
 		AuthorisationOpts,
 		K,
 	]) HandleMsgReconciliationInitiator(
-	left struct {
-		Range       types.Range3d
-		FingerPrint Fingerprint
-		Covers      uint64
-	},
-	right struct {
-		Range       types.Range3d
-		FingerPrint Fingerprint
-		Covers      uint64
-	},
-	role wgpstypes.SyncRole,
+	value types.Range3d,
 ) {
-	summaryLeft := w.Store.EntryDriver.Storage.Summarise(left.Range)
-	summaryRight := w.Store.EntryDriver.Storage.Summarise(right.Range)
-
-	w.Transport.Send(EncodeSummary(summaryLeft, left.Range), wgpstypes.ReconciliationChannel, wgpstypes.SyncRoleAlfie)
-	w.Transport.Send(EncodeSummary(summaryRight, right.Range), wgpstypes.ReconciliationChannel, wgpstypes.SyncRoleAlfie)
+	summaryValue := w.Store.EntryDriver.Storage.Summarise(value)
+	w.Transport.Send(EncodeSummary(summaryValue, value), wgpstypes.ReconciliationChannel, wgpstypes.SyncRoleAlfie)
 }
 
 func (
@@ -2883,74 +2866,17 @@ func (
 	w.Store.Set(entryInput, []byte(entry.Subspace_id))
 }
 
-func EncodeEntry(entry types.Entry) []byte {
+func EncodeRange[Fingerprint string](Range types.Range3d) []byte {
 	var buffer bytes.Buffer
 	encoder := gob.NewEncoder(&buffer)
-
-	// Register the types with gob
-	gob.Register(types.NamespaceId(nil))
-	gob.Register(types.SubspaceId(nil))
-	gob.Register(types.PayloadDigest(""))
-	gob.Register(types.Path(nil))
-	gob.Register(uint64(0))
-	gob.Register(uint64(0))
-
-	// Encode the entry
-	encoder.Encode(entry)
+	encoder.Encode(Range)
 	return buffer.Bytes()
 }
 
-func DecodeEntry(data []byte) (types.Entry, error) {
-	var entry types.Entry
-	buffer := bytes.NewBuffer(data)
-	decoder := gob.NewDecoder(buffer)
-
-	// Register the types with gob
-	gob.Register(types.NamespaceId(nil))
-	gob.Register(types.SubspaceId(nil))
-	gob.Register(types.PayloadDigest(""))
-	gob.Register(types.Path(nil))
-	gob.Register(uint64(0))
-	gob.Register(uint64(0))
-
-	// Decode the entry
-	err := decoder.Decode(&entry)
-	if err != nil {
-		return entry, fmt.Errorf("failed to decode entry: %w", err)
-	}
-
-	return entry, nil
-}
-
-func EncodeExtendedRange[Fingerprint string](value struct {
-	Range       types.Range3d
-	FingerPrint Fingerprint
-	Covers      uint64
-}) []byte {
-	var buffer bytes.Buffer
-	encoder := gob.NewEncoder(&buffer)
-	gob.Register(types.Range3d{})
-	gob.Register(Fingerprint(""))
-	gob.Register(uint64(0))
-	encoder.Encode(value)
-	return buffer.Bytes()
-}
-
-func DecodeExtendedRange[Fingerprint string](value []byte) struct {
-	Range       types.Range3d
-	FingerPrint Fingerprint
-	Covers      uint64
-} {
-	var decoded struct {
-		Range       types.Range3d
-		FingerPrint Fingerprint
-		Covers      uint64
-	}
+func DecodeRange[Fingerprint string](value []byte) types.Range3d {
+	var decoded types.Range3d
 	buffer := bytes.NewBuffer(value)
 	decoder := gob.NewDecoder(buffer)
-	gob.Register(types.Range3d{})
-	gob.Register(Fingerprint(""))
-	gob.Register(uint64(0))
 	decoder.Decode(&decoded)
 	return decoded
 }
@@ -2961,10 +2887,15 @@ func EncodeSummary[Fingerprint string](value struct {
 }, ourRange types.Range3d) []byte {
 	var buffer bytes.Buffer
 	encoder := gob.NewEncoder(&buffer)
-	gob.Register(Fingerprint(""))
-	gob.Register(uint64(0))
-	gob.Register(types.Range3d{})
-	encoder.Encode(value)
+	encoder.Encode(struct {
+		value struct {
+			FingerPrint string
+			Size        uint64
+		}
+		ourRange types.Range3d
+	}{
+		value, ourRange,
+	})
 	return buffer.Bytes()
 }
 func DecodeSummary[Fingerprint string](value []byte) (struct {
@@ -2972,31 +2903,33 @@ func DecodeSummary[Fingerprint string](value []byte) (struct {
 	Size        uint64
 }, types.Range3d) {
 	var decoded struct {
-		FingerPrint string
-		Size        uint64
-		ourRange    types.Range3d
+		value struct {
+			FingerPrint string
+			Size        uint64
+		}
+		ourRange types.Range3d
 	}
 	buffer := bytes.NewBuffer(value)
 	decoder := gob.NewDecoder(buffer)
-	gob.Register(Fingerprint(""))
-	gob.Register(uint64(0))
-	gob.Register(types.Range3d{})
 	decoder.Decode(&decoded)
 	return struct {
 		FingerPrint string
 		Size        uint64
 	}{
-		decoded.FingerPrint, decoded.Size,
+		decoded.value.FingerPrint, decoded.value.Size,
 	}, decoded.ourRange
 }
 
 func EncodeEntryPayload(entry types.Entry, payload []byte) []byte {
 	var buffer bytes.Buffer
 	encoder := gob.NewEncoder(&buffer)
-	gob.Register(types.Entry{})
-	gob.Register([]byte(nil))
-	encoder.Encode(entry)
-	encoder.Encode(payload)
+
+	encoder.Encode(struct {
+		Entry   types.Entry
+		Payload []byte
+	}{
+		entry, payload,
+	})
 	return buffer.Bytes()
 }
 func DecodeEntryPayload(value []byte) (entry types.Entry, payload []byte) {
@@ -3006,8 +2939,98 @@ func DecodeEntryPayload(value []byte) (entry types.Entry, payload []byte) {
 	}
 	buffer := bytes.NewBuffer(value)
 	decoder := gob.NewDecoder(buffer)
-	gob.Register(types.Entry{})
-	gob.Register([]byte(nil))
 	decoder.Decode(&decoded)
 	return decoded.Entry, decoded.Payload
+}
+
+func (w *WgpsMessenger[
+	ReadCapability,
+	Receiver,
+	SyncSignature,
+	ReceiverSecretKey,
+	PsiGroup,
+	PsiScalar,
+	SubspaceCapability,
+	SubspaceReceiver,
+	SyncSubspaceSignature,
+	SubspaceSecretKey,
+	Prefingerprint,
+	Fingerprint,
+	AuthorisationToken,
+	StaticToken,
+	DynamicToken,
+	AuthorisationOpts,
+	K,
+]) Respond(
+	yourRange types.Range3d,
+	fingerprint Fingerprint,
+
+) (struct {
+	Range       types.Range3d
+	FingerPrint Fingerprint
+}, struct {
+	Range       types.Range3d
+	FingerPrint Fingerprint
+}, struct {
+	WantResponse bool
+	Range        types.Range3d
+}) {
+	// TODO Implement Summarise function in store
+	ourFingerprint := w.Store.EntryDriver.Storage.Summarise(yourRange)
+	size := ourFingerprint.Size
+	fingerprintOursFinal := w.FingerPrintScheme.FingerPrintFinalise(Prefingerprint(ourFingerprint.FingerPrint))
+	if w.FingerPrintScheme.IsEqual(fingerprint, fingerprintOursFinal) {
+		return struct {
+				Range       types.Range3d
+				FingerPrint Fingerprint
+			}{}, struct {
+				Range       types.Range3d
+				FingerPrint Fingerprint
+			}{}, struct {
+				WantResponse bool
+				Range        types.Range3d
+			}{
+				WantResponse: false,
+				Range:        types.Range3d{},
+			}
+	} else if size <= 8 {
+		return struct {
+				Range       types.Range3d
+				FingerPrint Fingerprint
+			}{}, struct {
+				Range       types.Range3d
+				FingerPrint Fingerprint
+			}{}, struct {
+				WantResponse bool
+				Range        types.Range3d
+			}{
+				WantResponse: true,
+				Range:        yourRange,
+			}
+	} else {
+		// TODO: Implement Store Split Range
+		left, right := w.Store.EntryDriver.Storage.SplitRange(yourRange, int(size))
+		fingerprintLeftFinal := w.FingerPrintScheme.FingerPrintFinalise(Prefingerprint(w.Store.EntryDriver.Storage.Summarise(left).FingerPrint)) //Most readable code in Willow-Go
+		fingerprintRightFinal := w.FingerPrintScheme.FingerPrintFinalise(Prefingerprint(w.Store.EntryDriver.Storage.Summarise(right).FingerPrint))
+
+		return struct {
+				Range       types.Range3d
+				FingerPrint Fingerprint
+			}{
+				Range:       left,
+				FingerPrint: fingerprintLeftFinal,
+			}, struct {
+				Range       types.Range3d
+				FingerPrint Fingerprint
+			}{
+				Range:       right,
+				FingerPrint: fingerprintRightFinal,
+			}, struct {
+				WantResponse bool
+				Range        types.Range3d
+			}{
+				WantResponse: false,
+				Range:        types.Range3d{},
+			}
+	}
 }
