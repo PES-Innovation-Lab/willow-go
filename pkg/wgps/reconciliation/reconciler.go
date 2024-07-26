@@ -2,6 +2,7 @@ package reconciliation
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/store"
@@ -83,7 +84,7 @@ func NewReconciler[PreFingerPrint, FingerPrint string,
 		wg.Wait()
 	}
 	return newReconciler
-} */
+}
 
 func (r Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, AuthorisationToken]) DetermineRange(
 	aoi1, aoi2 types.AreaOfInterest, role wgpstypes.SyncRole,
@@ -122,9 +123,7 @@ func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, Authorisa
 		Range:       intersection,
 		FingerPrint: finalised,
 	}
-} */
-
-/*
+}
 
 func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, AuthorisationToken]) Respond(
 	yourRange types.Range3d,
@@ -207,4 +206,4 @@ func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, Authorisa
 		}
 	}()
 	return out
-} */
+}
