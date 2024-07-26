@@ -70,7 +70,7 @@ func NewMessageEncoder[ReadCapability any,
 	GetCurrentlySentEntry func() types.Entry
 }) *MessageEncoder[ReadCapability, Receiver, SyncSignature, ReceiverSecretKey, PsiGroup, PsiScalar, SubspaceCapability, SubspaceReceiver, SyncSubspaceSignature, SubspaceSecretKey, Prefingerprint, Fingerprint, AuthorisationToken, StaticToken, DynamicToken, AuthorisationOpts, K] {
 
-	var newMessageEncoder *MessageEncoder[ReadCapability, Receiver, SyncSignature, ReceiverSecretKey, PsiGroup, PsiScalar, SubspaceCapability, SubspaceReceiver, SyncSubspaceSignature, SubspaceSecretKey, Prefingerprint, Fingerprint, AuthorisationToken, StaticToken, DynamicToken, AuthorisationOpts, K]
+	var newMessageEncoder MessageEncoder[ReadCapability, Receiver, SyncSignature, ReceiverSecretKey, PsiGroup, PsiScalar, SubspaceCapability, SubspaceReceiver, SyncSubspaceSignature, SubspaceSecretKey, Prefingerprint, Fingerprint, AuthorisationToken, StaticToken, DynamicToken, AuthorisationOpts, K]
 	newMessageEncoder.Schemes = schemes
 	newMessageEncoder.Opts = opts
 	newMessageEncoder.MessageChannel = make(chan EncodedSyncMessage, 32)
@@ -82,7 +82,7 @@ func NewMessageEncoder[ReadCapability any,
 		AoiHandlesToRange3d:  opts.AoiHandlesToRange3d,
 	})
 
-	return newMessageEncoder
+	return &newMessageEncoder
 }
 
 func (me *MessageEncoder[ReadCapability, Receiver, SyncSignature, ReceiverSecretKey, PsiGroup, PsiScalar, SubspaceCapability, SubspaceReceiver, SyncSubspaceSignature, SubspaceSecretKey, Prefingerprint, Fingerprint, AuthorisationToken, StaticToken, DynamicToken, AuthorisationOpts, K]) Encode(message wgpstypes.SyncMessage) error {

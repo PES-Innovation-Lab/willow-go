@@ -2,7 +2,6 @@ package reconciliation
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/store"
@@ -84,7 +83,7 @@ func NewReconciler[PreFingerPrint, FingerPrint string,
 		wg.Wait()
 	}
 	return newReconciler
-}
+} */
 
 func (r Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, AuthorisationToken]) DetermineRange(
 	aoi1, aoi2 types.AreaOfInterest, role wgpstypes.SyncRole,
@@ -112,9 +111,8 @@ func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, Authorisa
 	// Initialize the reconciliation process.
 	intersection := <-r.Ranges
 	// TODO : Implement Summarise function in store
-	keys_in_range := r.Store.EntryDriver.Storage.Query(intersection)
-	preFingerprint := store.BuildFingerprints(keys_in_range)
-	finalised := r.FingerprintScheme.FingerPrintFinalise(PreFingerPrint(preFingerprint[0].Hash))
+	preFingerprint := r.Store.Summarise(intersection)
+	finalised := r.FingerprintScheme.FingerPrintFinalise(preFingerprint)
 	r.FingerPrintQueue <- struct {
 		Range       types.Range3d
 		FingerPrint FingerPrint
@@ -123,7 +121,9 @@ func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, Authorisa
 		Range:       intersection,
 		FingerPrint: finalised,
 	}
-}
+} */
+
+/*
 
 func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, AuthorisationToken]) Respond(
 	yourRange types.Range3d,
@@ -208,4 +208,4 @@ func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, Authorisa
 		}
 	}()
 	return out
-}
+} */
