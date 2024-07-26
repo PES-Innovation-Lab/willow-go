@@ -14,7 +14,6 @@ import (
 	"time"
 
 	pinagoladastore "github.com/PES-Innovation-Lab/willow-go/PinaGoladaStore"
-	"github.com/PES-Innovation-Lab/willow-go/animation"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/kdnode"
 	"github.com/PES-Innovation-Lab/willow-go/types"
@@ -152,14 +151,14 @@ LOOP:
 func NameSpaceInteraction(namespace types.NamespaceId) {
 	WillowStore := pinagoladastore.InitStorage(namespace)
 	pinagoladastore.InitKDTree(WillowStore)
-	fmt.Println("Hello father")
-	animationValues := make(chan []kdnode.Key)
-	fmt.Println("Created channel")
-	go animation.Start_animation(animationValues)
+	// fmt.Println("Hello father")
+	// animationValues := make(chan []kdnode.Key)
+	// fmt.Println("Created channel")
+	// go animation.Start_animation(animationValues)
 LOOPEND:
 	for {
 
-		animationValues <- WillowStore.List()
+		// animationValues <- WillowStore.List()
 		fmt.Print("> ")
 		if !scanner.Scan() {
 			break
