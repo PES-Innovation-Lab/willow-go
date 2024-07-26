@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	pinagoladastore "github.com/PES-Innovation-Lab/willow-go/PinaGoladaStore"
+	"github.com/PES-Innovation-Lab/willow-go/animation"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/kdnode"
 	"github.com/PES-Innovation-Lab/willow-go/types"
@@ -140,13 +141,14 @@ LOOP:
 func NameSpaceInteraction(namespace types.NamespaceId) {
 	WillowStore := pinagoladastore.InitStorage(namespace)
 	pinagoladastore.InitKDTree(WillowStore)
-
+	fmt.Println("Hello father")
 	animationValues := make(chan []kdnode.Key)
-	go start_animation(animationValues)
+	fmt.Println("Created channel")
+	go animation.Start_animation(animationValues)
 LOOPEND:
 	for {
-		animationValues <- WillowStore.List()
 
+		animationValues <- WillowStore.List()
 		fmt.Print("> ")
 		if !scanner.Scan() {
 			break
@@ -175,6 +177,7 @@ LOOPEND:
 				fmt.Println(Red, "invalid usage of command\nusage: set <subspacename> <path/in/willow> <path/to/file> [<timestamp>]", Reset)
 				break
 			}
+
 			subSpaceId := []byte(objects[1])
 			path := []byte(objects[2])
 			insertionFile := objects[3]
@@ -219,6 +222,7 @@ LOOPEND:
 				},
 				subSpaceId,
 			)
+
 			if err != nil {
 				fmt.Println(Red, "error setting entry:", err, Reset)
 				break

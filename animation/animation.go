@@ -1,4 +1,4 @@
-package main
+package animation
 
 import (
 	"encoding/hex"
@@ -73,7 +73,8 @@ func OrderBytes(a, b []byte) int {
 	return 0
 }
 
-func start_animation(valuesChannel chan []kdnode.Key) {
+func Start_animation(valuesChannel chan []kdnode.Key) {
+	fmt.Println("Hello mother")
 	// values := []kdnode.Key{
 	// 	{Timestamp: 1704067200, Subspace: types.SubspaceId("Manas"), Path: types.Path{[]byte("hello"), []byte("bye")}, Fingerprint: "fingerprint1"},
 	// 	{Timestamp: 1729742700, Subspace: types.SubspaceId("Samar"), Path: types.Path{[]byte("hello"), []byte("1234"), []byte("testing")}, Fingerprint: "fingerprint2"},
@@ -93,7 +94,7 @@ func start_animation(valuesChannel chan []kdnode.Key) {
 	defer rl.UnloadTexture(texture4)
 
 	textures := []rl.Texture2D{texture1, texture2, texture3, texture4}
-
+	fmt.Println("Goodmorning")
 	rl.SetTargetFPS(60)
 
 	// var paths []string
@@ -119,11 +120,18 @@ func start_animation(valuesChannel chan []kdnode.Key) {
 	// h1 := int32(path_count * 20)
 	// h2 := int32(time_count * 20)
 	var values []kdnode.Key
-	temp := <-valuesChannel
 
 	for !rl.WindowShouldClose() {
-		if temp != nil {
-			values = temp
+		select {
+		case temp := <-valuesChannel:
+			if temp != nil {
+				values = temp
+
+			}
+		default:
+			time.Sleep(500 * time.Millisecond)
+			continue
+
 		}
 		var sortedSubspaceArray []types.SubspaceId
 
@@ -168,7 +176,6 @@ func start_animation(valuesChannel chan []kdnode.Key) {
 
 			return timeMap
 		}()
-		fmt.Println(sortedPathMap, sortedSubspaceMap, sortedTimeMap)
 
 		paths := sortedPathArray
 		times := sortedTimeArray
@@ -219,7 +226,7 @@ func draw_files(entries []kdnode.Key, subspace_map map[string]int, time_map map[
 		uind := subspace_map[string(entry.Subspace)]
 		tind := time_map[entry.Timestamp]
 		pind := path_map[makePath(entry.Path)]
-		fmt.Println(makePath(entry.Path), uind, tind, pind)
+
 		draw_file(float64(tind), float64(pind), float64(uind), textures)
 	}
 }
@@ -432,6 +439,14 @@ func draw_plgm_2(v1 rl.Vector2, time_count int, col rl.Color) {
 	rl.DrawLineEx(v2, v3, border_thickness, border_color)
 	rl.DrawLineEx(v3, v4, border_thickness, border_color)
 	rl.DrawLineEx(v4, v1, border_thickness, border_color)
+}
+
+func makePath(path types.Path) string {
+	pathStr := string(path[0])
+	for i := 1; i < len(path); i++ {
+		pathStr += "/" + string(path[i])
+	}
+	return pathStr
 }
 
 // convert_timestamp converts a uint64 Unix timestamp to a readable string.
