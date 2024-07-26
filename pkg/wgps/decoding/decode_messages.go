@@ -212,5 +212,4 @@ func DecodeMessages[
 			fmt.Errorf("Could not decode")
 		}
 	}
-	outChannel <- nil
 }

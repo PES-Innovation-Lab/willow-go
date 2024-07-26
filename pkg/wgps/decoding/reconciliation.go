@@ -10,7 +10,7 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-type SendOpts[Fingerprint constraints.Ordered, ValueType constraints.Unsigned] struct {
+type SendOpts[Fingerprint string, ValueType constraints.Unsigned] struct {
 	NeutralFingerprint  Fingerprint
 	DecodeFingerprint   func(bytes *utils.GrowingBytes) chan Fingerprint
 	DecodeSubspaceId    func(bytes *utils.GrowingBytes) chan types.SubspaceId
@@ -19,7 +19,7 @@ type SendOpts[Fingerprint constraints.Ordered, ValueType constraints.Unsigned] s
 	AoiHandlesToRange3d func(senderAoiHandle uint64, receiverAoiHandle uint64) types.Range3d
 }
 
-func DecodeReconciliationSendFingerprint[Fingerprint constraints.Ordered, ValueType constraints.Unsigned](bytes *utils.GrowingBytes, opts SendOpts[Fingerprint, ValueType]) wgpstypes.MsgReconciliationSendFingerprint[Fingerprint] {
+func DecodeReconciliationSendFingerprint[Fingerprint string, ValueType constraints.Unsigned](bytes *utils.GrowingBytes, opts SendOpts[Fingerprint, ValueType]) wgpstypes.MsgReconciliationSendFingerprint[Fingerprint] {
 	Privy := opts.GetPrivy()
 
 	width := bytes.NextAbsolute(2)

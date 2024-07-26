@@ -136,7 +136,7 @@ func DecodeDataSendEntry[DynamicToken string, ValueType constraints.Unsigned](by
 func DecodeDataSendPayload(bytes *utils.GrowingBytes) wgpstypes.MsgDataSendPayload {
 	received := bytes.NextAbsolute(1)
 
-	Header := received
+	Header := received[0]
 
 	CompactWidthAmount := CompactWidthFromEndOfByte(int(Header))
 
