@@ -1,9 +1,10 @@
-package tests
+package reconciliation
 
 import (
 	"fmt"
 
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
+	entrydriver "github.com/PES-Innovation-Lab/willow-go/pkg/data_model/entry_driver" // Add this import statement
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/handlestore"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/wgpstypes"
 	"github.com/PES-Innovation-Lab/willow-go/types"
@@ -92,7 +93,7 @@ func (a *Announcer[PreFingerPrint, FingerPrint, ValueType, StaticToken, DynamicT
 	announcement struct {
 		SenderHandle   uint64
 		ReceiverHandle uint64
-		KDStore        *datamodeltypes.KDTreeStorage[PreFingerPrint, FingerPrint, K]
+		Store          entrydriver.EntryDriver[PreFingerPrint, FingerPrint, K]
 		Namespace      types.NamespaceId
 		Range          types.Range3d
 		WantResponse   bool
@@ -108,13 +109,19 @@ func (a *Announcer[PreFingerPrint, FingerPrint, ValueType, StaticToken, DynamicT
 	}{}
 
 	//TODO: Implement QueryRange in Store
-	results := announcement.KDStore.Query(announcement.Range)
+	results, _ := announcement.Store.Get()
 
 	for _, result := range results {
 
 		timestamp := result.Timestamp
 		path := result.Path
 		subspace := result.Subspace
+
+		entry := types.Entry{
+			Timestamp:   timestamp,
+			Subspace_id: subspace,
+			Path:        path,
+		}
 
 		SubspaceName := string(subspace)
 
@@ -134,7 +141,10 @@ func (a *Announcer[PreFingerPrint, FingerPrint, ValueType, StaticToken, DynamicT
 			StaticTokenHandle uint64
 			DynamicToken      DynamicToken
 		}{
-			LengthyEntry:      entries, //need to change this later
+			LengthyEntry: datamodeltypes.LengthyEntry{
+				Entry:     entry,
+				Available: 1,
+			}, //need to change this later
 			StaticTokenHandle: staticTokenHandle,
 			DynamicToken:      dynamicToken,
 		})

@@ -186,16 +186,16 @@ func DecodeMessages[
 			outChannel <- Message
 		} else if (FirstByte & 0x30) == 0x30 {
 			// Setup Bind Static Token
-			outChannel <- DecodeSetupBindStaticToken[string](bytes, opts.Schemes.AuthorisationToken.Encodings.StaticToken.DecodeStream)
+			// outChannel <- DecodeSetupBindStaticToken[string](bytes, opts.Schemes.AuthorisationToken.Encodings.StaticToken.DecodeStream)
 		} else if (FirstByte & 0x28) == 0x28 {
 			// Setup Bind Area of Interest
-			outChannel <- DecodeSetupBindAreaOfInterest(bytes, func(authHandle uint64) types.Area {
-				Cap := opts.GetTheirCap(authHandle)
-				outChannel <- opts.Schemes.AccessControl.GetGrantedArea(Cap)
-			}, opts.Schemes.SubspaceScheme.EncodingScheme.DecodeStream, opts.Schemes.PathParams)
+			// outChannel <- DecodeSetupBindAreaOfInterest(bytes, func(authHandle uint64) types.Area {
+			// 	Cap := opts.GetTheirCap(authHandle)
+			// 	outChannel <- opts.Schemes.AccessControl.GetGrantedArea(Cap)
+			// }, opts.Schemes.SubspaceScheme.EncodingScheme.DecodeStream, opts.Schemes.PathParams)
 		} else if (FirstByte & 0x20) == 0x20 {
 			// Setup Bind Read Capability
-			outChannel <- DecodeSetupBindReadCapability(bytes, opts.Schemes.AccessControl.Encodings.ReadCap, opts.GetIntersectionPrivy, opts.Schemes.AccessControl.Encodings.SyncSignature.DecodeStream)
+			// outChannel <- DecodeSetupBindReadCapability(bytes, opts.Schemes.AccessControl.Encodings.ReadCap, opts.GetIntersectionPrivy, opts.Schemes.AccessControl.Encodings.SyncSignature.DecodeStream)
 		} else if (FirstByte & 0x10) == 0x10 {
 			// PAI Reply Subspace Capability
 			outChannel <- DecodePaiReplySubspaceCapability(bytes, opts.Schemes.SubspaceCap.Encodings.SubspaceCapability.DecodeStream, opts.Schemes.SubspaceCap.Encodings.SyncSubspaceSignature.DecodeStream)
