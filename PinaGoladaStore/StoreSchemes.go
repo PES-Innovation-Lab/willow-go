@@ -87,7 +87,7 @@ var TestAuthorisationScheme datamodeltypes.AuthorisationScheme[[]byte, string] =
 	},
 }
 
-var TestPathParams types.PathParams[uint8] = types.PathParams[uint8]{
+var TestPathParams types.PathParams[uint] = types.PathParams[uint]{
 	MaxComponentCount:  50,
 	MaxComponentLength: 50,
 	MaxPathLength:      50,
@@ -113,7 +113,7 @@ var TestPayloadScheme datamodeltypes.PayloadScheme = datamodeltypes.PayloadSchem
 		return ch
 	},
 }
-var StoreSchemes datamodeltypes.StoreSchemes[string, string, uint8, []byte, string] = datamodeltypes.StoreSchemes[string, string, uint8, []byte, string]{
+var StoreSchemes datamodeltypes.StoreSchemes[string, string, uint, []byte, string] = datamodeltypes.StoreSchemes[string, string, uint, []byte, string]{
 	PathParams:          TestPathParams,
 	NamespaceScheme:     TestNameSpaceScheme,
 	AuthorisationScheme: TestAuthorisationScheme,

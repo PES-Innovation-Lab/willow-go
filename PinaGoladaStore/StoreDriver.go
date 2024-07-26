@@ -15,15 +15,15 @@ import (
 	"github.com/cockroachdb/pebble"
 )
 
-func InitStorage(nameSpaceId types.NamespaceId) *store.Store[string, string, uint8, []byte, string] {
+func InitStorage(nameSpaceId types.NamespaceId) *store.Store[string, string, uint, []byte, string] {
 
 	payloadRefDb, err := pebble.Open(fmt.Sprintf("willow/%s/payloadrefcounter", string(nameSpaceId)), &pebble.Options{})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	payloadRefKVstore := kv_driver.KvDriver[uint8]{Db: payloadRefDb}
-	PayloadReferenceCounter := payloadDriver.PayloadReferenceCounter[uint8]{
+	payloadRefKVstore := kv_driver.KvDriver[uint]{Db: payloadRefDb}
+	PayloadReferenceCounter := payloadDriver.PayloadReferenceCounter[uint]{
 		Store: payloadRefKVstore,
 	}
 
@@ -31,19 +31,19 @@ func InitStorage(nameSpaceId types.NamespaceId) *store.Store[string, string, uin
 	if err != nil {
 		log.Fatal(err)
 	}
-	entryKvStore := kv_driver.KvDriver[uint8]{Db: entryDb}
+	entryKvStore := kv_driver.KvDriver[uint]{Db: entryDb}
 
 	PayloadLock := &sync.Mutex{}
 	TestPayloadDriver := payloadDriver.MakePayloadDriver(fmt.Sprintf("willow/%s/payload", string(nameSpaceId)), TestPayloadScheme, PayloadLock)
 
-	entryDriver := entrydriver.EntryDriver[string, string, uint8]{
+	entryDriver := entrydriver.EntryDriver[string, string, uint]{
 		PayloadReferenceCounter: PayloadReferenceCounter,
 		Opts: struct {
-			KVDriver          kv_driver.KvDriver[uint8]
+			KVDriver          kv_driver.KvDriver[uint]
 			NamespaceScheme   datamodeltypes.NamespaceScheme
 			SubspaceScheme    datamodeltypes.SubspaceScheme
 			PayloadScheme     datamodeltypes.PayloadScheme
-			PathParams        types.PathParams[uint8]
+			PathParams        types.PathParams[uint]
 			FingerprintScheme datamodeltypes.FingerprintScheme[string, string]
 		}{
 			KVDriver:          entryKvStore,
@@ -54,9 +54,9 @@ func InitStorage(nameSpaceId types.NamespaceId) *store.Store[string, string, uin
 			FingerprintScheme: TestFingerprintScheme,
 		},
 	}
-	TestPrefixDriver := kv_driver.PrefixDriver[uint8]{}
+	TestPrefixDriver := kv_driver.PrefixDriver[uint]{}
 
-	return &store.Store[string, string, uint8, []byte, string]{
+	return &store.Store[string, string, uint, []byte, string]{
 		Schemes:            StoreSchemes,
 		EntryDriver:        entryDriver,
 		PayloadDriver:      TestPayloadDriver,
@@ -66,7 +66,7 @@ func InitStorage(nameSpaceId types.NamespaceId) *store.Store[string, string, uin
 	}
 }
 
-func InitKDTree(WillowStore *store.Store[string, string, uint8, []byte, string]) {
+func InitKDTree(WillowStore *store.Store[string, string, uint, []byte, string]) {
 
 	encodedKeyValue, _ := WillowStore.EntryDriver.Opts.KVDriver.ListAllValues()
 	var keys []kdnode.Key
