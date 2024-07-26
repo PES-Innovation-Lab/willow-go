@@ -2,12 +2,14 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	pinagoladastore "github.com/PES-Innovation-Lab/willow-go/PinaGoladaStore"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/store"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/wgpstypes"
 	"github.com/PES-Innovation-Lab/willow-go/types"
+	"github.com/PES-Innovation-Lab/willow-go/utils"
 )
 
 func main() {
@@ -89,4 +91,26 @@ func main() {
 	}
 	fmt.Println("Messenger set up")
 	messenger.NewMessenger.Initiate("localhost:4242")
+	hello1 := "Hello, world!"
+	var hello1Bytes []byte
+	hello1Bytes = append(hello1Bytes, utils.BigIntToBytes(uint64(len(hello1)))...)
+	hello1Bytes = append(hello1Bytes, []byte(hello1)...)
+	fmt.Printf("Sending %v now!!!\n", hello1Bytes)
+	//r := bytes.NewReader(hello1Bytes)
+	//// := binary.BigEndian.Uint64(hello1Bytes[:8])
+
+	//fmt.Printf("Length of hello1Bytes is %v\n", intVal)
+
+	hello2 := "Hello, world 2!"
+	hello3 := "Hello, world 3!"
+	var hello2Bytes []byte
+	hello2Bytes = append(hello2Bytes, utils.BigIntToBytes(uint64(len(hello2)))...)
+	hello2Bytes = append(hello2Bytes, []byte(hello2)...)
+	var hello3Bytes []byte
+	hello3Bytes = append(hello3Bytes, utils.BigIntToBytes(uint64(len(hello3)))...)
+	hello3Bytes = append(hello3Bytes, []byte(hello3)...)
+	messenger.NewMessenger.Transport.Send(hello1Bytes, wgpstypes.DataChannel, wgpstypes.SyncRoleAlfie)
+	messenger.NewMessenger.Transport.Send(hello2Bytes, wgpstypes.DataChannel, wgpstypes.SyncRoleAlfie)
+	messenger.NewMessenger.Transport.Send(hello3Bytes, wgpstypes.DataChannel, wgpstypes.SyncRoleAlfie)
+	time.Sleep(time.Second * 2)
 }

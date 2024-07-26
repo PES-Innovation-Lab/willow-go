@@ -6,12 +6,15 @@ import (
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/binary"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"log"
 	"math/big"
 
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/wgpstypes"
+	"github.com/PES-Innovation-Lab/willow-go/utils"
 	"github.com/quic-go/quic-go"
 )
 
@@ -48,10 +51,11 @@ func NewQuicTransport(addr string) (*QuicTransport, error) {
 
 		for i := 0; i < 8; i++ {
 			newQuicTransport.AcceptedStreams[i], err = conn.AcceptStream(context.Background())
-			//fmt.Println("Accepted stream")
+			fmt.Println("Accepted stream")
 			if err != nil {
 				log.Fatalf("Failed to set up stream: %v", err)
 			}
+
 		}
 
 	}()
@@ -73,12 +77,16 @@ func (q *QuicTransport) Initiate(addr string) error {
 
 	for i := 0; i < 8; i++ {
 		q.InitiatedStreams[i], err = conn.OpenStreamSync(context.Background())
+		fmt.Println("Opened Stream")
 		if err != nil {
 
 			return err
 		}
 		//fmt.Println("Initiated stream")
-		_, err = q.InitiatedStreams[i].Write([]byte{byte(i)})
+		var initBytes []byte
+		initBytes = append(initBytes, utils.BigIntToBytes(uint64(len(string(i))))...) // Length of the string
+		initBytes = append(initBytes, byte(i))                                        // The string
+		_, err = q.InitiatedStreams[i].Write(initBytes)
 		if err != nil {
 			return err
 		}
@@ -125,31 +133,68 @@ func (t *QuicTransport) Close() error {
 	return nil
 }
 
-func (q QuicTransport) IsClosed() bool {
+func (q *QuicTransport) IsClosed() bool {
 	return q.Closed
 }
 
-func (q *QuicTransport) Recv(writeTo chan []byte, channel wgpstypes.Channel, role wgpstypes.SyncRole) {
+func (q QuicTransport) Recv(writeTo chan []byte, channel wgpstypes.Channel, role wgpstypes.SyncRole) {
+	dataChan := make(chan []byte)
+	go func() {
+		if wgpstypes.IsAlfie(role) {
+			for {
+				buffer := make([]byte, 8) // Adjust buffer size as needed
+				if q.InitiatedStreams[channel] != nil {
+					_, err := io.ReadFull(q.InitiatedStreams[channel], buffer)
+					if err != nil {
+						// Handle Error
+						return
+					}
+					fmt.Println(buffer)
+					bytesWithLen := binary.BigEndian.Uint64(buffer[:8])
+					fmt.Printf("Length of message is %v\n", bytesWithLen)
+					newBuffer := make([]byte, bytesWithLen)
+					if q.InitiatedStreams[channel] != nil {
+						n, err := io.ReadFull(q.InitiatedStreams[channel], newBuffer)
+						if err != nil {
+							// Handle Error
+							return
+						}
 
-	if wgpstypes.IsAlfie(role) {
-		for {
-			buffer := make([]byte, 512) // Adjust buffer size as needed
-			n, err := q.InitiatedStreams[channel].Read(buffer)
-			if err != nil {
-				// Handle Error
-				return
+						fmt.Printf("Writing message now %v\n", string(newBuffer[:n]))
+						writeTo <- newBuffer[:n]
+					}
+				}
 			}
-			writeTo <- buffer[:n]
+		} else {
+			for {
+				buffer := make([]byte, 8)
+				if q.AcceptedStreams[channel] != nil {
+					_, err := io.ReadFull(q.AcceptedStreams[channel], buffer)
+					if err != nil {
+						// Handle Error
+						return
+					}
+					fmt.Println(buffer)
+					fmt.Printf("Length is %v\n", binary.BigEndian.Uint64(buffer))
+					bytesWithLen := binary.BigEndian.Uint64(buffer[:8])
+					newBuffer := make([]byte, bytesWithLen)
+					if q.AcceptedStreams[channel] != nil {
+						n, err := io.ReadFull(q.AcceptedStreams[channel], newBuffer)
+						if err != nil {
+							// Handle Error
+							return
+						}
+
+						fmt.Printf("Writing message now %v\n", string(newBuffer[:n]))
+						writeTo <- newBuffer[:n]
+					}
+				}
+			}
 		}
-	} else {
-		for {
-			buffer := make([]byte, 512)
-			n, err := q.AcceptedStreams[channel].Read(buffer)
-			if err != nil {
-				// Handle Error
-				return
-			}
-			writeTo <- buffer[:n]
+	}()
+	for {
+		for data := range dataChan {
+			writeTo <- data
 		}
 	}
 
