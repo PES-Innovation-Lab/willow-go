@@ -6,7 +6,7 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-type ReconcilerMap[K constraints.Unsigned, PreFingerPrint, FingerPrint constraints.Ordered, AuthorisationOpts []byte, AuthorisationToken string] struct {
+type ReconcilerMap[K constraints.Unsigned, PreFingerPrint, FingerPrint string, AuthorisationOpts []byte, AuthorisationToken string] struct {
 	Map map[uint64]map[uint64]Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, AuthorisationToken]
 }
 

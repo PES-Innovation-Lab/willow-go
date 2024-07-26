@@ -2,6 +2,7 @@ package wgps
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/data"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/encoding"
@@ -29,7 +30,7 @@ type NewMessengerReturn[
 	SyncSubspaceSignature,
 	SubspaceSecretKey any,
 	Prefingerprint,
-	Fingerprint constraints.Ordered,
+	Fingerprint string,
 	AuthorisationToken,
 	StaticToken,
 	DynamicToken string,
@@ -70,7 +71,7 @@ type WgpsMessengerOpts[
 	SyncSubspaceSignature,
 	SubspaceSecretKey any,
 	Prefingerprint,
-	Fingerprint constraints.Ordered,
+	Fingerprint string,
 	AuthorisationToken,
 	StaticToken,
 	DynamicToken string,
@@ -131,7 +132,7 @@ type WgpsMessenger[
 	SyncSubspaceSignature,
 	SubspaceSecretKey any,
 	Prefingerprint,
-	Fingerprint constraints.Ordered,
+	Fingerprint string,
 	AuthorisationToken,
 	StaticToken,
 	DynamicToken string,
@@ -298,7 +299,7 @@ func NewWgpsMessenger[
 	SyncSubspaceSignature,
 	SubspaceSecretKey any,
 	Prefingerprint,
-	Fingerprint constraints.Ordered,
+	Fingerprint string,
 	AuthorisationToken,
 	StaticToken,
 	DynamicToken string,
@@ -342,7 +343,7 @@ func NewWgpsMessenger[
 		DynamicToken,
 		AuthorisationOpts,
 		K,
-	],
+	], addr string, // ONLY FOR TESTING!!!!
 ) {
 
 	var newWgpsMessenger WgpsMessenger[
@@ -726,7 +727,24 @@ func NewWgpsMessenger[
 		return err
 	}, nil)
 
-	newWgpsMessenger.Transport, err = transport.NewQuicTransport("localhost:4242")
+	initiatorControlChannelListener := make(chan []byte, 32)
+	initiatorReconciliationChannelListener := make(chan []byte, 32)
+	initiatorDataChannelListener := make(chan []byte, 32)
+	initiatorIntersectionChannelListener := make(chan []byte, 32)
+	initiatorCapabilityChannelListener := make(chan []byte, 32)
+	initiatorAreaOfInterestChannelListener := make(chan []byte, 32)
+	initiatorPayloadRequestChannelListener := make(chan []byte, 32)
+	initiatorStaticTokenChannelListener := make(chan []byte, 32)
+	acceptedControlChannelListener := make(chan []byte, 32)
+	acceptedReconciliationChannelListener := make(chan []byte, 32)
+	acceptedDataChannelListener := make(chan []byte, 32)
+	acceptedIntersectionChannelListener := make(chan []byte, 32)
+	acceptedCapabilityChannelListener := make(chan []byte, 32)
+	acceptedAreaOfInterestChannelListener := make(chan []byte, 32)
+	acceptedPayloadRequestChannelListener := make(chan []byte, 32)
+	acceptedStaticTokenChannelListener := make(chan []byte, 32)
+
+	newWgpsMessenger.Transport, err = transport.NewQuicTransport(addr)
 	fmt.Println("Listening Now!!")
 	if err != nil {
 
@@ -755,6 +773,23 @@ func NewWgpsMessenger[
 		return
 
 	}
+
+	go newWgpsMessenger.Transport.Recv(initiatorControlChannelListener, wgpstypes.ControlChannel, wgpstypes.SyncRoleAlfie)
+	go newWgpsMessenger.Transport.Recv(initiatorReconciliationChannelListener, wgpstypes.ReconciliationChannel, wgpstypes.SyncRoleAlfie)
+	go newWgpsMessenger.Transport.Recv(initiatorDataChannelListener, wgpstypes.DataChannel, wgpstypes.SyncRoleAlfie)
+	go newWgpsMessenger.Transport.Recv(initiatorIntersectionChannelListener, wgpstypes.IntersectionChannel, wgpstypes.SyncRoleAlfie)
+	go newWgpsMessenger.Transport.Recv(initiatorCapabilityChannelListener, wgpstypes.CapabilityChannel, wgpstypes.SyncRoleAlfie)
+	go newWgpsMessenger.Transport.Recv(initiatorAreaOfInterestChannelListener, wgpstypes.AreaOfInterestChannel, wgpstypes.SyncRoleAlfie)
+	go newWgpsMessenger.Transport.Recv(initiatorPayloadRequestChannelListener, wgpstypes.PayloadRequestChannel, wgpstypes.SyncRoleAlfie)
+	go newWgpsMessenger.Transport.Recv(initiatorStaticTokenChannelListener, wgpstypes.StaticTokenChannel, wgpstypes.SyncRoleAlfie)
+	go newWgpsMessenger.Transport.Recv(acceptedControlChannelListener, wgpstypes.ControlChannel, wgpstypes.SyncRoleBetty)
+	go newWgpsMessenger.Transport.Recv(acceptedReconciliationChannelListener, wgpstypes.ReconciliationChannel, wgpstypes.SyncRoleBetty)
+	go newWgpsMessenger.Transport.Recv(acceptedDataChannelListener, wgpstypes.DataChannel, wgpstypes.SyncRoleBetty)
+	go newWgpsMessenger.Transport.Recv(acceptedIntersectionChannelListener, wgpstypes.IntersectionChannel, wgpstypes.SyncRoleBetty)
+	go newWgpsMessenger.Transport.Recv(acceptedCapabilityChannelListener, wgpstypes.CapabilityChannel, wgpstypes.SyncRoleBetty)
+	go newWgpsMessenger.Transport.Recv(acceptedAreaOfInterestChannelListener, wgpstypes.AreaOfInterestChannel, wgpstypes.SyncRoleBetty)
+	go newWgpsMessenger.Transport.Recv(acceptedPayloadRequestChannelListener, wgpstypes.PayloadRequestChannel, wgpstypes.SyncRoleBetty)
+	go newWgpsMessenger.Transport.Recv(acceptedStaticTokenChannelListener, wgpstypes.StaticTokenChannel, wgpstypes.SyncRoleBetty)
 
 	newMessengerChan <- NewMessengerReturn[
 		ReadCapability,
@@ -803,6 +838,7 @@ func (w *WgpsMessenger[
 ]) Initiate(addr string) error {
 
 	err := w.Transport.Initiate(addr)
+	time.Sleep(time.Second * 1)
 	return err
 
 }

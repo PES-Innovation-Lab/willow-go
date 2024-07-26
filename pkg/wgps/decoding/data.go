@@ -9,7 +9,7 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-type Opts[DynamicToken constraints.Ordered, ValueType constraints.Unsigned] struct {
+type Opts[DynamicToken string, ValueType constraints.Unsigned] struct {
 	DecodeNamespaceId      func(bytes *utils.GrowingBytes) chan types.NamespaceId
 	DecodeSubspaceId       func(bytes *utils.GrowingBytes) chan types.SubspaceId
 	DecodeDynamicToken     func(bytes *utils.GrowingBytes) DynamicToken

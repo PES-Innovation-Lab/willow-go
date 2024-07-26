@@ -38,7 +38,7 @@ func NewQuicTransport(addr string) (*QuicTransport, error) {
 		if err != nil {
 			log.Fatalf("Failed to set up listener: %v", err)
 		}
-		fmt.Println("listening")
+		//fmt.Println("listening")
 		var conn quic.Connection
 		conn, err = listener.Accept(context.Background())
 
@@ -48,7 +48,7 @@ func NewQuicTransport(addr string) (*QuicTransport, error) {
 
 		for i := 0; i < 8; i++ {
 			newQuicTransport.AcceptedStreams[i], err = conn.AcceptStream(context.Background())
-			fmt.Println("Accepted stream")
+			//fmt.Println("Accepted stream")
 			if err != nil {
 				log.Fatalf("Failed to set up stream: %v", err)
 			}
@@ -77,7 +77,7 @@ func (q *QuicTransport) Initiate(addr string) error {
 
 			return err
 		}
-		fmt.Println("Initiated stream")
+		//fmt.Println("Initiated stream")
 		_, err = q.InitiatedStreams[i].Write([]byte{byte(i)})
 		if err != nil {
 			return err
@@ -129,20 +129,28 @@ func (q QuicTransport) IsClosed() bool {
 	return q.Closed
 }
 
-func (q *QuicTransport) Recv(channel wgpstypes.Channel, role wgpstypes.SyncRole) ([]byte, error) {
-	buffer := make([]byte, 4096) // Adjust buffer size as needed
+func (q *QuicTransport) Recv(writeTo chan []byte, channel wgpstypes.Channel, role wgpstypes.SyncRole) {
+
 	if wgpstypes.IsAlfie(role) {
-		n, err := q.InitiatedStreams[channel].Read(buffer)
-		if err != nil {
-			return nil, err
+		for {
+			buffer := make([]byte, 512) // Adjust buffer size as needed
+			n, err := q.InitiatedStreams[channel].Read(buffer)
+			if err != nil {
+				// Handle Error
+				return
+			}
+			writeTo <- buffer[:n]
 		}
-		return buffer[:n], nil
 	} else {
-		n, err := q.AcceptedStreams[channel].Read(buffer)
-		if err != nil {
-			return nil, err
+		for {
+			buffer := make([]byte, 512)
+			n, err := q.AcceptedStreams[channel].Read(buffer)
+			if err != nil {
+				// Handle Error
+				return
+			}
+			writeTo <- buffer[:n]
 		}
-		return buffer[:n], nil
 	}
 
 }

@@ -48,7 +48,7 @@ func main() {
 	fmt.Println(bettyMessage)
 	return */
 
-	WillowStore := (*pinagoladastore.InitStorage(types.NamespaceId("thespace")))
+	WillowStore := (*pinagoladastore.InitStorage(types.NamespaceId("myspace")))
 	newMessengerChan := make(chan wgps.NewMessengerReturn[string, types.SubspaceId, string, string, string, int, string, types.SubspaceId, string, string, string, string, string, string, string, []byte, uint], 1)
 	opts := wgps.WgpsMessengerOpts[string, types.SubspaceId, string, string, string, int, string, types.SubspaceId, string, string, string, string, string, string, string, []byte, uint]{
 		Schemes: wgpstypes.SyncSchemes[
@@ -81,12 +81,12 @@ func main() {
 		},
 	}
 
-	go wgps.NewWgpsMessenger(opts, newMessengerChan, "localhost:4242")
+	go wgps.NewWgpsMessenger(opts, newMessengerChan, "localhost:4241")
 	messenger := <-newMessengerChan
 	if messenger.Error != nil {
 		fmt.Println("Error in creating messenger:", messenger.Error)
 		return
 	}
 	fmt.Println("Messenger set up")
-	select {}
+	messenger.NewMessenger.Initiate("localhost:4242")
 }

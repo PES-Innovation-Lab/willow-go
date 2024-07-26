@@ -32,14 +32,14 @@ type Event struct {
 	Cancel bool
 }
 
-type PayloadIngesterOpts[PreFingerPrint, FingerPrint constraints.Ordered, K constraints.Unsigned, AuthorisationToken string, AuthorisationOpts []byte] struct {
+type PayloadIngesterOpts[PreFingerPrint, FingerPrint string, K constraints.Unsigned, AuthorisationToken string, AuthorisationOpts []byte] struct {
 	GetStore               wgpstypes.GetStoreFn[PreFingerPrint, FingerPrint, K, AuthorisationToken, AuthorisationOpts]
 	ProcessReceivedPayload func(bytes []byte, entryLength uint64) []byte
 }
 
 // PayloadIngester struct modified to include the currentIngestion field.
 // This class can handle both the payload sending procedures for payloads sent via reconciliation AND data channels. It would probably be better to split them up.
-type PayloadIngester[Prefingerprint, Fingerprint constraints.Ordered, AuthorisationToken string, AuthorisationOpts []byte] struct {
+type PayloadIngester[Prefingerprint, Fingerprint string, AuthorisationToken string, AuthorisationOpts []byte] struct {
 	CurrentIngestion       CurrentIngestion
 	Events                 chan Event
 	ProcessReceivedPayload func(bytes []byte, entryLength uint64) []byte
@@ -50,7 +50,7 @@ type PayloadIngester[Prefingerprint, Fingerprint constraints.Ordered, Authorisat
 }
 
 // NewPayloadIngester creates a new PayloadIngester with the initial state.
-func NewPayloadIngester[Prefingerprint, Fingerprint constraints.Ordered, K constraints.Unsigned, AuthorisationToken string, AuthorisationOpts []byte](
+func NewPayloadIngester[Prefingerprint, Fingerprint string, K constraints.Unsigned, AuthorisationToken string, AuthorisationOpts []byte](
 	opts PayloadIngesterOpts[Prefingerprint, Fingerprint, K, AuthorisationToken, AuthorisationOpts],
 ) PayloadIngester[Prefingerprint, Fingerprint, AuthorisationToken, AuthorisationOpts] {
 

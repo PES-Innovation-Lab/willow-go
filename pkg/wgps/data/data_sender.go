@@ -36,18 +36,18 @@ type PayloadRequest struct {
 	Entry  types.Entry
 }
 
-type DataSenderOpts[Prefingerprint, Fingerprint constraints.Ordered, K constraints.Unsigned, AuthorisationToken, DynamicToken string, AuthorisationOpts []byte] struct {
+type DataSenderOpts[Prefingerprint, Fingerprint string, K constraints.Unsigned, AuthorisationToken, DynamicToken string, AuthorisationOpts []byte] struct {
 	HandlesPayloadRequestsTheirs handlestore.HandleStore[PayloadRequest]
 	GetStore                     wgpstypes.GetStoreFn[Prefingerprint, Fingerprint, K, AuthorisationToken, AuthorisationOpts]
 	TransformPayload             func(chunk []byte) []byte
 }
 
-type DataSender[Prefingerprint, Fingerprint constraints.Ordered, K constraints.Unsigned, AuthorisationToken, DynamicToken string, AuthorisationOpts []byte] struct {
+type DataSender[Prefingerprint, Fingerprint string, K constraints.Unsigned, AuthorisationToken, DynamicToken string, AuthorisationOpts []byte] struct {
 	Opts          DataSenderOpts[Prefingerprint, Fingerprint, K, AuthorisationToken, DynamicToken, AuthorisationOpts]
 	InternalQueue []interface{} // Either DataSendEntry or DataBindPayloadRequest
 }
 
-func NewDataSender[Prefingerprint, Fingerprint constraints.Ordered, K constraints.Unsigned, AuthorisationToken, DynamicToken string, AuthorisationOpts []byte](opts DataSenderOpts[Prefingerprint, Fingerprint, K, AuthorisationToken, DynamicToken, AuthorisationOpts]) DataSender[Prefingerprint, Fingerprint, K, AuthorisationToken, DynamicToken, AuthorisationOpts] {
+func NewDataSender[Prefingerprint, Fingerprint string, K constraints.Unsigned, AuthorisationToken, DynamicToken string, AuthorisationOpts []byte](opts DataSenderOpts[Prefingerprint, Fingerprint, K, AuthorisationToken, DynamicToken, AuthorisationOpts]) DataSender[Prefingerprint, Fingerprint, K, AuthorisationToken, DynamicToken, AuthorisationOpts] {
 	return DataSender[Prefingerprint, Fingerprint, K, AuthorisationToken, DynamicToken, AuthorisationOpts]{
 		Opts:          opts,
 		InternalQueue: make([]interface{}, 1),

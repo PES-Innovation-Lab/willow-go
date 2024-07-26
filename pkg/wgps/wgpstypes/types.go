@@ -28,7 +28,7 @@ func IsBetty(role SyncRole) bool {
 }
 
 type GetStoreFn[PreFingerPrint,
-	Fingerprint constraints.Ordered,
+	Fingerprint string,
 	K constraints.Unsigned,
 	AuthorisationToken string,
 	AuthorisationOpts []byte] func(namespace types.NamespaceId) store.Store[PreFingerPrint, Fingerprint, K, AuthorisationOpts, AuthorisationToken]
@@ -259,7 +259,7 @@ type MsgSetupBindStaticToken[StaticToken string] struct {
 }
 
 /** Send a Fingerprint as part of 3d range-based set reconciliation. */
-type MsgReconciliationSendFingerprintData[Fingerprint constraints.Ordered] struct {
+type MsgReconciliationSendFingerprintData[Fingerprint string] struct {
 	Range          types.Range3d
 	Fingerprint    Fingerprint
 	SenderHandle   uint64
@@ -267,7 +267,7 @@ type MsgReconciliationSendFingerprintData[Fingerprint constraints.Ordered] struc
 	Covers         uint64
 	DoesCover      bool
 }
-type MsgReconciliationSendFingerprint[Fingerprint constraints.Ordered] struct {
+type MsgReconciliationSendFingerprint[Fingerprint string] struct {
 	Kind MsgKind
 	Data MsgReconciliationSendFingerprintData[Fingerprint]
 }
@@ -576,7 +576,7 @@ type SyncSchemes[ReadCapability any,
 	SyncSubspaceSignature,
 	SubspaceSecretKey any,
 	Prefingerprint,
-	Fingerprint constraints.Ordered,
+	Fingerprint string,
 	AuthorisationToken,
 	StaticToken,
 	DynamicToken string,

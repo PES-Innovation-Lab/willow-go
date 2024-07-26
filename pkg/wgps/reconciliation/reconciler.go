@@ -12,7 +12,7 @@ import (
 )
 
 type ReconcilerOpts[
-	PreFingerPrint, FingerPrint constraints.Ordered,
+	PreFingerPrint, FingerPrint string,
 	K constraints.Unsigned,
 	AuthorisationOpts []byte, AuthorisationToken string] struct {
 	Role              wgpstypes.SyncRole
@@ -28,7 +28,7 @@ const SEND_ENTRIES_THRESHOLD = 8
 
 type Reconciler[
 	K constraints.Unsigned,
-	PreFingerprint, Fingerprint constraints.Ordered, AuthorisationOpts []byte, AuthorisationToken string] struct {
+	PreFingerprint, Fingerprint string, AuthorisationOpts []byte, AuthorisationToken string] struct {
 	SubspaceScheme    datamodeltypes.SubspaceScheme
 	FingerprintScheme datamodeltypes.FingerprintScheme[PreFingerprint, Fingerprint]
 	Store             *store.Store[PreFingerprint, Fingerprint, K, AuthorisationOpts, AuthorisationToken]
