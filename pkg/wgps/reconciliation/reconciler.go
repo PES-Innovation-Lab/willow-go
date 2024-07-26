@@ -130,62 +130,83 @@ func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, Authorisa
 	fingerprint FingerPrint,
 	yourRangeCounter int,
 
-) {
+) (struct {
+	Range       types.Range3d
+	FingerPrint FingerPrint
+	Covers      uint64
+}, struct {
+	Range       types.Range3d
+	FingerPrint FingerPrint
+	Covers      uint64
+}, struct {
+	WantResponse bool
+	Range        types.Range3d
+}) {
 	// TODO Implement Summarise function in store
 	ourFingerprint := r.Store.EntryDriver.Storage.Summarise(yourRange)
 	size := ourFingerprint.Size
 	fingerprintOursFinal := r.FingerprintScheme.FingerPrintFinalise(PreFingerPrint(ourFingerprint.FingerPrint))
 	if r.FingerprintScheme.IsEqual(fingerprint, fingerprintOursFinal) {
-		r.AnnounceQueue <- struct {
-			Range        types.Range3d
-			Count        int
-			WantResponse bool
-			Covers       uint64
-		}{
-			Range:        yourRange,
-			Count:        0,
-			WantResponse: false,
-			Covers:       uint64(yourRangeCounter),
-		}
+		return struct {
+				Range       types.Range3d
+				FingerPrint FingerPrint
+				Covers      uint64
+			}{}, struct {
+				Range       types.Range3d
+				FingerPrint FingerPrint
+				Covers      uint64
+			}{}, struct {
+				WantResponse bool
+				Range        types.Range3d
+			}{
+				WantResponse: false,
+				Range:        types.Range3d{},
+			}
 	} else if size <= SEND_ENTRIES_THRESHOLD {
-		r.AnnounceQueue <- struct {
-			Range        types.Range3d
-			Count        int
-			WantResponse bool
-			Covers       uint64
-		}{
-			Range:        yourRange,
-			Count:        int(size),
-			WantResponse: true,
-			Covers:       uint64(yourRangeCounter),
-		}
-		return
+		return struct {
+				Range       types.Range3d
+				FingerPrint FingerPrint
+				Covers      uint64
+			}{}, struct {
+				Range       types.Range3d
+				FingerPrint FingerPrint
+				Covers      uint64
+			}{}, struct {
+				WantResponse bool
+				Range        types.Range3d
+			}{
+				WantResponse: true,
+				Range:        yourRange,
+			}
 	} else {
 		// TODO: Implement Store Split Range
 		left, right := r.Store.EntryDriver.Storage.SplitRange(yourRange, int(size))
 		fingerprintLeftFinal := r.FingerprintScheme.FingerPrintFinalise(PreFingerPrint(r.Store.EntryDriver.Storage.Summarise(left).FingerPrint)) //Most readable code in Willow-Go
 		fingerprintRightFinal := r.FingerprintScheme.FingerPrintFinalise(PreFingerPrint(r.Store.EntryDriver.Storage.Summarise(right).FingerPrint))
 
-		r.FingerPrintQueue <- struct {
-			Range       types.Range3d
-			FingerPrint FingerPrint
-			Covers      uint64
-		}{
-			Range:       left,
-			FingerPrint: fingerprintLeftFinal,
-		}
-		r.FingerPrintQueue <- struct {
-			Range       types.Range3d
-			FingerPrint FingerPrint
-			Covers      uint64
-		}{
-			Range:       right,
-			FingerPrint: fingerprintRightFinal,
-			Covers:      uint64(yourRangeCounter),
-		}
-
+		return struct {
+				Range       types.Range3d
+				FingerPrint FingerPrint
+				Covers      uint64 
+			}{
+				Range:       left,
+				FingerPrint: fingerprintLeftFinal,
+			}, struct {
+				Range       types.Range3d
+				FingerPrint FingerPrint
+				Covers      uint64
+			}{
+				Range:       right,
+				FingerPrint: fingerprintRightFinal,
+				Covers:      uint64(yourRangeCounter),
+			}, struct {
+				WantResponse bool
+				Range        types.Range3d
+			}{
+				WantResponse: false,
+				Range:        types.Range3d{},
+			}
 	}
-
 }
 
 func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, AuthorisationToken]) announcements() chan struct {

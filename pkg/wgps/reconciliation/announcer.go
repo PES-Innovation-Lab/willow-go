@@ -1,6 +1,6 @@
 package reconciliation
 
-import (
+/* import (
 	"fmt"
 
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
@@ -180,4 +180,4 @@ func (a *Announcer[PreFingerPrint, FingerPrint, ValueType, StaticToken, DynamicT
 		}
 	}()
 	return out
-}
+} */
