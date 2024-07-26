@@ -46,7 +46,7 @@ type Reconciler[
 	Ranges chan types.Range3d
 }
 
-/*func NewReconciler[PreFingerPrint, FingerPrint constraints.Ordered,
+func NewReconciler[PreFingerPrint, FingerPrint string,
 	K constraints.Unsigned, AuthorisationOpts []byte, AuthorisationToken string](opts *ReconcilerOpts[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken],
 ) *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, AuthorisationToken] {
 
@@ -107,11 +107,11 @@ func (r Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, Authorisat
 	return nil
 }
 
-/*func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, AuthorisationToken]) Initiate() {
-// Initialize the reconciliation process.
-intersection := <-r.Ranges */
-// TODO : Implement Summarise function in store
-/* preFingerprint := r.Store.Summarise(intersection)
+func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, AuthorisationToken]) Initiate() {
+	// Initialize the reconciliation process.
+	intersection := <-r.Ranges
+	// TODO : Implement Summarise function in store
+	preFingerprint := r.Store.Summarise(intersection)
 	finalised := r.FingerprintScheme.FingerPrintFinalise(preFingerprint)
 	r.FingerPrintQueue <- struct {
 		Range       types.Range3d
@@ -132,9 +132,11 @@ func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, Authorisa
 
 ) {
 	// TODO Implement Summarise function in store
-	ourFingerprint, size := r.Store.Summarise(yourRange)
+	keys_in_range := r.Store.EntryDriver.Storage.Query(yourRange)
+	ourFingerprint := store.BuildFingerprints(keys_in_range)
+	size := len(keys_in_range)
 
-	fingerprintOursFinal := r.FingerprintScheme.FingerPrintFinalise(ourFingerprint)
+	fingerprintOursFinal := r.FingerprintScheme.FingerPrintFinalise(PreFingerPrint(ourFingerprint[0].Hash))
 	if r.FingerprintScheme.IsEqual(fingerprint, fingerprintOursFinal) {
 		r.AnnounceQueue <- struct {
 			Range        types.Range3d
@@ -162,9 +164,9 @@ func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, Authorisa
 		return
 	} else {
 		// TODO: Implement Store Split Range
-		left, right := r.Store.SplitRange(yourRange, size)
-		fingerprintLeftFinal := r.FingerprintScheme.FingerPrintFinalise(r.Store.Summarise(left))
-		fingerprintRightFinal := r.FingerprintScheme.FingerPrintFinalise(r.Store.Summarise(right))
+		left, right := store.SplitRange(ourFingerprint, ourFingerprint[0])
+		fingerprintLeftFinal := r.FingerprintScheme.FingerPrintFinalise(PreFingerPrint(left.Hash))
+		fingerprintRightFinal := r.FingerprintScheme.FingerPrintFinalise(PreFingerPrint(right.Hash))
 		r.FingerPrintQueue <- struct {
 			Range       types.Range3d
 			FingerPrint FingerPrint
@@ -187,26 +189,7 @@ func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, Authorisa
 
 }
 
-func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, AuthorisationToken]) fingerprints() <-chan struct {
-	Range       types.Range3d
-	FingerPrint FingerPrint
-	Covers      uint64
-} {
-	out := make(chan struct {
-		Range       types.Range3d
-		FingerPrint FingerPrint
-		Covers      uint64
-	})
-	go func() {
-		defer close(out)
-		for details := range r.FingerPrintQueue {
-			out <- details
-		}
-	}()
-	return out
-}
-
-func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, AuthorisationToken]) announcements() <-chan struct {
+func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, AuthorisationToken]) announcements() chan struct {
 	Range        types.Range3d
 	Count        int
 	WantResponse bool

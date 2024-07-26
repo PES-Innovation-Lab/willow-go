@@ -111,7 +111,7 @@ func DecodeDataSendEntry[DynamicToken string, ValueType constraints.Unsigned](by
 			}, bytes, opts.AoiHandlesToArea(SenderHandle, ReceiverHandle), opts.AoiHandlesToNamespace(SenderHandle, ReceiverHandle),
 		) //gotta check this out
 	} else {
-		fmt.Errorf("ould not decode entry encoded relative to area when no handles are provided")
+		fmt.Errorf("could not decode entry encoded relative to area when no handles are provided")
 	}
 
 	if !IsOffsetEncoded {

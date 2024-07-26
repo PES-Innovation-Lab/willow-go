@@ -20,7 +20,7 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-type Store[PreFingerPrint, FingerPrint constraints.Ordered, K constraints.Unsigned, AuthorisationOpts []byte, AuthorisationToken string] struct {
+type Store[PreFingerPrint, FingerPrint string, K constraints.Unsigned, AuthorisationOpts []byte, AuthorisationToken string] struct {
 	Schemes            datamodeltypes.StoreSchemes[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]
 	EntryDriver        entrydriver.EntryDriver[PreFingerPrint, FingerPrint, K]
 	PayloadDriver      payloadDriver.PayloadDriver

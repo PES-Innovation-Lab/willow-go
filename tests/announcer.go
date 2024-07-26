@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
-	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/store"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/handlestore"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/wgpstypes"
 	"github.com/PES-Innovation-Lab/willow-go/types"
@@ -37,7 +36,7 @@ type AnnouncementPack[StaticToken, DynamicToken string] struct {
 	}
 }
 
-type Announcer[PreFingerPrint, FingerPrint constraints.Ordered, ValueType any, StaticToken, DynamicToken string, AuthorisationOpts []byte, AuthorisationToken string, K constraints.Unsigned] struct {
+type Announcer[PreFingerPrint, FingerPrint string, ValueType any, StaticToken, DynamicToken string, AuthorisationOpts []byte, AuthorisationToken string, K constraints.Unsigned] struct {
 	AuthorisationTokenScheme   wgpstypes.AuthorisationTokenScheme[AuthorisationToken, StaticToken, DynamicToken]
 	PayloadScheme              datamodeltypes.PayloadScheme
 	StaticTokenHandleStoreOurs handlestore.HandleStore[StaticToken]
@@ -45,7 +44,7 @@ type Announcer[PreFingerPrint, FingerPrint constraints.Ordered, ValueType any, S
 	AnnouncementPackQueue      chan AnnouncementPack[StaticToken, DynamicToken]
 }
 
-func NewAnnouncer[PreFingerPrint, FingerPrint constraints.Ordered, ValueType any, StaticToken, DynamicToken string, AuthorisationOpts []byte, AuthorisationToken string, K constraints.Unsigned](
+func NewAnnouncer[PreFingerPrint, FingerPrint string, ValueType any, StaticToken, DynamicToken string, AuthorisationOpts []byte, AuthorisationToken string, K constraints.Unsigned](
 	opts AnnouncerOpts[AuthorisationToken, StaticToken,
 		DynamicToken, ValueType]) *Announcer[PreFingerPrint, FingerPrint, ValueType, StaticToken, DynamicToken, AuthorisationOpts, AuthorisationToken, K] {
 
@@ -93,7 +92,7 @@ func (a *Announcer[PreFingerPrint, FingerPrint, ValueType, StaticToken, DynamicT
 	announcement struct {
 		SenderHandle   uint64
 		ReceiverHandle uint64
-		Store          *store.Store[PreFingerPrint, FingerPrint, K, AuthorisationOpts, AuthorisationToken]
+		KDStore        *datamodeltypes.KDTreeStorage[PreFingerPrint, FingerPrint, K]
 		Namespace      types.NamespaceId
 		Range          types.Range3d
 		WantResponse   bool
@@ -109,14 +108,17 @@ func (a *Announcer[PreFingerPrint, FingerPrint, ValueType, StaticToken, DynamicT
 	}{}
 
 	//TODO: Implement QueryRange in Store
-	results := announcement.Store.QueryRange(announcement.Range, oldest)
+	results := announcement.KDStore.Query(announcement.Range)
 
-	for result := range results {
-		entry := result[0]
-		payload := result[1]
-		authToken := result[2]
+	for _, result := range results {
 
-		staticToken, dynamicToken := a.AuthorisationTokenScheme.DecomposeAuthToken(authToken)
+		timestamp := result.Timestamp
+		path := result.Path
+		subspace := result.Subspace
+
+		SubspaceName := string(subspace)
+
+		staticToken, dynamicToken := a.AuthorisationTokenScheme.DecomposeAuthToken(AuthorisationToken(SubspaceName))
 
 		TokenHandle, _ := a.GetStaticTokenHandle(staticToken)
 
@@ -132,7 +134,7 @@ func (a *Announcer[PreFingerPrint, FingerPrint, ValueType, StaticToken, DynamicT
 			StaticTokenHandle uint64
 			DynamicToken      DynamicToken
 		}{
-			LengthyEntry:      entry, //need ot change this later
+			LengthyEntry:      entries, //need to change this later
 			StaticTokenHandle: staticTokenHandle,
 			DynamicToken:      dynamicToken,
 		})

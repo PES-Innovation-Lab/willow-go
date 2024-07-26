@@ -16,7 +16,7 @@ import (
 	"github.com/cockroachdb/pebble"
 )
 
-func InitStorage(nameSpaceId types.NamespaceId) *Store[uint64, uint64, uint8, []byte, string] {
+func InitStorage(nameSpaceId types.NamespaceId) *Store[string, string, uint8, []byte, string] {
 
 	payloadRefDb, err := pebble.Open("willow/payloadrefcounter", &pebble.Options{})
 	if err != nil {
@@ -37,7 +37,7 @@ func InitStorage(nameSpaceId types.NamespaceId) *Store[uint64, uint64, uint8, []
 	PayloadLock := &sync.Mutex{}
 	TestPayloadDriver := payloadDriver.MakePayloadDriver("willow/payload", TestPayloadScheme, PayloadLock)
 
-	entryDriver := entrydriver.EntryDriver[uint64, uint64, uint8]{
+	entryDriver := entrydriver.EntryDriver[string, string, uint8]{
 		PayloadReferenceCounter: PayloadReferenceCounter,
 		Opts: struct {
 			KVDriver          kv_driver.KvDriver[uint8]
@@ -45,7 +45,7 @@ func InitStorage(nameSpaceId types.NamespaceId) *Store[uint64, uint64, uint8, []
 			SubspaceScheme    datamodeltypes.SubspaceScheme
 			PayloadScheme     datamodeltypes.PayloadScheme
 			PathParams        types.PathParams[uint8]
-			FingerprintScheme datamodeltypes.FingerprintScheme[uint64, uint64]
+			FingerprintScheme datamodeltypes.FingerprintScheme[string, string]
 		}{
 			KVDriver:          entryKvStore,
 			NamespaceScheme:   TestNameSpaceScheme,
@@ -57,7 +57,7 @@ func InitStorage(nameSpaceId types.NamespaceId) *Store[uint64, uint64, uint8, []
 	}
 	TestPrefixDriver := kv_driver.PrefixDriver[uint8]{}
 
-	return &Store[uint64, uint64, uint8, []byte, string]{
+	return &Store[string, string, uint8, []byte, string]{
 		Schemes:            StoreSchemes,
 		EntryDriver:        entryDriver,
 		PayloadDriver:      TestPayloadDriver,
@@ -67,7 +67,7 @@ func InitStorage(nameSpaceId types.NamespaceId) *Store[uint64, uint64, uint8, []
 	}
 }
 
-var TestStore *Store[uint64, uint64, uint8, []byte, string] = InitStorage([]byte("Test"))
+var TestStore *Store[string, string, uint8, []byte, string] = InitStorage([]byte("Test"))
 
 func TestSet(t *testing.T) {
 	tc := []struct {
