@@ -2,6 +2,7 @@ package reconciliation
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/store"
@@ -83,7 +84,7 @@ func NewReconciler[PreFingerPrint, FingerPrint string,
 		wg.Wait()
 	}
 	return newReconciler
-} */
+}
 
 func (r Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, AuthorisationToken]) DetermineRange(
 	aoi1, aoi2 types.AreaOfInterest, role wgpstypes.SyncRole,
@@ -111,8 +112,9 @@ func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, Authorisa
 	// Initialize the reconciliation process.
 	intersection := <-r.Ranges
 	// TODO : Implement Summarise function in store
-	preFingerprint := r.Store.Summarise(intersection)
-	finalised := r.FingerprintScheme.FingerPrintFinalise(preFingerprint)
+
+	preFingerprint := r.Store.EntryDriver.Storage.Summarise(intersection)
+	finalised := r.FingerprintScheme.FingerPrintFinalise(PreFingerPrint(preFingerprint.FingerPrint))
 	r.FingerPrintQueue <- struct {
 		Range       types.Range3d
 		FingerPrint FingerPrint
@@ -121,9 +123,7 @@ func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, Authorisa
 		Range:       intersection,
 		FingerPrint: finalised,
 	}
-} */
-
-/*
+}
 
 func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, AuthorisationToken]) Respond(
 	yourRange types.Range3d,
@@ -132,11 +132,9 @@ func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, Authorisa
 
 ) {
 	// TODO Implement Summarise function in store
-	keys_in_range := r.Store.EntryDriver.Storage.Query(yourRange)
-	ourFingerprint := store.BuildFingerprints(keys_in_range)
-	size := len(keys_in_range)
-
-	fingerprintOursFinal := r.FingerprintScheme.FingerPrintFinalise(PreFingerPrint(ourFingerprint[0].Hash))
+	ourFingerprint := r.Store.EntryDriver.Storage.Summarise(yourRange)
+	size := ourFingerprint.Size
+	fingerprintOursFinal := r.FingerprintScheme.FingerPrintFinalise(PreFingerPrint(ourFingerprint.FingerPrint))
 	if r.FingerprintScheme.IsEqual(fingerprint, fingerprintOursFinal) {
 		r.AnnounceQueue <- struct {
 			Range        types.Range3d
@@ -157,16 +155,17 @@ func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, Authorisa
 			Covers       uint64
 		}{
 			Range:        yourRange,
-			Count:        size,
+			Count:        int(size),
 			WantResponse: true,
 			Covers:       uint64(yourRangeCounter),
 		}
 		return
 	} else {
 		// TODO: Implement Store Split Range
-		left, right := store.SplitRange(ourFingerprint, ourFingerprint[0])
-		fingerprintLeftFinal := r.FingerprintScheme.FingerPrintFinalise(PreFingerPrint(left.Hash))
-		fingerprintRightFinal := r.FingerprintScheme.FingerPrintFinalise(PreFingerPrint(right.Hash))
+		left, right := r.Store.EntryDriver.Storage.SplitRange(yourRange, int(size))
+		fingerprintLeftFinal := r.FingerprintScheme.FingerPrintFinalise(PreFingerPrint(r.Store.EntryDriver.Storage.Summarise(left).FingerPrint)) //Most readable code in Willow-Go
+		fingerprintRightFinal := r.FingerprintScheme.FingerPrintFinalise(PreFingerPrint(r.Store.EntryDriver.Storage.Summarise(right).FingerPrint))
+
 		r.FingerPrintQueue <- struct {
 			Range       types.Range3d
 			FingerPrint FingerPrint
@@ -208,4 +207,4 @@ func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, Authorisa
 		}
 	}()
 	return out
-} */
+}

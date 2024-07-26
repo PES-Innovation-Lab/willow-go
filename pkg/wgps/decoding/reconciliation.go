@@ -10,7 +10,7 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-type SendOpts[Fingerprint constraints.Ordered, ValueType constraints.Unsigned] struct {
+type SendOpts[Fingerprint string, ValueType constraints.Unsigned] struct {
 	NeutralFingerprint  Fingerprint
 	DecodeFingerprint   func(bytes *utils.GrowingBytes) chan Fingerprint
 	DecodeSubspaceId    func(bytes *utils.GrowingBytes) chan types.SubspaceId
@@ -19,13 +19,13 @@ type SendOpts[Fingerprint constraints.Ordered, ValueType constraints.Unsigned] s
 	AoiHandlesToRange3d func(senderAoiHandle uint64, receiverAoiHandle uint64) types.Range3d
 }
 
-func DecodeReconciliationSendFingerprint[Fingerprint constraints.Ordered, ValueType constraints.Unsigned](bytes *utils.GrowingBytes, opts SendOpts[Fingerprint, ValueType]) wgpstypes.MsgReconciliationSendFingerprint[Fingerprint] {
+func DecodeReconciliationSendFingerprint[Fingerprint string, ValueType constraints.Unsigned](bytes *utils.GrowingBytes, opts SendOpts[Fingerprint, ValueType]) wgpstypes.MsgReconciliationSendFingerprint[Fingerprint] {
 	Privy := opts.GetPrivy()
 
-	bytes.NextAbsolute(2)
+	width := bytes.NextAbsolute(2)
 
-	FirstByte := bytes.Array[0]
-	SecondByte := bytes.Array[1]
+	FirstByte := width[0]
+	SecondByte := width[1]
 
 	IsFingerprintNeutral := (FirstByte & 0x8) == 0x8
 
@@ -49,9 +49,9 @@ func DecodeReconciliationSendFingerprint[Fingerprint constraints.Ordered, ValueT
 	bytes.Prune(2)
 
 	if CoversNotNone {
-		bytes.NextAbsolute(CoversCompactWidth)
+		width1 := bytes.NextAbsolute(CoversCompactWidth)
 
-		Covers, _ = utils.DecodeIntMax64(bytes.Array[:CoversCompactWidth])
+		Covers, _ = utils.DecodeIntMax64(width1[:CoversCompactWidth])
 
 		bytes.Prune(CoversCompactWidth)
 	} else {
@@ -59,9 +59,9 @@ func DecodeReconciliationSendFingerprint[Fingerprint constraints.Ordered, ValueT
 	}
 
 	if !IsSenderPrevSender {
-		bytes.NextAbsolute(SenderCompactWidth)
+		width1 := bytes.NextAbsolute(SenderCompactWidth)
 
-		SenderHandle, _ = utils.DecodeIntMax64(bytes.Array[:SenderCompactWidth])
+		SenderHandle, _ = utils.DecodeIntMax64(width1[:SenderCompactWidth])
 
 		bytes.Prune(SenderCompactWidth)
 	} else {
@@ -69,9 +69,9 @@ func DecodeReconciliationSendFingerprint[Fingerprint constraints.Ordered, ValueT
 	}
 
 	if !IsReceiverPrevReceiver {
-		bytes.NextAbsolute(ReceiverCompactWidth)
+		width1 := bytes.NextAbsolute(ReceiverCompactWidth)
 
-		ReceiverHandle, _ = utils.DecodeIntMax64(bytes.Array[:ReceiverCompactWidth])
+		ReceiverHandle, _ = utils.DecodeIntMax64(width1[:ReceiverCompactWidth])
 
 		bytes.Prune(ReceiverCompactWidth)
 	} else {
@@ -119,9 +119,9 @@ type AnnounceOpts[ValueType constraints.Unsigned] struct {
 func DecodeReconciliationAnnounceEntries[ValueType constraints.Unsigned](bytes *utils.GrowingBytes, opts AnnounceOpts[ValueType]) wgpstypes.MsgReconciliationAnnounceEntries {
 	Privy := opts.GetPrivy()
 
-	bytes.NextAbsolute(2)
+	width := bytes.NextAbsolute(2)
 
-	FirstByte, SecondByte := bytes.Array[0], bytes.Array[1]
+	FirstByte, SecondByte := width[0], width[1]
 
 	WantResponse := (FirstByte & 0x8) == 0x8
 
@@ -143,16 +143,16 @@ func DecodeReconciliationAnnounceEntries[ValueType constraints.Unsigned](bytes *
 	bytes.Prune(2)
 
 	if CoversNotNone {
-		bytes.NextAbsolute(1)
+		width1 := bytes.NextAbsolute(1)
 
-		CoversLength := bytes.Array[0]
+		CoversLength := width1[0]
 
 		if (CoversLength & 0xfc) == 0xfc {
 			CoversCompactWidth := int(math.Pow(2, float64(int((SecondByte & 0x3)))))
 
-			bytes.NextAbsolute(CoversCompactWidth)
+			width2 := bytes.NextAbsolute(CoversCompactWidth)
 
-			Covers, _ = utils.DecodeIntMax64(bytes.Array[1 : 1+CoversCompactWidth])
+			Covers, _ = utils.DecodeIntMax64(width2[1 : 1+CoversCompactWidth])
 
 			bytes.Prune(1 + CoversCompactWidth)
 		} else {
@@ -168,9 +168,9 @@ func DecodeReconciliationAnnounceEntries[ValueType constraints.Unsigned](bytes *
 
 	if !IsSenderPrevSender {
 		SenderCompactWidth := int(math.Pow(2, float64(int((SecondByte)>>6))))
-		bytes.NextAbsolute(SenderCompactWidth)
+		width1 := bytes.NextAbsolute(SenderCompactWidth)
 
-		SenderHandle, _ = utils.DecodeIntMax64(bytes.Array[:SenderCompactWidth])
+		SenderHandle, _ = utils.DecodeIntMax64(width1[:SenderCompactWidth])
 
 		bytes.Prune(SenderCompactWidth)
 	} else {
@@ -179,18 +179,18 @@ func DecodeReconciliationAnnounceEntries[ValueType constraints.Unsigned](bytes *
 
 	if !IsReceiverPrevReceiver {
 		ReceiverCompactWidth := int(math.Pow(2, float64(int((SecondByte>>4)&0x3))))
-		bytes.NextAbsolute(ReceiverCompactWidth)
+		width1 := bytes.NextAbsolute(ReceiverCompactWidth)
 
-		ReceiverHandle, _ = utils.DecodeIntMax64(bytes.Array[:ReceiverCompactWidth])
+		ReceiverHandle, _ = utils.DecodeIntMax64(width1[:ReceiverCompactWidth])
 
 		bytes.Prune(ReceiverCompactWidth)
 	} else {
 		ReceiverHandle = Privy.PrevReceiverHandle
 	}
 
-	bytes.NextAbsolute(CountWidth)
+	width1 := bytes.NextAbsolute(CountWidth)
 
-	Count, _ := utils.DecodeIntMax64(bytes.Array[:CountWidth])
+	Count, _ := utils.DecodeIntMax64(width1[:CountWidth])
 
 	bytes.Prune(CountWidth)
 
@@ -231,9 +231,9 @@ type EntryOpts[DynamicToken string, ValueType constraints.Unsigned] struct {
 func DecodeReconciliationSendEntry[DynamicToken string, ValueType constraints.Unsigned](bytes *utils.GrowingBytes, opts EntryOpts[DynamicToken, ValueType]) wgpstypes.MsgReconciliationSendEntry[DynamicToken] {
 	Privy := opts.GetPrivy()
 
-	bytes.NextAbsolute(1)
+	width := bytes.NextAbsolute(1)
 
-	Header := bytes.Array[0]
+	Header := width[0]
 
 	IsPrevStaticToken := (Header & 0x8) == 0x8
 	IsEncodedRelativeToPrev := (Header & 0x4) == 0x4
@@ -245,8 +245,8 @@ func DecodeReconciliationSendEntry[DynamicToken string, ValueType constraints.Un
 		StaticTokenHandle = Privy.PrevStaticTokenHandle
 		bytes.Prune(1)
 	} else {
-		bytes.NextAbsolute(2)
-		StaticTokensizeByte := bytes.Array[1]
+		width1 := bytes.NextAbsolute(2)
+		StaticTokensizeByte := width1[1]
 
 		var CompactWidth int = 0
 
@@ -260,19 +260,19 @@ func DecodeReconciliationSendEntry[DynamicToken string, ValueType constraints.Un
 			CompactWidth = 1
 		}
 
-		bytes.NextAbsolute(2 + CompactWidth)
+		width2 := bytes.NextAbsolute(2 + CompactWidth)
 
 		if StaticTokensizeByte < 63 {
 			StaticTokenHandle = uint64(StaticTokensizeByte)
 		} else {
-			StaticTokenHandle, _ = utils.DecodeIntMax64(bytes.Array[2 : 2+CompactWidth])
+			StaticTokenHandle, _ = utils.DecodeIntMax64(width2[2 : 2+CompactWidth])
 		}
 		bytes.Prune(2 + CompactWidth)
 	}
 
-	bytes.NextAbsolute(CompactWidthAvailable)
+	width1 := bytes.NextAbsolute(CompactWidthAvailable)
 
-	Available, _ := utils.DecodeIntMax64(bytes.Array[:CompactWidthAvailable])
+	Available, _ := utils.DecodeIntMax64(width1[:CompactWidthAvailable])
 
 	bytes.Prune(CompactWidthAvailable)
 
@@ -324,19 +324,19 @@ func DecodeReconciliationSendEntry[DynamicToken string, ValueType constraints.Un
 }
 
 func DecodeReconciliationSendPayload(bytes *utils.GrowingBytes) wgpstypes.MsgReconciliationSendPayload {
-	bytes.NextAbsolute(1)
+	width := bytes.NextAbsolute(1)
 
-	AmountCompactWidth := CompactWidthFromEndOfByte(int(bytes.Array[0]))
+	AmountCompactWidth := CompactWidthFromEndOfByte(int(width[0]))
 
-	bytes.NextAbsolute(1 + AmountCompactWidth)
+	width1 := bytes.NextAbsolute(1 + AmountCompactWidth)
 
-	Amount, _ := utils.DecodeIntMax64(bytes.Array[1 : 1+AmountCompactWidth])
+	Amount, _ := utils.DecodeIntMax64(width1[1 : 1+AmountCompactWidth])
 
 	bytes.Prune(1 + AmountCompactWidth)
 
-	bytes.NextAbsolute(int(Amount))
+	width2 := bytes.NextAbsolute(int(Amount))
 
-	MessageBytes := bytes.Array[:int(Amount)]
+	MessageBytes := width2[:int(Amount)]
 
 	bytes.Prune(int(Amount))
 
