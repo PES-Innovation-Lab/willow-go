@@ -502,7 +502,7 @@ type CapabilityChannelMsg interface {
 	IsCapabilityChannelMsg()
 }
 
-func (MsgSetupBindReadCapability[ReadCapability, SyncSignature]) isCapabilityChannelMsg() {}
+func (MsgSetupBindReadCapability[ReadCapability, SyncSignature]) IsCapabilityChannelMsg() {}
 
 type AreaOfInterestChannelMsg interface {
 	IsAreaOfInterestChannelMsg()
