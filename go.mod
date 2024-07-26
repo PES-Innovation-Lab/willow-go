@@ -4,6 +4,7 @@ go 1.22.5
 
 require (
 	github.com/cockroachdb/pebble v1.1.1
+	github.com/gen2brain/raylib-go/raylib v0.0.0-20240628125141-62016ee92fc0
 	github.com/quic-go/quic-go v0.45.1
 	github.com/rishitc/go-kd-tree v0.0.0-alpha.2
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
@@ -18,6 +19,7 @@ require (
 	github.com/cockroachdb/logtags v0.0.0-20230118201751-21c54148d20b // indirect
 	github.com/cockroachdb/redact v1.1.5 // indirect
 	github.com/cockroachdb/tokenbucket v0.0.0-20230807174530-cc333fc44b06 // indirect
+	github.com/ebitengine/purego v0.7.1 // indirect
 	github.com/getsentry/sentry-go v0.27.0 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect

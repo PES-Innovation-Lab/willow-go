@@ -12,6 +12,7 @@ import (
 
 	pinagoladastore "github.com/PES-Innovation-Lab/willow-go/PinaGoladaStore"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
+	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/kdnode"
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/PES-Innovation-Lab/willow-go/utils"
 )
@@ -140,8 +141,12 @@ func NameSpaceInteraction(namespace types.NamespaceId) {
 	WillowStore := pinagoladastore.InitStorage(namespace)
 	pinagoladastore.InitKDTree(WillowStore)
 
+	animationValues := make(chan []kdnode.Key)
+	go start_animation(animationValues)
 LOOPEND:
 	for {
+		animationValues <- WillowStore.List()
+
 		fmt.Print("> ")
 		if !scanner.Scan() {
 			break
