@@ -4,7 +4,6 @@ import (
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/wgpstypes"
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/PES-Innovation-Lab/willow-go/utils"
-	"golang.org/x/exp/constraints"
 )
 
 type ReconcileMsgTrackerOpts struct {
@@ -16,7 +15,7 @@ type ReconcileMsgTrackerOpts struct {
 	AoiHandlesToRange3d func(senderAoiHandle, receiverAoiHandle uint64) types.Range3d
 }
 
-type ReconcileMsgTracker[FingerPrint constraints.Ordered, DynamicToken string] struct {
+type ReconcileMsgTracker[FingerPrint string, DynamicToken string] struct {
 	PrevRange                 types.Range3d
 	PrevSenderHandle          uint64
 	PrevReceiverHandle        uint64
@@ -29,7 +28,7 @@ type ReconcileMsgTracker[FingerPrint constraints.Ordered, DynamicToken string] s
 	IsAwaitingTermination     bool
 }
 
-func NewReconcileMsgTracker[FingerPrint constraints.Ordered, DynamicToken string](
+func NewReconcileMsgTracker[FingerPrint string, DynamicToken string](
 	opts ReconcileMsgTrackerOpts,
 ) *ReconcileMsgTracker[FingerPrint, DynamicToken] {
 	return &ReconcileMsgTracker[FingerPrint, DynamicToken]{
