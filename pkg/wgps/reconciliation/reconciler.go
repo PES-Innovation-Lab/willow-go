@@ -163,8 +163,9 @@ func (r *Reconciler[K, PreFingerPrint, FingerPrint, AuthorisationOpts, Authorisa
 	} else {
 		// TODO: Implement Store Split Range
 		left, right := r.Store.EntryDriver.Storage.SplitRange(yourRange, int(size))
-		fingerprintLeftFinal := r.FingerprintScheme.FingerPrintFinalise(PreFingerPrint(r.Store.EntryDriver.Storage.Summarise(left).FingerPrint))
-		fingerprintRightFinal := r.FingerprintScheme.FingerPrintFinalise(PreFingerPrint(r.Store.EntryDriver.Storage.Summarise(right).FingerPrint))
+		fingerprintLeftFinal := r.FingerprintScheme.FingerPrintFinalise(PreFingerPrint(r.Store.EntryDriver.Storage.Summarise(left).FingerPrint))   //Most readable code in Willow-Go
+		fingerprintRightFinal := r.FingerprintScheme.FingerPrintFinalise(PreFingerPrint(r.Store.EntryDriver.Storage.Summarise(right).FingerPrint)) // Still more readable than JS 🤡
+
 		r.FingerPrintQueue <- struct {
 			Range       types.Range3d
 			FingerPrint FingerPrint
