@@ -1,9 +1,13 @@
 package wgps
 
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
+	"log"
 	"time"
 
+	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/store"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/data"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/syncutils"
 
@@ -262,8 +266,9 @@ type WgpsMessenger[
 
 	//Reconciliation
 	YourRangeCounter int
-	GetStore         wgpstypes.GetStoreFn[Prefingerprint, Fingerprint, K, AuthorisationToken, AuthorisationOpts]
-	//ReconcilerMap             reconciliation.ReconcilerMap //TODO: has to be changed to ReconcilerMap
+	// GetStore         wgpstypes.GetStoreFn[Prefingerprint, Fingerprint, K, AuthorisationToken, AuthorisationOpts]
+	Store store.Store[Prefingerprint, Fingerprint, K, AuthorisationOpts, AuthorisationToken]
+	// ReconcilerMap    reconciliation.ReconcilerMap[K, Prefingerprint, Fingerprint, AuthorisationOpts, AuthorisationToken] //TODO: has to be changed to ReconcilerMap
 	//AoiIntersectionFinder     reconciliation.AoiIntersectionFinder
 	//Announcer                 reconciliation.Announcer
 	CurrentlyReceivingEntries struct {
@@ -2711,4 +2716,110 @@ func (w *WgpsMessenger[
 	w.Closed = true
 	err := w.Transport.Close()
 	return err
+}
+
+func (
+	w *WgpsMessenger[
+		ReadCapability,
+		Receiver,
+		SyncSignature,
+		ReceiverSecretKey,
+		PsiGroup,
+		PsiScalar,
+		SubspaceCapability,
+		SubspaceReceiver,
+		SyncSubspaceSignature,
+		SubspaceSecretKey,
+		Prefingerprint,
+		Fingerprint,
+		AuthorisationToken,
+		StaticToken,
+		DynamicToken,
+		AuthorisationOpts,
+		K,
+	]) HandleMsgReconciliation(
+	msg wgpstypes.ReconciliationChannelMsg,
+	role wgpstypes.SyncRole,
+) {
+	switch msg := msg.(type) {
+	case wgpstypes.MsgReconciliationSendEntry[DynamicToken]:
+		store := w.GetStore(msg.Data.Entry.Entry.Namespace_id)
+		StaticToken, _ := w.HandlesStaticTokenTheirs.Get(msg.Data.StaticTokenHandle)
+		AuthToken := w.Schemes.AuthorisationToken.RecomposeAuthToken(StaticToken, msg.Data.DynamicToken)
+		_, err := store.IngestEntry(msg.Data.Entry.Entry, AuthToken)
+		if err != nil {
+			return
+		}
+		w.ReconciliationPayloadIngester.Target(msg.Data.Entry.Entry, false)
+		break
+	case wgpstypes.MsgReconciliationSendFingerprint[Fingerprint]:
+		reconciler, err := w.ReconcilerMap.GetReconciler(msg.Data.ReceiverHandle, msg.Data.SenderHandle)
+		if err != nil {
+			log.Fatal(err)
+		}
+		left, right, response := reconciler.Respond(msg.Data.Range, msg.Data.Fingerprint, w.YourRangeCounter)
+
+		if response.WantResponse {
+			extendedEntries, err := w.Store.EntryDriver.Query(response.Range)
+			if err != nil {
+				log.Fatal(err)
+			}
+			for _, extendedEntry := range extendedEntries {
+				w.Transport.Send(EncodeEntry(extendedEntry.Entry), wgpstypes.DataChannel, role)
+			}
+		} else {
+
+		}
+
+	case wgpstypes.MsgReconciliationSendPayload:
+		w.ReconciliationPayloadIngester.Push(msg.Data.Bytes, false)
+		break
+	case wgpstypes.MsgReconciliationTerminatePayload:
+		EntryToRequestPayloadFor := w.ReconciliationPayloadIngester.Terminate()
+		w.HandlesPayloadRequestsOurs.Bind(data.PayloadRequest{
+			Entry:  *EntryToRequestPayloadFor,
+			Offset: 0,
+		})
+
+	}
+
+}
+
+func EncodeEntry(entry types.Entry) []byte {
+	var buffer bytes.Buffer
+	encoder := gob.NewEncoder(&buffer)
+
+	// Register the types with gob
+	gob.Register(types.NamespaceId(nil))
+	gob.Register(types.SubspaceId(nil))
+	gob.Register(types.PayloadDigest(""))
+	gob.Register(types.Path(nil))
+	gob.Register(uint64(0))
+	gob.Register(uint64(0))
+
+	// Encode the entry
+	encoder.Encode(entry)
+	return buffer.Bytes()
+}
+
+func DecodeEntry(data []byte) (types.Entry, error) {
+	var entry types.Entry
+	buffer := bytes.NewBuffer(data)
+	decoder := gob.NewDecoder(buffer)
+
+	// Register the types with gob
+	gob.Register(types.NamespaceId(nil))
+	gob.Register(types.SubspaceId(nil))
+	gob.Register(types.PayloadDigest(""))
+	gob.Register(types.Path(nil))
+	gob.Register(uint64(0))
+	gob.Register(uint64(0))
+
+	// Decode the entry
+	err := decoder.Decode(&entry)
+	if err != nil {
+		return entry, fmt.Errorf("failed to decode entry: %w", err)
+	}
+
+	return entry, nil
 }
