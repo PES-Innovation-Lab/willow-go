@@ -56,14 +56,14 @@ func DecodeHandleTypeFromBeginningOfByte(bytes int) wgpstypes.HandleType {
 }
 
 func DecodeControlIssueGuarantee(bytes *utils.GrowingBytes) wgpstypes.MsgControlIssueGuarantee {
-	bytes.NextAbsolute(1)
-	CompactWidth := CompactWidthFromEndOfByte(int(bytes.Array[0]))
+	width1 := bytes.NextAbsolute(1)
+	CompactWidth := CompactWidthFromEndOfByte(int(width1[0]))
 
-	bytes.NextAbsolute(2)
-	Channel := DecodeChannelFromBeginningOfByte(int(bytes.Array[1]))
+	width2 := bytes.NextAbsolute(2)
+	Channel := DecodeChannelFromBeginningOfByte(int(width2[1]))
 
-	bytes.NextAbsolute(2 + CompactWidth)
-	Amount, _ := utils.DecodeIntMax64(bytes.Array[2 : 2+CompactWidth]) //TODO: Need to see why this is not defined anywhere
+	width3 := bytes.NextAbsolute(2 + CompactWidth)
+	Amount, _ := utils.DecodeIntMax64(width3[2 : 2+CompactWidth]) //TODO: Need to see why this is not defined anywhere
 	bytes.Prune(2 + CompactWidth)
 
 	return wgpstypes.MsgControlIssueGuarantee{
@@ -76,14 +76,14 @@ func DecodeControlIssueGuarantee(bytes *utils.GrowingBytes) wgpstypes.MsgControl
 }
 
 func DecodeControlAbsolve(bytes *utils.GrowingBytes) wgpstypes.MsgControlAbsolve {
-	bytes.NextAbsolute(1)
-	CompactWidth := CompactWidthFromEndOfByte(int(bytes.Array[0]))
+	width1 := bytes.NextAbsolute(1)
+	CompactWidth := CompactWidthFromEndOfByte(int(width1[0]))
 
-	bytes.NextAbsolute(2)
-	Channel := DecodeChannelFromBeginningOfByte(int(bytes.Array[1]))
+	width2 := bytes.NextAbsolute(2)
+	Channel := DecodeChannelFromBeginningOfByte(int(width2[1]))
 
-	bytes.NextAbsolute(2 + CompactWidth)
-	Amount, _ := utils.DecodeIntMax64(bytes.Array[2 : 2+CompactWidth]) //TODO: Need to see why this is not defined anywhere
+	width3 := bytes.NextAbsolute(2 + CompactWidth)
+	Amount, _ := utils.DecodeIntMax64(width3[2 : 2+CompactWidth]) //TODO: Need to see why this is not defined anywhere
 	bytes.Prune(2 + CompactWidth)
 
 	return wgpstypes.MsgControlAbsolve{
@@ -96,14 +96,14 @@ func DecodeControlAbsolve(bytes *utils.GrowingBytes) wgpstypes.MsgControlAbsolve
 }
 
 func DecodeControlPlead(bytes *utils.GrowingBytes) wgpstypes.MsgControlPlead {
-	bytes.NextAbsolute(1)
-	CompactWidth := CompactWidthFromEndOfByte(int(bytes.Array[0]))
+	width1 := bytes.NextAbsolute(1)
+	CompactWidth := CompactWidthFromEndOfByte(int(width1[0]))
 
-	bytes.NextAbsolute(2)
-	Channel := DecodeChannelFromBeginningOfByte(int(bytes.Array[1]))
+	width2 := bytes.NextAbsolute(2)
+	Channel := DecodeChannelFromBeginningOfByte(int(width2[1]))
 
-	bytes.NextAbsolute(2 + CompactWidth)
-	Target, _ := utils.DecodeIntMax64(bytes.Array[2 : 2+CompactWidth]) //TODO: Need to see why this is not defined anywhere
+	width3 := bytes.NextAbsolute(2 + CompactWidth)
+	Target, _ := utils.DecodeIntMax64(width3[2 : 2+CompactWidth]) //TODO: Need to see why this is not defined anywhere
 	bytes.Prune(2 + CompactWidth)
 
 	return wgpstypes.MsgControlPlead{
@@ -116,9 +116,9 @@ func DecodeControlPlead(bytes *utils.GrowingBytes) wgpstypes.MsgControlPlead {
 }
 
 func DecodeControlAnnounceDropping(bytes *utils.GrowingBytes) wgpstypes.MsgControlAnnounceDropping {
-	bytes.NextAbsolute(1)
+	width1 := bytes.NextAbsolute(1)
 
-	Channel := DecodeChannelFromEndOfByte(int(bytes.Array[0]))
+	Channel := DecodeChannelFromEndOfByte(int(width1[0]))
 
 	bytes.Prune(1)
 
@@ -131,9 +131,9 @@ func DecodeControlAnnounceDropping(bytes *utils.GrowingBytes) wgpstypes.MsgContr
 }
 
 func DecodeControlApologise(bytes *utils.GrowingBytes) wgpstypes.MsgControlApologise {
-	bytes.NextAbsolute(1)
+	width1 := bytes.NextAbsolute(1)
 
-	Channel := DecodeChannelFromEndOfByte(int(bytes.Array[0]))
+	Channel := DecodeChannelFromEndOfByte(int(width1[0]))
 
 	bytes.Prune(1)
 
@@ -146,17 +146,17 @@ func DecodeControlApologise(bytes *utils.GrowingBytes) wgpstypes.MsgControlApolo
 }
 
 func DecodeControlFree(bytes *utils.GrowingBytes) wgpstypes.MsgControlFree {
-	bytes.NextAbsolute(1)
+	width1 := bytes.NextAbsolute(1)
 
-	CompactWidth := CompactWidthFromEndOfByte(int(bytes.Array[0]))
+	CompactWidth := CompactWidthFromEndOfByte(int(width1[0]))
 
-	bytes.NextAbsolute(2)
+	width2 := bytes.NextAbsolute(2)
 
-	HandleType := DecodeHandleTypeFromBeginningOfByte(int(bytes.Array[1]))
+	HandleType := DecodeHandleTypeFromBeginningOfByte(int(width2[1]))
 
-	bytes.NextAbsolute(2 + CompactWidth)
+	width3 := bytes.NextAbsolute(2 + CompactWidth)
 
-	Handle, _ := utils.DecodeIntMax64(bytes.Array[2 : 2+CompactWidth])
+	Handle, _ := utils.DecodeIntMax64(width3[2 : 2+CompactWidth])
 
 	bytes.Prune(2 + CompactWidth)
 
