@@ -34,7 +34,7 @@ type AoiIntersectionFinder struct {
 }
 
 // NewAoiIntersectionFinder is the constructor function for AoiIntersectionFinder
-func NewAoiIntersectionFinder[NamespaceId comparable, SubspaceId comparable](opts AoiIntersectionFinderOpts) *AoiIntersectionFinder {
+func NewAoiIntersectionFinder(opts AoiIntersectionFinderOpts) *AoiIntersectionFinder {
 	return &AoiIntersectionFinder{
 		NamespaceScheme:           opts.NamespaceScheme,
 		SubspaceScheme:            opts.SubspaceScheme,
@@ -128,7 +128,7 @@ func (a *AoiIntersectionFinder) AddAoiHandleToNamespace(handle uint64, namespace
 	}
 }
 
-func (a *AoiIntersectionFinder) HandleToNamepsaceId(handle uint64, ours bool) types.NamespaceId {
+func (a *AoiIntersectionFinder) HandleToNamespaceId(handle uint64, ours bool) types.NamespaceId {
 	var HandleNamespaceMap map[uint64]types.NamespaceId
 	if ours {
 		HandleNamespaceMap = a.HandlesOursNamespaceMap
