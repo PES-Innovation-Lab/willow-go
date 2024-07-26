@@ -7,7 +7,7 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-func EncodeReconciliationSendFingerprint[Fingerprint constraints.Ordered, ValueType constraints.Unsigned](msg wgpstypes.MsgReconciliationSendFingerprint[Fingerprint], opts struct {
+func EncodeReconciliationSendFingerprint[Fingerprint string, ValueType constraints.Unsigned](msg wgpstypes.MsgReconciliationSendFingerprint[Fingerprint], opts struct {
 	OrderSubspace        types.TotalOrder[types.SubspaceId]
 	EncodeSubspaceId     func(subspace types.SubspaceId) []byte
 	PathScheme           types.PathParams[ValueType]

@@ -2,6 +2,7 @@ package wgps
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/data"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/encoding"
@@ -180,6 +181,7 @@ type WgpsMessenger[
 		AuthorisationOpts,
 		K,
 	]
+	// Initiator side
 	InitiatorOutChannelReconciliation GuaranteedQueue
 	InitiatorOutChannelData           GuaranteedQueue
 	InitiatorOutChannelIntersection   GuaranteedQueue
@@ -187,26 +189,32 @@ type WgpsMessenger[
 	InitiatorOutChannelAreaOfInterest GuaranteedQueue
 	InitiatorOutChannelPayloadRequest GuaranteedQueue
 	InitiatorOutChannelStaticToken    GuaranteedQueue
-	AcceptedOutChannelReconciliation  GuaranteedQueue
-	AcceptedOutChannelData            GuaranteedQueue
-	AcceptedOutChannelIntersection    GuaranteedQueue
-	AcceptedOutChannelCapability      GuaranteedQueue
-	AcceptedOutChannelAreaOfInterest  GuaranteedQueue
-	AcceptedOutChannelPayloadRequest  GuaranteedQueue
-	AcceptedOutChannelStaticToken     GuaranteedQueue
-	InitiatorInChannelReconciliation  chan wgpstypes.ReconciliationChannelMsg
-	InitiatorInChannelData            chan wgpstypes.DataChannelMsg
-	//InChannelIntersection    []wgpstypes.IntersectionChannelMsg
-	//InChannelCapability      []wgpstypes.CapabilityChannelMsg
-	//InChannelAreaOfInterest  []wgpstypes.AreaOfInterestChannelMsg
+
+	// Accepted side
+	AcceptedOutChannelReconciliation GuaranteedQueue
+	AcceptedOutChannelData           GuaranteedQueue
+	AcceptedOutChannelIntersection   GuaranteedQueue
+	AcceptedOutChannelCapability     GuaranteedQueue
+	AcceptedOutChannelAreaOfInterest GuaranteedQueue
+	AcceptedOutChannelPayloadRequest GuaranteedQueue
+	AcceptedOutChannelStaticToken    GuaranteedQueue
+
+	// Initiator side
+	InitiatorInChannelReconciliation chan wgpstypes.ReconciliationChannelMsg
+	InitiatorInChannelData           chan wgpstypes.DataChannelMsg
+	InitiatorInChannelIntersection   chan wgpstypes.IntersectionChannelMsg
+	InitiatorInChannelCapability     chan wgpstypes.CapabilityChannelMsg
+	InitiatorInChannelAreaOfInterest chan wgpstypes.AreaOfInterestChannelMsg
 	InitiatorInChannelPayloadRequest chan wgpstypes.PayloadRequestChannelMsg
 	InitiatorInChannelStaticToken    chan wgpstypes.StaticTokenChannelMsg
 	InitiatorInChannelNone           chan wgpstypes.NoChannelMsg
-	AcceptedInChannelReconciliation  chan wgpstypes.ReconciliationChannelMsg
-	AcceptedInChannelData            chan wgpstypes.DataChannelMsg
-	//InChannelIntersection    []wgpstypes.IntersectionChannelMsg
-	//InChannelCapability      []wgpstypes.CapabilityChannelMsg
-	//InChannelAreaOfInterest  []wgpstypes.AreaOfInterestChannelMsg
+
+	// Accepted side
+	AcceptedInChannelReconciliation chan wgpstypes.ReconciliationChannelMsg
+	AcceptedInChannelData           chan wgpstypes.DataChannelMsg
+	AcceptedInChannelIntersection   chan wgpstypes.IntersectionChannelMsg
+	AcceptedInChannelCapability     chan wgpstypes.CapabilityChannelMsg
+	AcceptedInChannelAreaOfInterest chan wgpstypes.AreaOfInterestChannelMsg
 	AcceptedInChannelPayloadRequest chan wgpstypes.PayloadRequestChannelMsg
 	AcceptedInChannelStaticToken    chan wgpstypes.StaticTokenChannelMsg
 	AcceptedInChannelNone           chan wgpstypes.NoChannelMsg
@@ -335,10 +343,10 @@ func NewWgpsMessenger[
 		DynamicToken,
 		AuthorisationOpts,
 		K,
-	],
+	], addr string, // ONLY FOR TESTING!!!!
 ) {
 
-	var newWgpsMessenger *WgpsMessenger[
+	var newWgpsMessenger WgpsMessenger[
 		ReadCapability,
 		Receiver,
 		SyncSignature,
@@ -362,17 +370,48 @@ func NewWgpsMessenger[
 	newWgpsMessenger.GetStore = opts.GetStore
 	newWgpsMessenger.Schemes = opts.Schemes
 
-	newWgpsMessenger.InitiatorOutChannelData = GuaranteedQueue{
-		Queue:         make(chan []byte, 32),
-		ReceivedBytes: make([]byte, 1),
-		OutGoingBytes: make([]byte, 1),
-	}
 	newWgpsMessenger.InitiatorOutChannelReconciliation = GuaranteedQueue{
 		Queue:         make(chan []byte, 32),
 		ReceivedBytes: make([]byte, 1),
 		OutGoingBytes: make([]byte, 1),
 	}
+
+	newWgpsMessenger.InitiatorOutChannelData = GuaranteedQueue{
+		Queue:         make(chan []byte, 32),
+		ReceivedBytes: make([]byte, 1),
+		OutGoingBytes: make([]byte, 1),
+	}
+
+	newWgpsMessenger.InitiatorOutChannelIntersection = GuaranteedQueue{
+		Queue:         make(chan []byte, 32),
+		ReceivedBytes: make([]byte, 1),
+		OutGoingBytes: make([]byte, 1),
+	}
+
+	newWgpsMessenger.InitiatorOutChannelCapability = GuaranteedQueue{
+		Queue:         make(chan []byte, 32),
+		ReceivedBytes: make([]byte, 1),
+		OutGoingBytes: make([]byte, 1),
+	}
+
+	newWgpsMessenger.InitiatorOutChannelAreaOfInterest = GuaranteedQueue{
+		Queue:         make(chan []byte, 32),
+		ReceivedBytes: make([]byte, 1),
+		OutGoingBytes: make([]byte, 1),
+	}
+
 	newWgpsMessenger.InitiatorOutChannelPayloadRequest = GuaranteedQueue{
+		Queue:         make(chan []byte, 32),
+		ReceivedBytes: make([]byte, 1),
+		OutGoingBytes: make([]byte, 1),
+	}
+	newWgpsMessenger.InitiatorOutChannelStaticToken = GuaranteedQueue{
+		Queue:         make(chan []byte, 32),
+		ReceivedBytes: make([]byte, 1),
+		OutGoingBytes: make([]byte, 1),
+	}
+
+	newWgpsMessenger.AcceptedOutChannelReconciliation = GuaranteedQueue{
 		Queue:         make(chan []byte, 32),
 		ReceivedBytes: make([]byte, 1),
 		OutGoingBytes: make([]byte, 1),
@@ -382,12 +421,28 @@ func NewWgpsMessenger[
 		ReceivedBytes: make([]byte, 1),
 		OutGoingBytes: make([]byte, 1),
 	}
-	newWgpsMessenger.AcceptedOutChannelReconciliation = GuaranteedQueue{
+	newWgpsMessenger.AcceptedOutChannelIntersection = GuaranteedQueue{
 		Queue:         make(chan []byte, 32),
 		ReceivedBytes: make([]byte, 1),
 		OutGoingBytes: make([]byte, 1),
 	}
+	newWgpsMessenger.AcceptedOutChannelCapability = GuaranteedQueue{
+		Queue:         make(chan []byte, 32),
+		ReceivedBytes: make([]byte, 1),
+		OutGoingBytes: make([]byte, 1),
+	}
+	newWgpsMessenger.AcceptedOutChannelAreaOfInterest = GuaranteedQueue{
+		Queue:         make(chan []byte, 32),
+		ReceivedBytes: make([]byte, 1),
+		OutGoingBytes: make([]byte, 1),
+	}
+
 	newWgpsMessenger.AcceptedOutChannelPayloadRequest = GuaranteedQueue{
+		Queue:         make(chan []byte, 32),
+		ReceivedBytes: make([]byte, 1),
+		OutGoingBytes: make([]byte, 1),
+	}
+	newWgpsMessenger.AcceptedOutChannelStaticToken = GuaranteedQueue{
 		Queue:         make(chan []byte, 32),
 		ReceivedBytes: make([]byte, 1),
 		OutGoingBytes: make([]byte, 1),
@@ -397,27 +452,19 @@ func NewWgpsMessenger[
 	newWgpsMessenger.InitiatorInChannelReconciliation = make(chan wgpstypes.ReconciliationChannelMsg, 32)
 	newWgpsMessenger.InitiatorInChannelPayloadRequest = make(chan wgpstypes.PayloadRequestChannelMsg, 32)
 	newWgpsMessenger.InitiatorInChannelNone = make(chan wgpstypes.NoChannelMsg, 32)
+	newWgpsMessenger.InitiatorInChannelIntersection = make(chan wgpstypes.IntersectionChannelMsg, 32)
+	newWgpsMessenger.InitiatorInChannelCapability = make(chan wgpstypes.CapabilityChannelMsg, 32)
+	newWgpsMessenger.InitiatorInChannelStaticToken = make(chan wgpstypes.StaticTokenChannelMsg, 32)
+	newWgpsMessenger.InitiatorInChannelAreaOfInterest = make(chan wgpstypes.AreaOfInterestChannelMsg, 32)
+
 	newWgpsMessenger.AcceptedInChannelData = make(chan wgpstypes.DataChannelMsg, 32)
 	newWgpsMessenger.AcceptedInChannelReconciliation = make(chan wgpstypes.ReconciliationChannelMsg, 32)
 	newWgpsMessenger.AcceptedInChannelPayloadRequest = make(chan wgpstypes.PayloadRequestChannelMsg, 32)
 	newWgpsMessenger.AcceptedInChannelNone = make(chan wgpstypes.NoChannelMsg, 32)
-
-	newWgpsMessenger.ReconciliationPayloadIngester = data.NewPayloadIngester[
-		Prefingerprint,
-		Fingerprint,
-		K,
-		AuthorisationToken,
-		AuthorisationOpts,
-	](data.PayloadIngesterOpts[
-		Prefingerprint,
-		Fingerprint,
-		K,
-		AuthorisationToken,
-		AuthorisationOpts,
-	]{
-		GetStore:               opts.GetStore,
-		ProcessReceivedPayload: opts.ProcessReceivedPayload,
-	})
+	newWgpsMessenger.AcceptedInChannelIntersection = make(chan wgpstypes.IntersectionChannelMsg, 32)
+	newWgpsMessenger.AcceptedInChannelCapability = make(chan wgpstypes.CapabilityChannelMsg, 32)
+	newWgpsMessenger.AcceptedInChannelStaticToken = make(chan wgpstypes.StaticTokenChannelMsg, 32)
+	newWgpsMessenger.AcceptedInChannelAreaOfInterest = make(chan wgpstypes.AreaOfInterestChannelMsg, 32)
 
 	newWgpsMessenger.AcceptedEncoder = encoding.NewMessageEncoder[
 		ReadCapability,
@@ -543,6 +590,23 @@ func NewWgpsMessenger[
 		HandlesPayloadRequestsTheirs: newWgpsMessenger.HandlesPayloadRequestsTheirs,
 	})
 
+	newWgpsMessenger.ReconciliationPayloadIngester = data.NewPayloadIngester[
+		Prefingerprint,
+		Fingerprint,
+		K,
+		AuthorisationToken,
+		AuthorisationOpts,
+	](data.PayloadIngesterOpts[
+		Prefingerprint,
+		Fingerprint,
+		K,
+		AuthorisationToken,
+		AuthorisationOpts,
+	]{
+		GetStore:               opts.GetStore,
+		ProcessReceivedPayload: opts.ProcessReceivedPayload,
+	})
+
 	newWgpsMessenger.DataPayloadIngester = data.NewPayloadIngester[
 		Prefingerprint,
 		Fingerprint,
@@ -564,7 +628,20 @@ func NewWgpsMessenger[
 		switch msg.Channel {
 		case wgpstypes.ReconciliationChannel:
 			newWgpsMessenger.InitiatorOutChannelReconciliation.Push(msg.Message)
-
+		case wgpstypes.DataChannel:
+			newWgpsMessenger.InitiatorOutChannelData.Push(msg.Message)
+		case wgpstypes.IntersectionChannel:
+			newWgpsMessenger.InitiatorOutChannelIntersection.Push(msg.Message)
+		case wgpstypes.CapabilityChannel:
+			newWgpsMessenger.InitiatorOutChannelCapability.Push(msg.Message)
+		case wgpstypes.AreaOfInterestChannel:
+			newWgpsMessenger.InitiatorOutChannelAreaOfInterest.Push(msg.Message)
+		case wgpstypes.StaticTokenChannel:
+			newWgpsMessenger.InitiatorOutChannelStaticToken.Push(msg.Message)
+		case wgpstypes.PayloadRequestChannel:
+			newWgpsMessenger.InitiatorOutChannelPayloadRequest.Push(msg.Message)
+		default:
+			newWgpsMessenger.Transport.Send(msg.Message, wgpstypes.ControlChannel, wgpstypes.SyncRoleAlfie)
 		}
 		return nil
 	}, nil)
@@ -573,6 +650,20 @@ func NewWgpsMessenger[
 		switch msg.Channel {
 		case wgpstypes.ReconciliationChannel:
 			newWgpsMessenger.AcceptedOutChannelReconciliation.Push(msg.Message)
+		case wgpstypes.DataChannel:
+			newWgpsMessenger.AcceptedOutChannelData.Push(msg.Message)
+		case wgpstypes.IntersectionChannel:
+			newWgpsMessenger.AcceptedOutChannelIntersection.Push(msg.Message)
+		case wgpstypes.CapabilityChannel:
+			newWgpsMessenger.AcceptedOutChannelCapability.Push(msg.Message)
+		case wgpstypes.AreaOfInterestChannel:
+			newWgpsMessenger.AcceptedOutChannelAreaOfInterest.Push(msg.Message)
+		case wgpstypes.StaticTokenChannel:
+			newWgpsMessenger.AcceptedOutChannelStaticToken.Push(msg.Message)
+		case wgpstypes.PayloadRequestChannel:
+			newWgpsMessenger.AcceptedOutChannelPayloadRequest.Push(msg.Message)
+		default:
+			newWgpsMessenger.Transport.Send(msg.Message, wgpstypes.ControlChannel, wgpstypes.SyncRoleBetty)
 
 		}
 		return nil
@@ -606,6 +697,7 @@ func NewWgpsMessenger[
 		err := newWgpsMessenger.Transport.Send(value, wgpstypes.AreaOfInterestChannel, wgpstypes.SyncRoleBetty)
 		return err
 	}, nil)
+
 	go syncutils.AsyncReceive[[]byte](newWgpsMessenger.InitiatorOutChannelData.Queue, func(value []byte) error {
 		err := newWgpsMessenger.Transport.Send(value, wgpstypes.DataChannel, wgpstypes.SyncRoleAlfie)
 		return err
@@ -635,7 +727,25 @@ func NewWgpsMessenger[
 		return err
 	}, nil)
 
-	newWgpsMessenger.Transport, err = transport.NewQuicTransport("localhost:4242")
+	initiatorControlChannelListener := make(chan []byte, 32)
+	initiatorReconciliationChannelListener := make(chan []byte, 32)
+	initiatorDataChannelListener := make(chan []byte, 32)
+	initiatorIntersectionChannelListener := make(chan []byte, 32)
+	initiatorCapabilityChannelListener := make(chan []byte, 32)
+	initiatorAreaOfInterestChannelListener := make(chan []byte, 32)
+	initiatorPayloadRequestChannelListener := make(chan []byte, 32)
+	initiatorStaticTokenChannelListener := make(chan []byte, 32)
+	acceptedControlChannelListener := make(chan []byte, 32)
+	acceptedReconciliationChannelListener := make(chan []byte, 32)
+	acceptedDataChannelListener := make(chan []byte, 32)
+	acceptedIntersectionChannelListener := make(chan []byte, 32)
+	acceptedCapabilityChannelListener := make(chan []byte, 32)
+	acceptedAreaOfInterestChannelListener := make(chan []byte, 32)
+	acceptedPayloadRequestChannelListener := make(chan []byte, 32)
+	acceptedStaticTokenChannelListener := make(chan []byte, 32)
+
+	newWgpsMessenger.Transport, err = transport.NewQuicTransport(addr)
+	fmt.Println("Listening Now!!")
 	if err != nil {
 
 		newMessengerChan <- NewMessengerReturn[
@@ -657,12 +767,29 @@ func NewWgpsMessenger[
 			AuthorisationOpts,
 			K,
 		]{
-			NewMessenger: newWgpsMessenger,
+			NewMessenger: &newWgpsMessenger,
 			Error:        err,
 		}
 		return
 
 	}
+
+	go newWgpsMessenger.Transport.Recv(initiatorControlChannelListener, wgpstypes.ControlChannel, wgpstypes.SyncRoleAlfie)
+	go newWgpsMessenger.Transport.Recv(initiatorReconciliationChannelListener, wgpstypes.ReconciliationChannel, wgpstypes.SyncRoleAlfie)
+	go newWgpsMessenger.Transport.Recv(initiatorDataChannelListener, wgpstypes.DataChannel, wgpstypes.SyncRoleAlfie)
+	go newWgpsMessenger.Transport.Recv(initiatorIntersectionChannelListener, wgpstypes.IntersectionChannel, wgpstypes.SyncRoleAlfie)
+	go newWgpsMessenger.Transport.Recv(initiatorCapabilityChannelListener, wgpstypes.CapabilityChannel, wgpstypes.SyncRoleAlfie)
+	go newWgpsMessenger.Transport.Recv(initiatorAreaOfInterestChannelListener, wgpstypes.AreaOfInterestChannel, wgpstypes.SyncRoleAlfie)
+	go newWgpsMessenger.Transport.Recv(initiatorPayloadRequestChannelListener, wgpstypes.PayloadRequestChannel, wgpstypes.SyncRoleAlfie)
+	go newWgpsMessenger.Transport.Recv(initiatorStaticTokenChannelListener, wgpstypes.StaticTokenChannel, wgpstypes.SyncRoleAlfie)
+	go newWgpsMessenger.Transport.Recv(acceptedControlChannelListener, wgpstypes.ControlChannel, wgpstypes.SyncRoleBetty)
+	go newWgpsMessenger.Transport.Recv(acceptedReconciliationChannelListener, wgpstypes.ReconciliationChannel, wgpstypes.SyncRoleBetty)
+	go newWgpsMessenger.Transport.Recv(acceptedDataChannelListener, wgpstypes.DataChannel, wgpstypes.SyncRoleBetty)
+	go newWgpsMessenger.Transport.Recv(acceptedIntersectionChannelListener, wgpstypes.IntersectionChannel, wgpstypes.SyncRoleBetty)
+	go newWgpsMessenger.Transport.Recv(acceptedCapabilityChannelListener, wgpstypes.CapabilityChannel, wgpstypes.SyncRoleBetty)
+	go newWgpsMessenger.Transport.Recv(acceptedAreaOfInterestChannelListener, wgpstypes.AreaOfInterestChannel, wgpstypes.SyncRoleBetty)
+	go newWgpsMessenger.Transport.Recv(acceptedPayloadRequestChannelListener, wgpstypes.PayloadRequestChannel, wgpstypes.SyncRoleBetty)
+	go newWgpsMessenger.Transport.Recv(acceptedStaticTokenChannelListener, wgpstypes.StaticTokenChannel, wgpstypes.SyncRoleBetty)
 
 	newMessengerChan <- NewMessengerReturn[
 		ReadCapability,
@@ -683,9 +810,10 @@ func NewWgpsMessenger[
 		AuthorisationOpts,
 		K,
 	]{
-		NewMessenger: newWgpsMessenger,
+		NewMessenger: &newWgpsMessenger,
 		Error:        nil,
 	}
+	fmt.Println("Everything looks good!")
 	select {}
 }
 
@@ -707,9 +835,10 @@ func (w *WgpsMessenger[
 	DynamicToken,
 	AuthorisationOpts,
 	K,
-]) Initiate(addr string, areasofinterests []types.AreaOfInterest) error {
+]) Initiate(addr string) error {
 
 	err := w.Transport.Initiate(addr)
+	time.Sleep(time.Second * 1)
 	return err
 
 }

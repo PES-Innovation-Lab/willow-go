@@ -21,10 +21,10 @@ type Opts[DynamicToken string, ValueType constraints.Unsigned] struct {
 }
 
 func DecodeDataSendEntry[DynamicToken string, ValueType constraints.Unsigned](bytes *utils.GrowingBytes, opts Opts[DynamicToken, ValueType]) wgpstypes.MsgDataSendEntry[DynamicToken] {
-	bytes.NextAbsolute(2)
+	received := bytes.NextAbsolute(2)
 
-	FirstByte := bytes.Array[0]
-	SecondByte := bytes.Array[1]
+	FirstByte := received[0]
+	SecondByte := received[1]
 
 	StaticTokenCompactWidth := CompactWidthFromEndOfByte(int(FirstByte))
 
@@ -60,9 +60,9 @@ func DecodeDataSendEntry[DynamicToken string, ValueType constraints.Unsigned](by
 
 	bytes.Prune(2)
 
-	bytes.NextAbsolute(StaticTokenCompactWidth)
+	received = bytes.NextAbsolute(StaticTokenCompactWidth)
 
-	StaticTokenHandle, _ := utils.DecodeIntMax64(bytes.Array[:StaticTokenCompactWidth])
+	StaticTokenHandle, _ := utils.DecodeIntMax64(received[:StaticTokenCompactWidth])
 
 	bytes.Prune(StaticTokenCompactWidth)
 
@@ -71,9 +71,9 @@ func DecodeDataSendEntry[DynamicToken string, ValueType constraints.Unsigned](by
 	var Offset uint64
 
 	if IsOffsetEncoded {
-		bytes.NextAbsolute(OffsetCompactWidth)
+		received = bytes.NextAbsolute(OffsetCompactWidth)
 
-		Offset, _ = utils.DecodeIntMax64(bytes.Array[:OffsetCompactWidth])
+		Offset, _ = utils.DecodeIntMax64(received[:OffsetCompactWidth])
 
 		bytes.Prune(OffsetCompactWidth)
 	} else {
@@ -99,9 +99,9 @@ func DecodeDataSendEntry[DynamicToken string, ValueType constraints.Unsigned](by
 		result := <-decodeResultChan
 		Entry = result.Entry
 	} else if !IsEntryEncodedRelative && SenderHandleCompactWidth > 0 && ReceiverHandleCompactWidth > 0 {
-		bytes.NextAbsolute(SenderHandleCompactWidth + ReceiverHandleCompactWidth)
-		SenderHandle, _ := utils.DecodeIntMax64(bytes.Array[:SenderHandleCompactWidth])
-		ReceiverHandle, _ := utils.DecodeIntMax64(bytes.Array[SenderHandleCompactWidth : SenderHandleCompactWidth+ReceiverHandleCompactWidth])
+		received = bytes.NextAbsolute(SenderHandleCompactWidth + ReceiverHandleCompactWidth)
+		SenderHandle, _ := utils.DecodeIntMax64(received[:SenderHandleCompactWidth])
+		ReceiverHandle, _ := utils.DecodeIntMax64(received[SenderHandleCompactWidth : SenderHandleCompactWidth+ReceiverHandleCompactWidth])
 		bytes.Prune(SenderHandleCompactWidth + ReceiverHandleCompactWidth)
 		Entry, _ = utils.DecodeStreamEntryInNamespaceArea[ValueType](
 			utils.EntryOpts[ValueType]{
@@ -134,19 +134,19 @@ func DecodeDataSendEntry[DynamicToken string, ValueType constraints.Unsigned](by
 }
 
 func DecodeDataSendPayload(bytes *utils.GrowingBytes) wgpstypes.MsgDataSendPayload {
-	bytes.NextAbsolute(1)
+	received := bytes.NextAbsolute(1)
 
-	Header := bytes.Array
+	Header := received[0]
 
-	CompactWidthAmount := CompactWidthFromEndOfByte(int(Header[0]))
+	CompactWidthAmount := CompactWidthFromEndOfByte(int(Header))
 
-	bytes.NextAbsolute(1 + CompactWidthAmount)
+	received = bytes.NextAbsolute(1 + CompactWidthAmount)
 
-	Amount, _ := utils.DecodeIntMax64(bytes.Array[1 : 1+CompactWidthAmount])
+	Amount, _ := utils.DecodeIntMax64(received[1 : 1+CompactWidthAmount])
 
 	bytes.Prune(1 + CompactWidthAmount + int(Amount))
 
-	MsgBytes := bytes.Array[1+CompactWidthAmount : 1+CompactWidthAmount+int(Amount)]
+	MsgBytes := received[1+CompactWidthAmount : 1+CompactWidthAmount+int(Amount)]
 
 	bytes.Prune(1 + CompactWidthAmount + int(Amount))
 
@@ -160,10 +160,10 @@ func DecodeDataSendPayload(bytes *utils.GrowingBytes) wgpstypes.MsgDataSendPaylo
 }
 
 func DecodeDataSetEagerness(bytes *utils.GrowingBytes) wgpstypes.MsgDataSetMetadata {
-	bytes.NextAbsolute(2)
+	width := bytes.NextAbsolute(2)
 
-	FirstByte := bytes.Array[0]
-	SecondByte := bytes.Array[1]
+	FirstByte := width[0]
+	SecondByte := width[1]
 
 	IsEager := (FirstByte & 0x2) == 0x2
 
@@ -171,11 +171,11 @@ func DecodeDataSetEagerness(bytes *utils.GrowingBytes) wgpstypes.MsgDataSetMetad
 
 	CompactWidthReceiverHandle := CompactWidthFromEndOfByte(int(SecondByte >> 4))
 
-	bytes.NextAbsolute(2 + CompactWidthSenderHandle + CompactWidthReceiverHandle)
+	width1 := bytes.NextAbsolute(2 + CompactWidthSenderHandle + CompactWidthReceiverHandle)
 
-	SenderHandle, _ := utils.DecodeIntMax64(bytes.Array[2 : 2+CompactWidthSenderHandle])
+	SenderHandle, _ := utils.DecodeIntMax64(width1[2 : 2+CompactWidthSenderHandle])
 
-	ReceiverHandle, _ := utils.DecodeIntMax64(bytes.Array[2+CompactWidthSenderHandle : 2+CompactWidthSenderHandle+CompactWidthReceiverHandle])
+	ReceiverHandle, _ := utils.DecodeIntMax64(width1[2+CompactWidthSenderHandle : 2+CompactWidthSenderHandle+CompactWidthReceiverHandle])
 
 	bytes.Prune(2 + CompactWidthSenderHandle + CompactWidthReceiverHandle)
 
@@ -200,10 +200,10 @@ type DecodeOpts[ValueType constraints.Unsigned] struct {
 }
 
 func DecodeDataBindPayloadRequest[ValueType constraints.Unsigned](bytes *utils.GrowingBytes, opts DecodeOpts[ValueType]) wgpstypes.MsgDataBindPayloadRequest {
-	bytes.NextAbsolute(2)
+	width := bytes.NextAbsolute(2)
 
-	FirstByte := bytes.Array[0]
-	SecondByte := bytes.Array[1]
+	FirstByte := width[0]
+	SecondByte := width[1]
 
 	CompactWidthCapability := CompactWidthFromEndOfByte(int(FirstByte))
 
@@ -232,14 +232,14 @@ func DecodeDataBindPayloadRequest[ValueType constraints.Unsigned](bytes *utils.G
 		CompactWidthReceiverHandle = CompactWidthFromEndOfByte(int(SecondByte))
 	}
 
-	bytes.NextAbsolute(CompactWidthCapability + 2)
+	width1 := bytes.NextAbsolute(CompactWidthCapability + 2)
 
-	Capability, _ := utils.DecodeIntMax64(bytes.Array[2 : 2+CompactWidthCapability])
+	Capability, _ := utils.DecodeIntMax64(width1[2 : 2+CompactWidthCapability])
 
 	var Offset uint64
 
 	if IsOffsetEncoded {
-		Offset, _ = utils.DecodeIntMax64(bytes.Array[2+CompactWidthCapability : 2+CompactWidthCapability+CompactWidthOffset])
+		Offset, _ = utils.DecodeIntMax64(width1[2+CompactWidthCapability : 2+CompactWidthCapability+CompactWidthOffset])
 		bytes.Prune(2 + CompactWidthCapability + CompactWidthOffset)
 	} else {
 		Offset = 0
@@ -265,9 +265,9 @@ func DecodeDataBindPayloadRequest[ValueType constraints.Unsigned](bytes *utils.G
 		result := <-decodeResultChan
 		Entry = result.Entry //gotta check this out
 	} else if !IsEncodedRelativeToCurrEntry && CompactWidthSenderHandle > 0 && CompactWidthReceiverHandle > 0 {
-		bytes.NextAbsolute(CompactWidthSenderHandle + CompactWidthReceiverHandle)
-		SenderHandle, _ := utils.DecodeIntMax64(bytes.Array[:CompactWidthSenderHandle])
-		ReceiverHandle, _ := utils.DecodeIntMax64(bytes.Array[CompactWidthSenderHandle : CompactWidthSenderHandle+CompactWidthReceiverHandle])
+		width2 := bytes.NextAbsolute(CompactWidthSenderHandle + CompactWidthReceiverHandle)
+		SenderHandle, _ := utils.DecodeIntMax64(width2[:CompactWidthSenderHandle])
+		ReceiverHandle, _ := utils.DecodeIntMax64(width2[CompactWidthSenderHandle : CompactWidthSenderHandle+CompactWidthReceiverHandle])
 		bytes.Prune(CompactWidthSenderHandle + CompactWidthReceiverHandle)
 		Entry, _ = utils.DecodeStreamEntryInNamespaceArea[ValueType](
 			utils.EntryOpts[ValueType]{
@@ -290,13 +290,13 @@ func DecodeDataBindPayloadRequest[ValueType constraints.Unsigned](bytes *utils.G
 }
 
 func DecodeDataReplyPayload(bytes *utils.GrowingBytes) wgpstypes.MsgDataReplyPayload {
-	bytes.NextAbsolute(1)
+	width := bytes.NextAbsolute(1)
 
-	CompactWidthHandle := CompactWidthFromEndOfByte(int(bytes.Array[0]))
+	CompactWidthHandle := CompactWidthFromEndOfByte(int(width[0]))
 
-	bytes.NextAbsolute(1 + CompactWidthHandle)
+	width1 := bytes.NextAbsolute(1 + CompactWidthHandle)
 
-	Handle, _ := utils.DecodeIntMax64(bytes.Array[1 : 1+CompactWidthHandle])
+	Handle, _ := utils.DecodeIntMax64(width1[1 : 1+CompactWidthHandle])
 
 	bytes.Prune(1 + CompactWidthHandle)
 
