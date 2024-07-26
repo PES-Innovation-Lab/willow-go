@@ -57,7 +57,14 @@ var TestSubspaceScheme datamodeltypes.SubspaceScheme = datamodeltypes.SubspaceSc
 	Order:               utils.OrderSubspace,
 	MinimalSubspaceId:   types.SubspaceId(""),
 }
-var TestFingerprintScheme datamodeltypes.FingerprintScheme[string, string] = datamodeltypes.FingerprintScheme[string, string]{} //Dummy scheme
+var TestFingerprintScheme datamodeltypes.FingerprintScheme[string, string] = datamodeltypes.FingerprintScheme[string, string]{
+	FingerPrintFinalise: func(fingerprint string) string {
+		return fingerprint
+	},
+	IsEqual: func(a string, b string) bool {
+		return strings.Compare(a, b) == 0
+	},
+}
 
 var TestAuthorisationScheme datamodeltypes.AuthorisationScheme[[]byte, string] = datamodeltypes.AuthorisationScheme[[]byte, string]{
 	Authorise: func(entry types.Entry, opts []byte) (string, error) {
