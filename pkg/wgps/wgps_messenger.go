@@ -780,15 +780,15 @@ func NewWgpsMessenger[
 		}, nil) */
 
 	// initiatorControlChannelListener := make(chan []byte, 32)
-	//initiatorReconciliationChannelListener := make(chan []byte, 32)
-	//initiatorDataChannelListener := make(chan []byte, 32)
+	initiatorReconciliationChannelListener := make(chan []byte, 32)
+	initiatorDataChannelListener := make(chan []byte, 32)
 	//initiatorIntersectionChannelListener := make(chan []byte, 32)
 	//initiatorCapabilityChannelListener := make(chan []byte, 32)
 	//initiatorAreaOfInterestChannelListener := make(chan []byte, 32)
 	//initiatorPayloadRequestChannelListener := make(chan []byte, 32)
 	//initiatorStaticTokenChannelListener := make(chan []byte, 32)
 	//acceptedControlChannelListener := make(chan []byte, 32)
-	//acceptedReconciliationChannelListener := make(chan []byte, 32)
+	acceptedReconciliationChannelListener := make(chan []byte, 32)
 	acceptedDataChannelListener := make(chan []byte, 32)
 	//acceptedIntersectionChannelListener := make(chan []byte, 32)
 	//acceptedCapabilityChannelListener := make(chan []byte, 32)
@@ -815,7 +815,26 @@ func NewWgpsMessenger[
 		return nil
 	}, nil)
 
+	go syncutils.AsyncReceive[[]byte](initiatorDataChannelListener, func(msg []byte) error {
+		// ADD LOGIC FOR DATA AS ALFIE
+		return nil
+	}, nil)
+
+	go syncutils.AsyncReceive[[]byte](acceptedReconciliationChannelListener, func(msg []byte) error {
+		// ADD LOGIC FOR RECONCILIATION AS BETTY
+		return nil
+	}, nil)
+
+	go syncutils.AsyncReceive[[]byte](initiatorReconciliationChannelListener, func(msg []byte) error {
+		// ADD LOGIC FOR RECONCILIATION AS ALFIE
+		return nil
+	}, nil)
+
+	go newWgpsMessenger.Transport.Recv(initiatorDataChannelListener, wgpstypes.DataChannel, wgpstypes.SyncRoleAlfie)
+	go newWgpsMessenger.Transport.Recv(initiatorReconciliationChannelListener, wgpstypes.DataChannel, wgpstypes.SyncRoleAlfie)
+
 	go newWgpsMessenger.Transport.Recv(acceptedDataChannelListener, wgpstypes.DataChannel, wgpstypes.SyncRoleBetty)
+	go newWgpsMessenger.Transport.Recv(acceptedReconciliationChannelListener, wgpstypes.DataChannel, wgpstypes.SyncRoleBetty)
 
 	/* if newWgpsMessenger.Transport != nil {
 		go newWgpsMessenger.Transport.Recv(initiatorControlChannelListener, wgpstypes.ControlChannel, wgpstypes.SyncRoleAlfie)
@@ -2766,7 +2785,7 @@ func (
 				var finalEncoded []byte
 				binary.BigEndian.PutUint64(finalEncoded, uint64(len(encodedEntryPayload)))
 				finalEncoded = append(finalEncoded, encodedEntryPayload...)
-				w.Transport.Send(finalEncoded, wgpstypes.DataChannel, role)
+				w.Transport.Send(finalEncoded, wgpstypes.DataChannel, wgpstypes.SyncRoleBetty)
 			}
 		} else {
 			if reflect.DeepEqual(left, struct {
@@ -2783,12 +2802,12 @@ func (
 			var leftEncodedExtendedRange []byte
 			binary.BigEndian.PutUint64(leftEncodedExtendedRange, uint64(len(EncodeExtendedRange(left))))
 			leftEncodedExtendedRange = append(leftEncodedExtendedRange, EncodeExtendedRange(left)...)
-			w.Transport.Send(leftEncodedExtendedRange, wgpstypes.ReconciliationChannel, role)
+			w.Transport.Send(leftEncodedExtendedRange, wgpstypes.ReconciliationChannel, wgpstypes.SyncRoleBetty)
 
 			var rightEncodedExtendedRange []byte
 			binary.BigEndian.PutUint64(rightEncodedExtendedRange, uint64(len(EncodeExtendedRange(right))))
 			rightEncodedExtendedRange = append(rightEncodedExtendedRange, EncodeExtendedRange(right)...)
-			w.Transport.Send(rightEncodedExtendedRange, wgpstypes.ReconciliationChannel, role)
+			w.Transport.Send(rightEncodedExtendedRange, wgpstypes.ReconciliationChannel, wgpstypes.SyncRoleBetty)
 		}
 	}
 
@@ -2829,8 +2848,8 @@ func (
 	summaryLeft := w.Store.EntryDriver.Storage.Summarise(left.Range)
 	summaryRight := w.Store.EntryDriver.Storage.Summarise(right.Range)
 
-	w.Transport.Send(EncodeSummary(summaryLeft, left.Range), wgpstypes.ReconciliationChannel, role)
-	w.Transport.Send(EncodeSummary(summaryRight, right.Range), wgpstypes.ReconciliationChannel, role)
+	w.Transport.Send(EncodeSummary(summaryLeft, left.Range), wgpstypes.ReconciliationChannel, wgpstypes.SyncRoleAlfie)
+	w.Transport.Send(EncodeSummary(summaryRight, right.Range), wgpstypes.ReconciliationChannel, wgpstypes.SyncRoleAlfie)
 }
 
 func (
@@ -2855,7 +2874,6 @@ func (
 	]) HandleDataInitiator(
 	entry types.Entry,
 	payload []byte,
-	role wgpstypes.SyncRole,
 ) {
 	var entryInput datamodeltypes.EntryInput
 	entryInput.Path = entry.Path
