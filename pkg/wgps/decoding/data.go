@@ -194,7 +194,7 @@ type DecodeOpts[ValueType constraints.Unsigned] struct {
 	DecodeSubspaceId          func(bytes *utils.GrowingBytes) chan types.SubspaceId
 	DecodePayloadDigest       func(bytes *utils.GrowingBytes) chan types.PayloadDigest
 	PathScheme                types.PathParams[ValueType] //need to check this out
-	GetCurrentlyReceivedEntry types.Entry
+	GetCurrentlyReceivedEntry func() types.Entry
 	AoiHandlesToArea          func(senderHandle uint64, receiverHandle uint64) types.Area
 	AoiHandlesToNamespace     func(senderHandle uint64, receiverHandle uint64) types.NamespaceId
 }
@@ -261,7 +261,7 @@ func DecodeDataBindPayloadRequest[ValueType constraints.Unsigned](bytes *utils.G
 				DecodeStreamSubspace:      opts.DecodeSubspaceId,
 				DecodeStreamPayloadDigest: opts.DecodePayloadDigest,
 				PathScheme:                opts.PathScheme,
-			}, bytes, opts.GetCurrentlyReceivedEntry)
+			}, bytes, opts.GetCurrentlyReceivedEntry())
 		result := <-decodeResultChan
 		Entry = result.Entry //gotta check this out
 	} else if !IsEncodedRelativeToCurrEntry && CompactWidthSenderHandle > 0 && CompactWidthReceiverHandle > 0 {

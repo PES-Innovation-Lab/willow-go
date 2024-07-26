@@ -1,21 +1,12 @@
-package main
+package animation
 
 import (
-	"bufio"
 	"encoding/hex"
 	"fmt"
-	"io"
-	"log"
 	"math"
-	"os"
 	"sort"
-	"strconv"
-	"strings"
 	"time"
 
-	pinagoladastore "github.com/PES-Innovation-Lab/willow-go/PinaGoladaStore"
-	"github.com/PES-Innovation-Lab/willow-go/animation"
-	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/kdnode"
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/PES-Innovation-Lab/willow-go/utils"
@@ -23,456 +14,11 @@ import (
 	"golang.org/x/exp/rand"
 )
 
-var textAScii string = ` 
-  ___ ___ _  _   _   ___  ___  _      _   ___   _   
- | _ \_ _| \| | /_\ / __|/ _ \| |    /_\ |   \ /_\  
- |  _/| || .' |/ _ \ (_ | (_) | |__ / _ \| |) / _ \ 
- |_| |___|_|\_/_/ \_\___|\___/|____/_/ \_\___/_/ \_\
-`
-
 const (
 	w      = float64(80)
 	startx = float32(400)
 	starty = float32(600)
 )
-
-const (
-	Reset   = "\033[0m"
-	Red     = "\033[31m"
-	Green   = "\033[32m"
-	Yellow  = "\033[33m"
-	Blue    = "\033[34m"
-	Magenta = "\033[35m"
-	Cyan    = "\033[36m"
-	White   = "\033[37m"
-)
-
-var setNamespace types.NamespaceId
-
-var scanner *bufio.Scanner = bufio.NewScanner(os.Stdin)
-
-func main() {
-	fmt.Println("\033[H\033[2J")
-	dir := "willow"
-	f, err := os.Open(dir)
-	nameSpaces := make(map[string]uint8)
-	if err != nil && strings.Compare(err.Error(), "open willow: no such file or directory") != 0 {
-		fmt.Println(err)
-		return
-	} else if err == nil {
-		files, err := f.Readdir(-1)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		for _, file := range files {
-			if file.IsDir() {
-				nameSpaces[file.Name()] = 255
-			}
-		}
-	}
-	defer f.Close()
-
-	fmt.Println(Blue, textAScii)
-	fmt.Println(White, "Type", Yellow, "exit", White, "to escape")
-	fmt.Println(" Enter namespace: ", Reset)
-LOOP:
-	for {
-		fmt.Print("> ")
-
-		if !scanner.Scan() {
-			break LOOP
-		}
-		input := scanner.Text()
-		objects := strings.Split(input, " ")
-		switch objects[0] {
-		case "help":
-			fmt.Print(White, "Valid commands:\n\n")
-			fmt.Print("new:\t\tUsage: new <namespace>\n\t\tdesc: creates a new namespace\n\n")
-			fmt.Print("list:\t\tUsage: list\n\t\tdesc: lists all available namespaces\n\n")
-			fmt.Print("enter:\t\tUsage: list\n\t\tdesc: enter into an existing namespace\n\n")
-			fmt.Print("help:\t\tUsage: help\n\n")
-			fmt.Print("exit:\t\tUsage: exit\n\n", Reset)
-		case "new":
-			if nameSpaces[input] != 255 {
-				fmt.Printf("%sCreating new NameSpaceID %s\n", White, objects[1])
-				fmt.Println("Are sure you want to create a new NameSpaceID (y/n)", Reset)
-				if !scanner.Scan() {
-					break LOOP
-				}
-				decision := scanner.Text()
-				if decision == "y" {
-					setNamespace = types.NamespaceId(strings.Split(input, " ")[1])
-					NameSpaceInteraction(setNamespace)
-				} else if decision == "n" {
-					fmt.Println(Red, "Namespace creation canceled. Please enter a valid namespace.", Reset)
-				} else {
-					fmt.Println(Red, "Invalid input. Please enter 'y' or 'n'.", Reset)
-				}
-			} else {
-				setNamespace = types.NamespaceId(input)
-				NameSpaceInteraction(setNamespace)
-			}
-		case "list":
-			if len(nameSpaces) > 0 {
-				fmt.Println(White, "available NameSpaces:", Reset)
-				for nameSpace := range nameSpaces {
-					fmt.Println(nameSpace)
-				}
-			} else {
-				fmt.Println(White, "no namespaces available")
-				fmt.Print("use the new command to create a new namespace\n\n")
-				fmt.Println("usage: new <namespace>", Reset)
-
-			}
-		case "exit":
-			fmt.Println(White, "Exiting...", Reset)
-			break LOOP
-		case "enter":
-			if len(objects) != 2 {
-				fmt.Println(Red, "invalid usage of command\nusage: enter <namespace>", Reset)
-				break
-			}
-			if nameSpaces[objects[1]] == 255 {
-				setNamespace = types.NamespaceId(objects[1])
-				NameSpaceInteraction(setNamespace)
-			} else {
-				fmt.Println(Red, "error: namespace does not exist")
-				fmt.Print("use the list command to view available namespaces\n\n")
-				fmt.Println("usage: list", Reset)
-			}
-		default:
-			fmt.Println(Red, "invalid command")
-			fmt.Println("enter help to list commands!", Reset)
-		}
-
-	}
-}
-
-func NameSpaceInteraction(namespace types.NamespaceId) {
-	WillowStore := pinagoladastore.InitStorage(namespace)
-	pinagoladastore.InitKDTree(WillowStore)
-	fmt.Println("Hello father")
-	animationValues := make(chan []kdnode.Key)
-	fmt.Println("Created channel")
-	go animation.Start_animation(animationValues)
-LOOPEND:
-	for {
-
-		animationValues <- WillowStore.List()
-		fmt.Print("> ")
-		if !scanner.Scan() {
-			break
-		}
-		input := scanner.Text()
-		if strings.ToLower(input) == "exit" {
-			fmt.Println(White, "Exiting...", Reset)
-			break
-		}
-		input = strings.TrimSpace(input)
-		objects := strings.Split(input, " ")
-		switch objects[0] {
-		case "back":
-			fmt.Println(textAScii)
-			fmt.Println(White, "Type exit to escape")
-			fmt.Println("Enter namespace: ", Reset)
-			break LOOPEND
-		case "help":
-			fmt.Println(White, "valid commands:")
-			fmt.Println("set:\t\tUsage: set <subspacename> <file/to/path> [<timestamp>]")
-			fmt.Println("get:\t\tUsage: get <subspacename> <file/to/path> [<timestamp>]")
-			fmt.Println("list:\t\tUsage: list", Reset)
-			// fmt.Println("query:\t\tUsage: set <subspacename> <file/to/path> [<timestamp>]")
-		case "set":
-			if len(objects) < 4 || len(objects) > 5 {
-				fmt.Println(Red, "invalid usage of command\nusage: set <subspacename> <path/in/willow> <path/to/file> [<timestamp>]", Reset)
-				break
-			}
-
-			subSpaceId := []byte(objects[1])
-			path := []byte(objects[2])
-			insertionFile := objects[3]
-
-			file, err := os.Open(string(insertionFile))
-			if err != nil && err.Error() == "open "+string(insertionFile)+": no such file or directory" {
-				fmt.Println(Red, "error: file does not exist")
-				fmt.Println("please enter a valid path to the file you want to store", err, Reset)
-				break
-			} else if err != nil {
-				fmt.Println(Red, "error opening file:", err, Reset)
-				break
-			}
-			defer file.Close()
-			fileInfo, err := file.Stat()
-			if err != nil {
-				log.Fatal(err)
-			}
-			fileSize := fileInfo.Size()
-			payloadBytes := make([]byte, fileSize)
-			_, err = io.ReadFull(file, payloadBytes)
-			if err != nil {
-				fmt.Println(Red, "error reading file:", err, Reset)
-				return
-			}
-
-			var timestamp uint64
-			if len(objects) == 5 {
-				timestamp = parseTimeStampToMicroSeconds(objects[4])
-				if timestamp == 0 {
-					fmt.Println(Red, "invalid timestamp: please enter a valid time", Reset)
-					return
-				}
-			}
-			pathBytes := pinagoladastore.ConvertToByteSlices(strings.Split(string(path), "/"))
-			prunedEntries, err := WillowStore.Set(
-				datamodeltypes.EntryInput{
-					Subspace:  subSpaceId,
-					Timestamp: timestamp,
-					Path:      pathBytes,
-					Payload:   payloadBytes,
-				},
-				subSpaceId,
-			)
-
-			if err != nil {
-				fmt.Println(Red, "error setting entry:", err, Reset)
-				break
-			}
-			if len(prunedEntries) == 0 {
-				fmt.Println(White, "No entries pruned", Reset)
-				break
-			}
-			fmt.Println("Pruned Entries: ")
-			for _, entry := range prunedEntries {
-				fmt.Printf("%sSubspace: %s, Path: [%s], Timestamp: %d%s\n", White, entry.Subspace_id, makePath(entry.Path), entry.Timestamp, Reset)
-			}
-
-		case "get":
-			if len(objects) != 3 {
-				fmt.Println(Red, "invalid usage of command\nusage: get <subspacename> <file/to/path> [<timestamp>]", Reset)
-				break
-			}
-
-			subSpaceId := []byte(objects[1])
-			path := []byte(objects[2])
-			pathBytes := pinagoladastore.ConvertToByteSlices(strings.Split(string(path), "/"))
-
-			var timestamp uint64
-			if len(objects) == 4 {
-				timestamp = parseTimeStampToMicroSeconds(objects[3])
-				if timestamp == 0 {
-					fmt.Println(Red, "invalid timestamp", Reset)
-					return
-				}
-			}
-			encodedValue, err := WillowStore.EntryDriver.Get(subSpaceId, pathBytes)
-			if err != nil {
-				fmt.Println(Red, "error getting entry:", err, Reset)
-			}
-			returnedPayload, err := WillowStore.PayloadDriver.Get(encodedValue.Entry.Payload_digest)
-			if err != nil {
-				fmt.Println(Red, "error getting payload", err, Reset)
-			}
-
-			fmt.Println(string(returnedPayload.Bytes()))
-
-		case "list":
-			if len(objects) > 1 {
-				fmt.Println(Red, "invalid usage of command\nusage: list", Reset)
-			}
-			nodes := WillowStore.List()
-			sort.Slice(nodes, func(i, j int) bool {
-				return utils.OrderBytes(nodes[i].Subspace, nodes[j].Subspace) < 0
-			})
-
-			// Print the header of the table
-			fmt.Printf("%s %-20s %-20s %-20s\n", White, "Subspace", "Timestamp", "Path")
-			fmt.Println(strings.Repeat("-", 60), Reset)
-
-			// Print each node in the sorted list
-			for _, node := range nodes {
-				fmt.Printf("%s%-20s %-20d %-20s%s\n", White, node.Subspace, node.Timestamp, makePath(node.Path), Reset)
-			}
-
-		// case "query":
-		case "clear":
-			fmt.Println("\003[H\033[2J")
-			fmt.Println(Blue, textAScii, Reset)
-		default:
-			fmt.Println(Red, "invalid command\nenter help to list commands!", Reset)
-		}
-
-		if err := scanner.Err(); err != nil {
-			fmt.Fprintln(os.Stderr, "Error reading input:", err)
-		}
-	}
-	WillowStore.EntryDriver.Opts.KVDriver.Close()
-	WillowStore.EntryDriver.PayloadReferenceCounter.Store.Close()
-}
-
-func parseTimeStampToMicroSeconds(timestamp string) uint64 {
-	dateTime := strings.Split(timestamp, ":")
-	if len(dateTime) != 2 {
-		return 0
-	}
-	hours, err := strconv.ParseUint(dateTime[0], 10, 64)
-	if err != nil {
-		return 0
-	}
-	minutes, err := strconv.ParseUint(dateTime[1], 10, 64)
-	if err != nil {
-		return 0
-	}
-	return (hours * 60 * 60 * 1000000) + (minutes * 60 * 1000000)
-}
-
-func makePath(path types.Path) string {
-	pathStr := string(path[0])
-	for i := 1; i < len(path); i++ {
-		pathStr += "/" + string(path[i])
-	}
-	return pathStr
-}
-
-func StartAnimation(valuesChannel chan []kdnode.Key) {
-	// values := []kdnode.Key{
-	// 	{Timestamp: 1704067200, Subspace: types.SubspaceId("Manas"), Path: types.Path{[]byte("hello"), []byte("bye")}, Fingerprint: "fingerprint1"},
-	// 	{Timestamp: 1729742700, Subspace: types.SubspaceId("Samar"), Path: types.Path{[]byte("hello"), []byte("1234"), []byte("testing")}, Fingerprint: "fingerprint2"},
-	// 	{Timestamp: 1704067199, Subspace: types.SubspaceId("Samarth"), Path: types.Path{[]byte("test"), []byte("path"), []byte("hello")}, Fingerprint: "fingerprint3"},
-	// }
-
-	rl.InitWindow(1200, 900, "learning this bad boy yeeyee")
-	defer rl.CloseWindow()
-
-	texture1 := rl.LoadTexture(`G:\PIL\main_project\raylib\images\img1.png`)
-	texture2 := rl.LoadTexture(`G:\PIL\main_project\raylib\images\img2.png`)
-	texture3 := rl.LoadTexture(`G:\PIL\main_project\raylib\images\img3.png`)
-	texture4 := rl.LoadTexture(`G:\PIL\main_project\raylib\images\img4.png`)
-	defer rl.UnloadTexture(texture1)
-	defer rl.UnloadTexture(texture2)
-	defer rl.UnloadTexture(texture3)
-	defer rl.UnloadTexture(texture4)
-
-	textures := []rl.Texture2D{texture1, texture2, texture3, texture4}
-
-	rl.SetTargetFPS(60)
-
-	// var paths []string
-
-	// paths := []string{
-	// 	"/usr/local/bin",
-	// 	"/home/user/documents",
-	// 	"/var/log/apache2",
-	// 	"/etc/nginx/sites-available",
-	// 	"/tmp/cache/session",
-	// }
-
-	// times := []uint64{
-	// 	1704067200,
-	// 	1729742700,
-	// 	1704067199,
-	// 	1704067199,
-	// 	1704067199,
-	// }
-
-	// payload_count := 5
-
-	// h1 := int32(path_count * 20)
-	// h2 := int32(time_count * 20)
-	var values []kdnode.Key
-	temp := <-valuesChannel
-
-	for !rl.WindowShouldClose() {
-		if temp != nil {
-			values = temp
-		}
-		var sortedSubspaceArray []types.SubspaceId
-
-		sortedSubspaceMap := func() map[string]int {
-			sort.Slice(values, func(i, j int) bool {
-				return utils.OrderSubspace(values[i].Subspace, values[j].Subspace) == -1
-			})
-			subspaceMap := make(map[string]int)
-
-			for i, value := range values {
-				sortedSubspaceArray = append(sortedSubspaceArray, value.Subspace)
-				subspaceMap[string(value.Subspace)] = i
-			}
-
-			return subspaceMap
-		}()
-
-		var sortedPathArray []string
-		sortedPathMap := func() map[string]int {
-			sort.Slice(values, func(i, j int) bool {
-				return utils.OrderPath(values[i].Path, values[j].Path) == -1
-			})
-			pathMap := make(map[string]int)
-
-			for i, value := range values {
-				sortedPathArray = append(sortedPathArray, makePath(value.Path))
-				pathMap[makePath(value.Path)] = i
-			}
-			return pathMap
-		}()
-		var sortedTimeArray []uint64
-		sortedTimeMap := func() map[uint64]int {
-			sort.Slice(values, func(i, j int) bool {
-				return values[i].Timestamp < values[j].Timestamp
-			})
-			timeMap := make(map[uint64]int)
-
-			for i, value := range values {
-				sortedTimeArray = append(sortedTimeArray, value.Timestamp)
-				timeMap[value.Timestamp] = i
-			}
-
-			return timeMap
-		}()
-		fmt.Println(sortedPathMap, sortedSubspaceMap, sortedTimeMap)
-
-		paths := sortedPathArray
-		times := sortedTimeArray
-
-		user_count := len(sortedSubspaceArray)
-		path_count := len(paths)
-		time_count := len(times)
-
-		rl.BeginDrawing()
-
-		rl.ClearBackground(rl.White)
-		// rl.DrawText("Data Model Animation coming soon", 190, 200, 20, rl.Black)
-		// draw_plgm_2(rl.Vector2{X: 100, Y: 100}, 4, rl.Black)
-		// draw_plgm_1(rl.Vector2{X: 100, Y: 100}, 4, rl.Blue)
-		// draw_plgm_2(rl.Vector2{X: 400, Y: 400}, 4, rl.Black)
-		// draw_plgm_1(rl.Vector2{X: 400, Y: 400}, 6, rl.Green)
-
-		for ind, path := range paths {
-			draw_right_aligned_text(path, int32(startx)-10, int32(int(starty)-ind*int(w)-45), 18, rl.Black)
-		}
-
-		// for ind, time := range times {
-		// 	draw_time(time)
-		// }
-
-		points := get_starting_points(user_count)
-		for ind, point := range points {
-			if ind%2 == 0 {
-				draw_plgm_1(point, path_count, rl.Gray)
-				draw_plgm_2(point, time_count, rl.LightGray)
-			} else {
-				draw_plgm_1(point, path_count, rl.LightGray)
-				draw_plgm_2(point, time_count, rl.Gray)
-			}
-		}
-
-		draw_times(time_count, times)
-
-		draw_files(values, sortedSubspaceMap, sortedTimeMap, sortedPathMap, textures)
-
-		rl.EndDrawing()
-	}
-}
 
 func OrderSubspace(a, b types.SubspaceId) int {
 	if hex.EncodeToString(a[:]) < hex.EncodeToString(b[:]) {
@@ -527,13 +73,160 @@ func OrderBytes(a, b []byte) int {
 	return 0
 }
 
+func Start_animation(valuesChannel chan []kdnode.Key) {
+	fmt.Println("Hello mother")
+	// values := []kdnode.Key{
+	// 	{Timestamp: 1704067200, Subspace: types.SubspaceId("Manas"), Path: types.Path{[]byte("hello"), []byte("bye")}, Fingerprint: "fingerprint1"},
+	// 	{Timestamp: 1729742700, Subspace: types.SubspaceId("Samar"), Path: types.Path{[]byte("hello"), []byte("1234"), []byte("testing")}, Fingerprint: "fingerprint2"},
+	// 	{Timestamp: 1704067199, Subspace: types.SubspaceId("Samarth"), Path: types.Path{[]byte("test"), []byte("path"), []byte("hello")}, Fingerprint: "fingerprint3"},
+	// }
+
+	rl.InitWindow(1200, 900, "learning this bad boy yeeyee")
+	defer rl.CloseWindow()
+
+	texture1 := rl.LoadTexture(`G:\PIL\main_project\raylib\images\img1.png`)
+	texture2 := rl.LoadTexture(`G:\PIL\main_project\raylib\images\img2.png`)
+	texture3 := rl.LoadTexture(`G:\PIL\main_project\raylib\images\img3.png`)
+	texture4 := rl.LoadTexture(`G:\PIL\main_project\raylib\images\img4.png`)
+	defer rl.UnloadTexture(texture1)
+	defer rl.UnloadTexture(texture2)
+	defer rl.UnloadTexture(texture3)
+	defer rl.UnloadTexture(texture4)
+
+	textures := []rl.Texture2D{texture1, texture2, texture3, texture4}
+	fmt.Println("Goodmorning")
+	rl.SetTargetFPS(60)
+
+	// var paths []string
+
+	// paths := []string{
+	// 	"/usr/local/bin",
+	// 	"/home/user/documents",
+	// 	"/var/log/apache2",
+	// 	"/etc/nginx/sites-available",
+	// 	"/tmp/cache/session",
+	// }
+
+	// times := []uint64{
+	// 	1704067200,
+	// 	1729742700,
+	// 	1704067199,
+	// 	1704067199,
+	// 	1704067199,
+	// }
+
+	// payload_count := 5
+
+	// h1 := int32(path_count * 20)
+	// h2 := int32(time_count * 20)
+	var values []kdnode.Key
+
+	for !rl.WindowShouldClose() {
+		select {
+		case temp := <-valuesChannel:
+			if temp != nil {
+				values = temp
+
+			}
+		default:
+			time.Sleep(500 * time.Millisecond)
+			continue
+
+		}
+		var sortedSubspaceArray []types.SubspaceId
+
+		sortedSubspaceMap := func() map[string]int {
+			sort.Slice(values, func(i, j int) bool {
+				return utils.OrderSubspace(values[i].Subspace, values[j].Subspace) == -1
+			})
+			subspaceMap := make(map[string]int)
+
+			for i, value := range values {
+				sortedSubspaceArray = append(sortedSubspaceArray, value.Subspace)
+				subspaceMap[string(value.Subspace)] = i
+			}
+
+			return subspaceMap
+		}()
+
+		var sortedPathArray []string
+		sortedPathMap := func() map[string]int {
+			sort.Slice(values, func(i, j int) bool {
+				return utils.OrderPath(values[i].Path, values[j].Path) == -1
+			})
+			pathMap := make(map[string]int)
+
+			for i, value := range values {
+				sortedPathArray = append(sortedPathArray, makePath(value.Path))
+				pathMap[makePath(value.Path)] = i
+			}
+			return pathMap
+		}()
+		var sortedTimeArray []uint64
+		sortedTimeMap := func() map[uint64]int {
+			sort.Slice(values, func(i, j int) bool {
+				return values[i].Timestamp < values[j].Timestamp
+			})
+			timeMap := make(map[uint64]int)
+
+			for i, value := range values {
+				sortedTimeArray = append(sortedTimeArray, value.Timestamp)
+				timeMap[value.Timestamp] = i
+			}
+
+			return timeMap
+		}()
+
+		paths := sortedPathArray
+		times := sortedTimeArray
+
+		user_count := len(sortedSubspaceArray)
+		path_count := len(paths)
+		time_count := len(times)
+
+		rl.BeginDrawing()
+
+		rl.ClearBackground(rl.White)
+		// rl.DrawText("Data Model Animation coming soon", 190, 200, 20, rl.Black)
+		// draw_plgm_2(rl.Vector2{X: 100, Y: 100}, 4, rl.Black)
+		// draw_plgm_1(rl.Vector2{X: 100, Y: 100}, 4, rl.Blue)
+		// draw_plgm_2(rl.Vector2{X: 400, Y: 400}, 4, rl.Black)
+		// draw_plgm_1(rl.Vector2{X: 400, Y: 400}, 6, rl.Green)
+
+		for ind, path := range paths {
+			draw_right_aligned_text(path, int32(startx)-10, int32(int(starty)-ind*int(w)-45), 18, rl.Black)
+		}
+
+		// for ind, time := range times {
+		// 	draw_time(time)
+		// }
+
+		points := get_starting_points(user_count)
+		for ind, point := range points {
+			if ind%2 == 0 {
+				draw_plgm_1(point, path_count, rl.Gray)
+				draw_plgm_2(point, time_count, rl.LightGray)
+			} else {
+				draw_plgm_1(point, path_count, rl.LightGray)
+				draw_plgm_2(point, time_count, rl.Gray)
+			}
+		}
+
+		draw_times(time_count, times)
+
+		draw_files(values, sortedSubspaceMap, sortedTimeMap, sortedPathMap, textures)
+
+		rl.EndDrawing()
+	}
+}
+
 func draw_files(entries []kdnode.Key, subspace_map map[string]int, time_map map[uint64]int, path_map map[string]int, textures []rl.Texture2D) {
 	fmt.Println(subspace_map, path_map)
 	for _, entry := range entries {
 		uind := subspace_map[string(entry.Subspace)]
 		tind := time_map[entry.Timestamp]
 		pind := path_map[makePath(entry.Path)]
-		fmt.Println(makePath(entry.Path), uind, tind, pind)
+
 		draw_file(float64(tind), float64(pind), float64(uind), textures)
 	}
 }
@@ -746,6 +439,14 @@ func draw_plgm_2(v1 rl.Vector2, time_count int, col rl.Color) {
 	rl.DrawLineEx(v2, v3, border_thickness, border_color)
 	rl.DrawLineEx(v3, v4, border_thickness, border_color)
 	rl.DrawLineEx(v4, v1, border_thickness, border_color)
+}
+
+func makePath(path types.Path) string {
+	pathStr := string(path[0])
+	for i := 1; i < len(path); i++ {
+		pathStr += "/" + string(path[i])
+	}
+	return pathStr
 }
 
 // convert_timestamp converts a uint64 Unix timestamp to a readable string.

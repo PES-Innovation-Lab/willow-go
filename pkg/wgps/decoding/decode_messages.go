@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/reconciliation"
-	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/transport"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/wgpstypes"
 	"github.com/PES-Innovation-Lab/willow-go/types"
 	"github.com/PES-Innovation-Lab/willow-go/utils"
@@ -31,8 +30,8 @@ type DecodeMessageOpts[
 	K constraints.Unsigned,
 ] struct {
 	Reconcile reconciliation.ReconcileMsgTrackerOpts
-	Channel   wgpstypes.Channel
-	Schemes   wgpstypes.SyncSchemes[
+	//	Channel   wgpstypes.Channel
+	Schemes wgpstypes.SyncSchemes[
 		ReadCapability,
 		Receiver,
 		SyncSignature,
@@ -51,11 +50,11 @@ type DecodeMessageOpts[
 		AuthorisationOpts,
 		K,
 	]
-	Transport *transport.QuicTransport
+	//Transport *transport.QuicTransport
 	//ChallengeLength int
 	//GetIntersectionPrivy      func(handle uint64) wgpstypes.ReadCapPrivy
 	//GetTheirCap               func(handle uint64) ReadCapability
-	GetCurrentlyReceivedEntry types.Entry
+	GetCurrentlyReceivedEntry func() types.Entry
 	AoiHandlesToNamespace     func(senderHandle uint64, receiverHandle uint64) types.NamespaceId
 	AoiHandlesToArea          func(senderHandle uint64, receiverHandle uint64) types.Area
 }
@@ -211,5 +210,6 @@ func DecodeMessages[
 		} else {
 			fmt.Errorf("Could not decode")
 		}
+		outChannel <- nil
 	}
 }
