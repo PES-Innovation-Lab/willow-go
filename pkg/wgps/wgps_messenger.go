@@ -263,7 +263,7 @@ type WgpsMessenger[
 	//Reconciliation
 	YourRangeCounter int
 	GetStore         wgpstypes.GetStoreFn[Prefingerprint, Fingerprint, K, AuthorisationToken, AuthorisationOpts]
-	//ReconcilerMap             reconciliation.ReconcilerMap //TODO: has to be changed to ReconcilerMap
+	ReconcilerMap    reconciliation.ReconcilerMap[K, Prefingerprint, Fingerprint, AuthorisationOpts, AuthorisationToken] //TODO: has to be changed to ReconcilerMap
 	//AoiIntersectionFinder     reconciliation.AoiIntersectionFinder
 	//Announcer                 reconciliation.Announcer
 	CurrentlyReceivingEntries struct {
@@ -2688,4 +2688,50 @@ func (w *WgpsMessenger[
 	w.Closed = true
 	err := w.Transport.Close()
 	return err
+}
+
+func (
+	w *WgpsMessenger[
+		ReadCapability,
+		Receiver,
+		SyncSignature,
+		ReceiverSecretKey,
+		PsiGroup,
+		PsiScalar,
+		SubspaceCapability,
+		SubspaceReceiver,
+		SyncSubspaceSignature,
+		SubspaceSecretKey,
+		Prefingerprint,
+		Fingerprint,
+		AuthorisationToken,
+		StaticToken,
+		DynamicToken,
+		AuthorisationOpts,
+		K,
+	]) HandleMsgReconciliation(
+	msg wgpstypes.ReconciliationChannelMsg) {
+	switch msg := msg.(type) {
+	case wgpstypes.MsgReconciliationSendEntry[DynamicToken]:
+		store := w.GetStore(msg.Data.Entry.Entry.Namespace_id)
+		StaticToken, _ := w.HandlesStaticTokenTheirs.Get(msg.Data.StaticTokenHandle)
+		AuthToken := w.Schemes.AuthorisationToken.RecomposeAuthToken(StaticToken, msg.Data.DynamicToken)
+		_, err := store.IngestEntry(msg.Data.Entry.Entry, AuthToken)
+		if err != nil {
+			return
+		}
+		w.ReconciliationPayloadIngester.Target(msg.Data.Entry.Entry, false)
+		break
+	case wgpstypes.MsgReconciliationSendPayload:
+		w.ReconciliationPayloadIngester.Push(msg.Data.Bytes, false)
+		break
+	case wgpstypes.MsgReconciliationTerminatePayload:
+		EntryToRequestPayloadFor := w.ReconciliationPayloadIngester.Terminate()
+		w.HandlesPayloadRequestsOurs.Bind(data.PayloadRequest{
+			Entry:  *EntryToRequestPayloadFor,
+			Offset: 0,
+		})
+
+	}
+
 }
