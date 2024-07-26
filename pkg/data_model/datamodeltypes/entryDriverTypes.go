@@ -3,6 +3,7 @@ package datamodeltypes
 import (
 	"errors"
 	"log"
+	"sort"
 
 	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/kdnode"
 	"github.com/PES-Innovation-Lab/willow-go/types"
@@ -106,4 +107,77 @@ func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) GetInterestRange(areaOfI
 		}, areaOfInterest.Area,
 	)
 	return newRange
+}
+
+func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) Summarise(Range types.Range3d) struct {
+	FingerPrint string
+	Size        uint64
+} {
+	var size uint64
+	var fingerPrint string
+	valuesInRange := k.Query(Range)
+	for _, val := range valuesInRange {
+		size += 1
+		fingerPrint = xorStrings(fingerPrint, val.Fingerprint)
+	}
+	return struct {
+		FingerPrint string
+		Size        uint64
+	}{
+		FingerPrint: fingerPrint,
+		Size:        size,
+	}
+}
+
+/* Used for splitting a 3dRange*/
+func (k *KDTreeStorage[PreFingerPrint, FingerPrint, K]) SplitRange(Range types.Range3d, size int) (types.Range3d, types.Range3d) {
+	entries := k.Query(Range)
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].Timestamp < entries[j].Timestamp
+	})
+	//find median
+	mid := len(entries) / 2
+	median := entries[mid].Timestamp
+
+	//split the range
+	leftRange := types.Range3d{
+		SubspaceRange: Range.SubspaceRange,
+		PathRange:     Range.PathRange,
+		TimeRange: types.Range[uint64]{
+			Start:   Range.TimeRange.Start,
+			End:     median,
+			OpenEnd: false,
+		},
+	}
+	rightRange := types.Range3d{
+		SubspaceRange: Range.SubspaceRange,
+		PathRange:     Range.PathRange,
+		TimeRange: types.Range[uint64]{
+			Start:   median,
+			End:     Range.TimeRange.End,
+			OpenEnd: Range.TimeRange.OpenEnd,
+		},
+	}
+
+	return leftRange, rightRange
+}
+
+func xorStrings(a, b string) string {
+	// ensure both strings have the same length
+	// they should always be the same length 🙄
+	// if len(a) > len(b) {
+	// 	b += string(make([]byte, len(a)-len(b)))
+	// } else if len(b) > len(a) {
+	// 	a += string(make([]byte, len(b)-len(a)))
+	// }
+
+	if len(a) != len(b) {
+		log.Fatal("Hashes of payloads are of different length 😨, fingerprinting.go, line 63")
+	}
+
+	result := make([]byte, len(a))
+	for i := range a {
+		result[i] = a[i] ^ b[i]
+	}
+	return string(result)
 }
