@@ -107,14 +107,32 @@ func main() {
 	for _, testSet := range testSets {
 		WillowStore.Set(testSet.input, testSet.authOpts)
 	}
+
 	go wgps.NewWgpsMessenger(opts, newMessengerChan, "localhost:4241", WillowStore)
 	messenger := <-newMessengerChan
 	if messenger.Error != nil {
 		fmt.Println("Error in creating messenger:", messenger.Error)
 		return
 	}
+
 	fmt.Println("Messenger set up")
 	messenger.NewMessenger.Initiate("localhost:4242")
+	rangeToBeSent := types.Range3d{
+		PathRange: types.Range[types.Path]{
+			Start: types.Path{[]byte("path"), []byte("to"), []byte("entry1")},
+			End:   types.Path{[]byte("path"), []byte("to"), []byte("entry10")},
+		},
+		SubspaceRange: types.Range[types.SubspaceId]{
+			Start: types.SubspaceId("myspace"),
+			End:   types.SubspaceId("myspace1"),
+		},
+		TimeRange: types.Range[uint64]{
+			Start:   0,
+			End:     10,
+			OpenEnd: true,
+		},
+	}
+
 	hello1 := "Hello, world!"
 	var hello1Bytes []byte
 	hello1Bytes = append(hello1Bytes, utils.BigIntToBytes(uint64(len(hello1)))...)
