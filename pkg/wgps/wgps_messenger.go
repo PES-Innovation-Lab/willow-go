@@ -151,7 +151,6 @@ type WgpsMessenger[
 	//Interests map[*wgpstypes.ReadAuthorisation[ReadCapability, SubspaceCapability]][]types.AreaOfInterest
 	Transport *transport.QuicTransport
 
-	FingerPrintScheme datamodeltypes.FingerprintScheme[Prefingerprint, Fingerprint]
 	/*InitiatorEncoder *encoding.MessageEncoder[
 		ReadCapability,
 		Receiver,
@@ -356,8 +355,8 @@ func NewWgpsMessenger[
 		AuthorisationOpts,
 		K,
 	], addr string, // ONLY FOR TESTING!!!!
+	Store store.Store[Prefingerprint, Fingerprint, K, AuthorisationOpts, AuthorisationToken],
 ) {
-
 	var newWgpsMessenger WgpsMessenger[
 		ReadCapability,
 		Receiver,
@@ -379,6 +378,8 @@ func NewWgpsMessenger[
 	]
 	var err error
 	newWgpsMessenger.Schemes = opts.Schemes
+
+	newWgpsMessenger.Store = Store
 
 	newWgpsMessenger.InitiatorOutChannelReconciliation = GuaranteedQueue{
 		Queue:         make(chan []byte, 32),
@@ -2978,8 +2979,8 @@ func (w *WgpsMessenger[
 	// TODO Implement Summarise function in store
 	ourFingerprint := w.Store.EntryDriver.Storage.Summarise(yourRange)
 	size := ourFingerprint.Size
-	fingerprintOursFinal := w.FingerPrintScheme.FingerPrintFinalise(Prefingerprint(ourFingerprint.FingerPrint))
-	if w.FingerPrintScheme.IsEqual(fingerprint, fingerprintOursFinal) {
+	fingerprintOursFinal := w.Schemes.Fingerprint.FingerPrintFinalise(Prefingerprint(ourFingerprint.FingerPrint))
+	if w.Schemes.Fingerprint.IsEqual(fingerprint, fingerprintOursFinal) {
 		return struct {
 				Range       types.Range3d
 				FingerPrint Fingerprint
@@ -3010,8 +3011,8 @@ func (w *WgpsMessenger[
 	} else {
 		// TODO: Implement Store Split Range
 		left, right := w.Store.EntryDriver.Storage.SplitRange(yourRange, int(size))
-		fingerprintLeftFinal := w.FingerPrintScheme.FingerPrintFinalise(Prefingerprint(w.Store.EntryDriver.Storage.Summarise(left).FingerPrint)) //Most readable code in Willow-Go
-		fingerprintRightFinal := w.FingerPrintScheme.FingerPrintFinalise(Prefingerprint(w.Store.EntryDriver.Storage.Summarise(right).FingerPrint))
+		fingerprintLeftFinal := w.Schemes.Fingerprint.FingerPrintFinalise(Prefingerprint(w.Store.EntryDriver.Storage.Summarise(left).FingerPrint)) //Most readable code in Willow-Go
+		fingerprintRightFinal := w.Schemes.Fingerprint.FingerPrintFinalise(Prefingerprint(w.Store.EntryDriver.Storage.Summarise(right).FingerPrint))
 
 		return struct {
 				Range       types.Range3d

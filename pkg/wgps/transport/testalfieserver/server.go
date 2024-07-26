@@ -5,7 +5,7 @@ import (
 	"time"
 
 	pinagoladastore "github.com/PES-Innovation-Lab/willow-go/PinaGoladaStore"
-	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/store"
+	"github.com/PES-Innovation-Lab/willow-go/pkg/data_model/datamodeltypes"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/wgpstypes"
 	"github.com/PES-Innovation-Lab/willow-go/types"
@@ -78,12 +78,36 @@ func main() {
 			Fingerprint:     pinagoladastore.TestFingerprintScheme,
 			PathParams:      pinagoladastore.TestPathParams,
 		},
-		GetStore: func(namespace types.NamespaceId) store.Store[string, string, uint, []byte, string] {
-			return WillowStore
+	}
+
+	testSets := []struct {
+		input    datamodeltypes.EntryInput
+		authOpts []byte
+	}{
+		{
+			input: datamodeltypes.EntryInput{
+				Subspace:  types.SubspaceId("myspace"),
+				Path:      types.Path{[]byte("path"), []byte("to"), []byte("entry1")},
+				Timestamp: 0,
+				Payload:   []byte("payload1"),
+			},
+			authOpts: []byte("myspace"),
+		},
+		{
+			input: datamodeltypes.EntryInput{
+				Subspace:  types.SubspaceId("myspace"),
+				Path:      types.Path{[]byte("path"), []byte("to"), []byte("entry2")},
+				Timestamp: 0,
+				Payload:   []byte("payload2"),
+			},
+			authOpts: []byte("myspace"),
 		},
 	}
 
-	go wgps.NewWgpsMessenger(opts, newMessengerChan, "localhost:4241")
+	for _, testSet := range testSets {
+		WillowStore.Set(testSet.input, testSet.authOpts)
+	}
+	go wgps.NewWgpsMessenger(opts, newMessengerChan, "localhost:4241", WillowStore)
 	messenger := <-newMessengerChan
 	if messenger.Error != nil {
 		fmt.Println("Error in creating messenger:", messenger.Error)
