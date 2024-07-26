@@ -1,7 +1,6 @@
 package animation
 
 import (
-	"encoding/hex"
 	"fmt"
 	"math"
 	"sort"
@@ -20,66 +19,13 @@ const (
 	starty = float32(600)
 )
 
-func OrderSubspace(a, b types.SubspaceId) int {
-	if hex.EncodeToString(a[:]) < hex.EncodeToString(b[:]) {
-		return -1
-	} else if hex.EncodeToString(a[:]) > hex.EncodeToString(b[:]) {
-		return 1
-	}
-	return 0
-}
-
-func OrderPath(a, b types.Path) int {
-	minLen := len(a)
-	if len(b) < minLen {
-		minLen = len(b)
-	}
-
-	for i := 0; i < minLen; i++ {
-		order := OrderBytes(a[i], b[i])
-		if order != 0 {
-			return order
-		}
-	}
-
-	if len(a) < len(b) {
-		return -1
-	} else if len(a) > len(b) {
-		return 1
-	}
-	return 0
-}
-
-func OrderBytes(a, b []byte) int {
-	minLen := len(a)
-	if len(b) < minLen {
-		minLen = len(b)
-	}
-
-	for i := 0; i < minLen; i++ {
-		if a[i] < b[i] {
-			return -1
-		} else if a[i] > b[i] {
-			return 1
-		}
-	}
-
-	if len(a) < len(b) {
-		return -1
-	} else if len(a) > len(b) {
-		return 1
-	}
-
-	return 0
-}
-
-func Start_animation(valuesChannel chan []kdnode.Key) {
+func Start_animation() {
 	fmt.Println("Hello mother")
-	// values := []kdnode.Key{
-	// 	{Timestamp: 1704067200, Subspace: types.SubspaceId("Manas"), Path: types.Path{[]byte("hello"), []byte("bye")}, Fingerprint: "fingerprint1"},
-	// 	{Timestamp: 1729742700, Subspace: types.SubspaceId("Samar"), Path: types.Path{[]byte("hello"), []byte("1234"), []byte("testing")}, Fingerprint: "fingerprint2"},
-	// 	{Timestamp: 1704067199, Subspace: types.SubspaceId("Samarth"), Path: types.Path{[]byte("test"), []byte("path"), []byte("hello")}, Fingerprint: "fingerprint3"},
-	// }
+	values := []kdnode.Key{
+		{Timestamp: 1704067200, Subspace: types.SubspaceId("Manas"), Path: types.Path{[]byte("hello"), []byte("bye")}, Fingerprint: "fingerprint1"},
+		{Timestamp: 1729742700, Subspace: types.SubspaceId("Samar"), Path: types.Path{[]byte("hello"), []byte("1234"), []byte("testing")}, Fingerprint: "fingerprint2"},
+		{Timestamp: 1704067199, Subspace: types.SubspaceId("Samarth"), Path: types.Path{[]byte("test"), []byte("path"), []byte("hello")}, Fingerprint: "fingerprint3"},
+	}
 
 	rl.InitWindow(1200, 900, "learning this bad boy yeeyee")
 	defer rl.CloseWindow()
@@ -119,20 +65,9 @@ func Start_animation(valuesChannel chan []kdnode.Key) {
 
 	// h1 := int32(path_count * 20)
 	// h2 := int32(time_count * 20)
-	var values []kdnode.Key
+	// var values []kdnode.Key
 
 	for !rl.WindowShouldClose() {
-		select {
-		case temp := <-valuesChannel:
-			if temp != nil {
-				values = temp
-
-			}
-		default:
-			time.Sleep(500 * time.Millisecond)
-			continue
-
-		}
 		var sortedSubspaceArray []types.SubspaceId
 
 		sortedSubspaceMap := func() map[string]int {
