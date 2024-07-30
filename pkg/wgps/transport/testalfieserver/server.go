@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	"time"
 
@@ -9,7 +11,6 @@ import (
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps"
 	"github.com/PES-Innovation-Lab/willow-go/pkg/wgps/wgpstypes"
 	"github.com/PES-Innovation-Lab/willow-go/types"
-	"github.com/PES-Innovation-Lab/willow-go/utils"
 )
 
 func main() {
@@ -51,6 +52,7 @@ func main() {
 	return */
 
 	WillowStore := (*pinagoladastore.InitStorage(types.NamespaceId("myspace")))
+	pinagoladastore.InitKDTree(&WillowStore)
 	newMessengerChan := make(chan wgps.NewMessengerReturn[string, types.SubspaceId, string, string, string, int, string, types.SubspaceId, string, string, string, string, string, string, string, []byte, uint], 1)
 	opts := wgps.WgpsMessengerOpts[string, types.SubspaceId, string, string, string, int, string, types.SubspaceId, string, string, string, string, string, string, string, []byte, uint]{
 		Schemes: wgpstypes.SyncSchemes[
@@ -133,26 +135,71 @@ func main() {
 		},
 	}
 
-	hello1 := "Hello, world!"
-	var hello1Bytes []byte
-	hello1Bytes = append(hello1Bytes, utils.BigIntToBytes(uint64(len(hello1)))...)
-	hello1Bytes = append(hello1Bytes, []byte(hello1)...)
-	fmt.Printf("Sending %v now!!!\n", hello1Bytes)
-	//r := bytes.NewReader(hello1Bytes)
-	//// := binary.BigEndian.Uint64(hello1Bytes[:8])
+	summary := WillowStore.EntryDriver.Storage.Summarise(rangeToBeSent)
+	//encode using gob both summarise and range
 
-	//fmt.Printf("Length of hello1Bytes is %v\n", intVal)
+	encodedValue := EncodeSummary(summary, rangeToBeSent)
 
-	hello2 := "Hello, world 2!"
-	hello3 := "Hello, world 3!"
-	var hello2Bytes []byte
-	hello2Bytes = append(hello2Bytes, utils.BigIntToBytes(uint64(len(hello2)))...)
-	hello2Bytes = append(hello2Bytes, []byte(hello2)...)
-	var hello3Bytes []byte
-	hello3Bytes = append(hello3Bytes, utils.BigIntToBytes(uint64(len(hello3)))...)
-	hello3Bytes = append(hello3Bytes, []byte(hello3)...)
-	messenger.NewMessenger.Transport.Send(hello1Bytes, wgpstypes.DataChannel, wgpstypes.SyncRoleAlfie)
-	messenger.NewMessenger.Transport.Send(hello2Bytes, wgpstypes.DataChannel, wgpstypes.SyncRoleAlfie)
-	messenger.NewMessenger.Transport.Send(hello3Bytes, wgpstypes.DataChannel, wgpstypes.SyncRoleAlfie)
+	// hello1 := "Hello, world!"
+	// var hello1Bytes []byte
+	// hello1Bytes = append(hello1Bytes, utils.BigIntToBytes(uint64(len(hello1)))...)
+	// hello1Bytes = append(hello1Bytes, []byte(hello1)...)
+	// fmt.Printf("Sending %v now!!!\n", hello1Bytes)
+	// //r := bytes.NewReader(hello1Bytes)
+	// //// := binary.BigEndian.Uint64(hello1Bytes[:8])
+
+	// //fmt.Printf("Length of hello1Bytes is %v\n", intVal)
+
+	// hello2 := "Hello, world 2!"
+	// hello3 := "Hello, world 3!"
+	// var hello2Bytes []byte
+	// hello2Bytes = append(hello2Bytes, utils.BigIntToBytes(uint64(len(hello2)))...)
+	// hello2Bytes = append(hello2Bytes, []byte(hello2)...)
+	// var hello3Bytes []byte
+	// hello3Bytes = append(hello3Bytes, utils.BigIntToBytes(uint64(len(hello3)))...)
+	// hello3Bytes = append(hello3Bytes, []byte(hello3)...)
+	// messenger.NewMessenger.Transport.Send(hello1Bytes, wgpstypes.DataChannel, wgpstypes.SyncRoleAlfie)
+	// messenger.NewMessenger.Transport.Send(hello2Bytes, wgpstypes.DataChannel, wgpstypes.SyncRoleAlfie)
+	// messenger.NewMessenger.Transport.Send(hello3Bytes, wgpstypes.DataChannel, wgpstypes.SyncRoleAlfie)
+	messenger.NewMessenger.Transport.Send(encodedValue, wgpstypes.DataChannel, wgpstypes.SyncRoleAlfie)
 	time.Sleep(time.Second * 2)
+}
+
+func EncodeSummary[Fingerprint string](value struct {
+	FingerPrint string
+	Size        uint64
+}, ourRange types.Range3d) []byte {
+	var buffer bytes.Buffer
+	encoder := gob.NewEncoder(&buffer)
+	encoder.Encode(struct {
+		value struct {
+			FingerPrint string
+			Size        uint64
+		}
+		ourRange types.Range3d
+	}{
+		value, ourRange,
+	})
+	return buffer.Bytes()
+}
+func DecodeSummary[Fingerprint string](value []byte) (struct {
+	FingerPrint string
+	Size        uint64
+}, types.Range3d) {
+	var decoded struct {
+		value struct {
+			FingerPrint string
+			Size        uint64
+		}
+		ourRange types.Range3d
+	}
+	buffer := bytes.NewBuffer(value)
+	decoder := gob.NewDecoder(buffer)
+	decoder.Decode(&decoded)
+	return struct {
+		FingerPrint string
+		Size        uint64
+	}{
+		decoded.value.FingerPrint, decoded.value.Size,
+	}, decoded.ourRange
 }
